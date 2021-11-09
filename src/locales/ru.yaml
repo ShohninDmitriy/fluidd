@@ -30,6 +30,7 @@ app:
       'on': Включить график
       power: Мощность
       target: Цель
+      rate_of_change: Изменение
     tooltip:
       help: >-
         Удерживайте shift для увеличения.<br />Кликните на элемент, чтобы
@@ -163,6 +164,7 @@ app:
       send: Отправить
       set_color: Установить цвет
       shutdown: Отключение
+      socket_reconnect: Повторное подключение
       socket_refresh: Принудительно обновление
       upload: Загрузить
       upload_print: Загрузить и напечатать
@@ -181,6 +183,7 @@ app:
     label:
       accel_to_decel: Ускорения и торможения
       acceleration: Ускорение
+      actual_time: Фактический
       add_camera: Добавить камеру
       add_preset: Добавить предустановку
       add_user: Добавить пользователя
@@ -198,13 +201,18 @@ app:
       edit_user: Редактирование пользователя
       extrude_length: Длинна экструзии
       extrude_speed: Скорость экструзии
+      filament: Филамент
+      file: Файл
+      finish_time: Конец
       flow: Поток
       free: Свободно
       high: Выше
       host: Хост
+      layer: Слой
       layout: Компоновка интерфейса
       longest_job: Самая долгая печать
       low: Ниже
+      m117: M117
       name: Имя
       new_password: Новый пароль
       no_notifications: Нет уведомлений
@@ -218,8 +226,10 @@ app:
       retract_speed: Скорость ретракта
       save_as: Сохранить как
       services: Сервисы
+      slicer: Slicer
       speed: Скорость
       sqv: Скорость прохождения угла
+      total: Весь
       total_filament: Всего использованно филамента
       total_filament_avg: Среднее на печать
       total_jobs: Всего печатей
@@ -228,12 +238,14 @@ app:
       total_time: Общее время
       total_time_avg: Среднее время
       uncategorized: Вне категории
+      unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
       used: Использованно
       variance: Различие
       velocity: Скорость
       visible: Видимый
       z_offset: Смещение Z
+      unsaved_changes: Не сохраненные изменения
     msg:
       password_changed: Пароль изменен
       wrong_password: Ой, что-то пошло не так. Пароль введен верно?
