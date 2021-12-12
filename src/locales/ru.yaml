@@ -263,6 +263,7 @@ app:
         confirm: Вы уверены?
         confirm_reboot_host: Вы уверены? Это приведёт к перезагрузке вашей хост системы.
         confirm_shutdown_host: Вы уверены? Это приведёт к выключению вашей хост системы.
+        unsaved_changes: У вас есть несохраненные изменения. Вы уверены, что хотите закрыть файл?
     table:
       header:
         actions: Действия
@@ -340,6 +341,7 @@ app:
       mjpegadaptive: Адаптивный MJPEG
       mjpegstream: MJPEG поток
       video: IP Камера
+      iframe: Страница HTTP
     label:
       all_off: Всё выключить
       all_on: Всё включить
@@ -361,6 +363,7 @@ app:
       flip_horizontal: Сдвиг по горизонтали
       flip_vertical: Сдвиг по вертикали
       fps_target: Целевой FPS
+      height: Высота
       gcode_coords: Испрользовать координаты GCode
       invert_x_control: Инвертировать управление по оси X
       invert_y_control: Инвертировать управление по оси Y
