@@ -226,7 +226,7 @@ app:
       retract_speed: Скорость ретракта
       save_as: Сохранить как
       services: Сервисы
-      slicer: Slicer
+      slicer: Слайсер
       speed: Скорость
       sqv: Скорость прохождения угла
       total: Весь
