@@ -350,6 +350,8 @@ app:
       camera_stream_type: Тип потока
       camera_url: URL камеры
       confirm_on_estop: Требовать подтверждение при аварийной остановке
+      confirm_on_power_device_change: Требуется подтверждение при изменении мощности устройства
+      confirm_dirty_editor_close: Требовать подтверждения при закрытии редактора с несохраненными изменениями
       dark_mode: Тёмная тема
       default_extrude_length: Длина экструдирования по умолчанию
       default_extrude_speed: Скорость экструдера по умолчанию
