@@ -212,6 +212,7 @@ app:
       name: Name
       new_password: New password
       no_notifications: No notifications
+      'on': 'On'
       'off': 'Off'
       password: Password
       power: Power
