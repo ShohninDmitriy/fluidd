@@ -185,6 +185,7 @@ app:
       acceleration: Ускорение
       actual_time: Фактический
       add_camera: Добавить камеру
+      add_filter: Добавить фильтр
       add_preset: Добавить предустановку
       add_user: Добавить пользователя
       api_key: Ключ API
@@ -197,6 +198,7 @@ app:
       current_password: Текущий пароль
       disabled_while_printing: Отключено во время печати
       edit_camera: Редактировать камеру
+      edit_filter: Редактировать фильтр
       edit_preset: Редактировать предустановку
       edit_user: Редактирование пользователя
       extrude_length: Длинна экструзии
@@ -216,6 +218,7 @@ app:
       name: Имя
       new_password: Новый пароль
       no_notifications: Нет уведомлений
+      'on': 'Включить'
       'off': Выключить
       password: Пароль
       power: Питание
@@ -246,6 +249,8 @@ app:
       visible: Видимый
       z_offset: Смещение Z
       unsaved_changes: Не сохраненные изменения
+      alias: Псевдоним
+      apply_z_offset: Применить и сохранить Z_Offset
     msg:
       password_changed: Пароль изменен
       wrong_password: Ой, что-то пошло не так. Пароль введен верно?
@@ -254,6 +259,7 @@ app:
         arrayofnums: Только цифры
         exists: Уже существует
         invalid_url: Невалидный URL
+        invalid_expression: Недопустимое выражение
         max: Макс %{max}
         min: Мин %{min}
         min_or_0: Мин %{min} или 0
@@ -263,7 +269,14 @@ app:
         confirm: Вы уверены?
         confirm_reboot_host: Вы уверены? Это приведёт к перезагрузке вашей хост системы.
         confirm_shutdown_host: Вы уверены? Это приведёт к выключению вашей хост системы.
+        confirm_power_device_toggle: Вы уверен? Это позволит переключить питание этого устройства.
         unsaved_changes: У вас есть несохраненные изменения. Вы уверены, что хотите закрыть файл?
+        apply_z_offset_endstop: >-
+          Z-смещение конечной точки будет рассчитано и обновлено по текущему
+          Z-Offset.
+        apply_z_offset_probe: >-
+          Z-смещение датчика/Bl touch будет рассчитано и обновлено на основе текущего
+          Z-Offset.
     table:
       header:
         actions: Действия
@@ -333,6 +346,7 @@ app:
   setting:
     btn:
       add_camera: Добавить камеру
+      add_filter: Добавить фильтр
       add_thermal_preset: Добавить пресет температур
       add_user: Добавить пользователя
       reset: Сбросить
@@ -352,6 +366,7 @@ app:
       confirm_on_estop: Требовать подтверждение при аварийной остановке
       confirm_on_power_device_change: Требуется подтверждение при изменении мощности устройства
       confirm_dirty_editor_close: Требовать подтверждения при закрытии редактора с несохраненными изменениями
+      contains: Содержит
       dark_mode: Тёмная тема
       default_extrude_length: Длина экструдирования по умолчанию
       default_extrude_speed: Скорость экструдера по умолчанию
@@ -361,12 +376,16 @@ app:
       draw_background: Отображать фон
       enable: Включить
       enable_notifications: Включить оповещения
+      expression: Выражение
       extrusion_line_width: Ширина линии экструзии
       flip_horizontal: Сдвиг по горизонтали
       flip_vertical: Сдвиг по вертикали
+      filter: Filter | Фильтры
       fps_target: Целевой FPS
+      fps_idle_target: Цель FPS, когда она не в фокусе
       height: Высота
       gcode_coords: Испрользовать координаты GCode
+      group_lower_layers: Группировать нижние слои
       invert_x_control: Инвертировать управление по оси X
       invert_y_control: Инвертировать управление по оси Y
       invert_z_control: Инвертировать управление по оси Z
@@ -377,10 +396,13 @@ app:
       reset: Сбросить настройки
       retraction_icon_size: Размер иконки ретракта
       show_animations: Показывать анимации
+      starts_with: Начинается с
       theme_preset: Цветовая схема
       thermal_preset_gcode: GCode
       thermal_preset_name: Имя профиля
+      type: Тип
       z_adjust_values: Значения подстройки оси Z
+      date_time_format: Формат даты и времени
     timer_options:
       duration: Только продолжительность
       filament: Оценка филамента
@@ -388,6 +410,7 @@ app:
       slicer: Слайсер
     title:
       authentication: Аутентификация
+      console: Консоль
       camera: Камера | Камеры
       gcode_preview: Предпросмотр GCode
       general: Общие
