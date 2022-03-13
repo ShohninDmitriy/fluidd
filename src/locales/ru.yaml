@@ -341,6 +341,7 @@ app:
   printer:
     state:
       busy: Занят
+      cancelled: Отмененый
       complete: Готово
       idle: Ждёт задачу
       loading: Загрузка
@@ -485,7 +486,7 @@ app:
       commit_history: История коммитов
       commits_on: Коммиты на
       committed: Закоммичено
-      dirty: DIRTY
+      dirty: Грязный
       invalid: Ошибка
       os_packages: Системные пакеты
       package_list: Список пакетов
