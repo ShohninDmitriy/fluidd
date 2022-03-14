@@ -54,7 +54,11 @@ export const defaultState = (): ConfigState => {
         zAdjustDistances: [0.005, 0.01, 0.025, 0.050],
         enableVersionNotifications: true,
         confirmOnEstop: false,
-        confirmOnPowerDeviceChange: false
+        confirmOnPowerDeviceChange: false,
+        dateformat: 'MMM. DD,',
+        timeformat: 'hh:mm a',
+        showRateOfChange: false,
+        flipConsoleLayout: false
       },
       theme: {
         isDark: true,
@@ -65,6 +69,10 @@ export const defaultState = (): ConfigState => {
         currentTheme: {
           primary: '#2196F3'
         }
+      },
+      editor: {
+        confirmDirtyEditorClose: true,
+        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.md', '.sh', '.txt']
       },
       dashboard: {
         tempPresets: []
@@ -104,6 +112,7 @@ export const defaultState = (): ConfigState => {
         retractionIconSize: 0.6,
         drawBackground: true,
         showAnimations: true,
+        groupLowerLayers: false,
         flip: {
           horizontal: false,
           vertical: true

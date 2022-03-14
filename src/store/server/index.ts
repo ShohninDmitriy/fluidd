@@ -13,17 +13,15 @@ export const defaultState = (): ServerState => {
       klippy_connected: false, // indicates if klippy is disconnected vs shutdown.
       klippy_state: '',
       components: [],
-      registered_directories: []
+      registered_directories: [],
+      warnings: []
     },
     system_info: null,
     config: {
       authorization: {
         enabled: true
       },
-      server: {
-        gcode_store_size: 1000,
-        temperature_store_size: 1200
-      }
+      server: {}
     },
     moonraker_stats: [],
     throttled_state: {

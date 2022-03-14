@@ -20,7 +20,6 @@ import vuetify from './plugins/vuetify'
 import VueVirtualScroller from 'vue-virtual-scroller'
 import VueMeta from 'vue-meta'
 import VuetifyConfirm from 'vuetify-confirm'
-import vueHeadful from 'vue-headful'
 import { InlineSvgPlugin } from 'vue-inline-svg'
 import { loadWASM } from 'onigasm'
 
@@ -33,11 +32,10 @@ import { FiltersPlugin } from './plugins/filters'
 import { SocketPlugin } from './plugins/socketClient'
 import { ColorSetPlugin } from './plugins/colorSet'
 import { DayJSPlugin } from './plugins/dayjs'
-import { plugin } from 'echarts-for-vue'
 
 // Import ECharts
-// import * as echarts from 'echarts'
-import * as echarts from 'echarts/core'
+import ECharts from 'vue-echarts'
+import { use as echartsUse } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { Grid3DComponent } from 'echarts-gl/components'
 import { SurfaceChart } from 'echarts-gl/charts'
@@ -49,7 +47,6 @@ import {
   LegendComponent,
   VisualMapComponent
 } from 'echarts/components'
-
 import { SVGRenderer, CanvasRenderer } from 'echarts/renderers'
 
 // Main App component
@@ -64,13 +61,10 @@ import Blur from '@/directives/blur'
 // Directives...
 Vue.directive('blur', Blur)
 
-// ...and 3rd party
-Vue.component('vue-headful', vueHeadful)
-
 // Use any Plugins
 
 // Configure echarts
-echarts.use([
+echartsUse([
   DatasetComponent,
   TooltipComponent,
   GridComponent,
@@ -83,8 +77,8 @@ echarts.use([
   SVGRenderer,
   CanvasRenderer
 ])
+Vue.component('VChart', ECharts)
 
-Vue.use(plugin, { echarts })
 Vue.use(VueVirtualScroller)
 Vue.use(DayJSPlugin)
 Vue.use(FiltersPlugin)
