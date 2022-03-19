@@ -225,6 +225,7 @@ app:
       'off': Выключить
       password: Пароль
       power: Питание
+      pressure_advance: Повышение давления
       printers: Принтеры
       progress: Прогресс
       requested_speed: Запрошенная скорость
@@ -233,6 +234,7 @@ app:
       save_as: Сохранить как
       services: Сервисы
       slicer: Слайсер
+      smooth_time: Сглаживающее время
       speed: Скорость
       sqv: Скорость прохождения угла
       total: Весь
@@ -337,7 +339,9 @@ app:
       reload_restart_klipper: Перезагружает конфигурацию Klipper и перезапускает MCU.
       restart_klipper: Перезагружает сервис Klipper.
   history:
-    msg: {}
+    msg:
+      confirm_jobs: Вы уверены? Это очистит все выполненые работы.
+      confirm_stats: Вы уверены? Это очистит всю статистику.
   printer:
     state:
       busy: Занят
@@ -415,6 +419,7 @@ app:
       theme_preset: Цветовая схема
       thermal_preset_gcode: GCode
       thermal_preset_name: Имя профиля
+      toolhead_move_distances: Значения расстояния перемещения головки
       type: Тип
       z_adjust_values: Значения подстройки оси Z
       date_time_format: Формат даты и времени
