@@ -263,6 +263,7 @@ app:
       error:
         arrayofnums: Только цифры
         exists: Уже существует
+        invalid_number: Неверный номер
         invalid_url: Невалидный URL
         invalid_expression: Недопустимое выражение
         max: Макс %{max}
