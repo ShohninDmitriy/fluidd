@@ -37,6 +37,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        
+      - name: Create Artifact
+        run: |
+          cd ./dist
+          zip -r fluidd.zip ./
+          cd ..
 
       - name: Copy output
         run: cp ${{ github.workspace }}/dist/fluidd.zip fluidd-latest.zip
