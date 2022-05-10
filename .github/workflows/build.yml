@@ -13,15 +13,20 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  # This workflow contains a single job called "build"
   build:
-    runs-on: ubuntu-20.04
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Fetch repo
+        uses: actions/checkout@v3
 
       - name: Install node
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
 
@@ -36,12 +41,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Create Artifact
-        run: |
-          cd ./dist
-          zip -r fluidd.zip ./
-          cd ..
 
       - name: Copy output
         run: cp ${{ github.workspace }}/dist/fluidd.zip fluidd-latest.zip
