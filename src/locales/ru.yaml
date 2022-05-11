@@ -85,6 +85,8 @@ app:
       file_name: Имя файла
       transfer_rate: Скорость передачи данных
       uploaded: Загружен
+      view_section_documentation: >-
+        Просмотр '%{section}' документации
     msg:
       confirm: Вы уверены? Это приведет к удалению всех файлов и папок внутри.
       not_found: Файлы не найдены
@@ -102,6 +104,9 @@ app:
     tooltip:
       low_on_space: Мало места на диске
       root_disabled: Root недоступен. Проверьте файлы логов.
+    url:
+      klipper_config: 'https://www.klipper3d.org/Config_Reference.html#%{hash}'
+      moonraker_config: 'https://moonraker.readthedocs.io/en/latest/configuration/#%{hash}'
   gcode:
     btn:
       load_current_file: Загрузить текущий файл
@@ -212,7 +217,9 @@ app:
       finish_time: Конец
       flow: Поток
       free: Свободно
-      heaters_busy: Принтер в данный момент занят. Выключение нагревателей может привести к сбою печати.
+      heaters_busy: >-
+        Принтер в данный момент занят. Выключение нагревателей может привести 
+	к сбою печати.
       high: Выше
       host: Хост
       layer: Слой
@@ -375,10 +382,10 @@ app:
       video: IP Камера
       iframe: Страница HTTP
     camera_rotate_options:
-      none: Нет
       90: 90°
       180: 180°
       270: 270°
+      none: Нет
     label:
       all_off: Всё выключить
       all_on: Всё включить
