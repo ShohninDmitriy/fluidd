@@ -96,6 +96,7 @@ app:
     title:
       add_dir: Добавить папку
       add_file: Добавить файл
+      command_palette: Палитра команд
       download_file: Получение файла
       rename_dir: Переименовать папку
       rename_file: Переименовать файл
@@ -115,6 +116,7 @@ app:
       layer: Слой
       layers: Слои
       parsed: Считано
+      show_current_layer: Показать текущий слой
       show_extrusions: Показывать
       show_moves: Показывать перемещения
       show_next_layer: Показывать следующий слой
@@ -425,7 +427,9 @@ app:
       reset: Сбросить настройки
       retraction_icon_size: Размер иконки ретракта
       show_animations: Показывать анимации
+      show_barometric_pressure: Показать барометрическое давление
       show_rate_of_change: Показать скорость изменения температуры
+      show_relative_humidity: Показать относительную влажность
       starts_with: Начинается с
       theme_preset: Цветовая схема
       thermal_preset_gcode: GCode
