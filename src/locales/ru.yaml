@@ -471,6 +471,7 @@ app:
       distribution_codename: Кодовое название
       distribution_like: Тип дистрибьютива
       distribution_name: Дистрибьютив
+      frequency: Частота
       hardware_desc: Описание оборудования
       hostname: Имя в сети
       klipper_load: Klipper
@@ -478,7 +479,9 @@ app:
       manufacturer: Производитель
       mcu_awake: Время работы {mcu}
       mcu_bandwidth: Частота {mcu}
+      mcu_information: Информация {mcu}
       mcu_load: Загрузка {mcu}
+      micro_controller: Микроконтроллер
       model: Модель CPU
       moonraker_load: Moonraker
       processor_desc: Процессор
@@ -488,6 +491,7 @@ app:
       system_memory: Оперативная память
       system_utilization: Загрузка системы
       total_memory: Всего памяти
+      version: Версия
   tool:
     btn:
       home_x: X
