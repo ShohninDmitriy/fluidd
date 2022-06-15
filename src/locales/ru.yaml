@@ -428,6 +428,7 @@ app:
       retraction_icon_size: Размер иконки ретракта
       show_animations: Показывать анимации
       show_barometric_pressure: Показать барометрическое давление
+      show_code_lens: Показать Код Объектива
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
       starts_with: Начинается с
