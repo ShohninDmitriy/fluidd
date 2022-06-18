@@ -389,6 +389,10 @@ app:
       auto_edit_extensions: Extensions to automatically open in edit mode
       camera_flip_x: Flip horizontally
       camera_flip_y: Flip vertically
+      camera_fullscreen_action:
+        title: Fullscreen action
+        embed: Embed
+        rawstream: Raw stream
       camera_rotate_by: Rotate by
       camera_stream_type: Stream type
       camera_url: Camera Url
@@ -493,12 +497,14 @@ app:
       home_y: 'Y'
       home_all: All
     tooltip:
+      absolute_positioning: Absolute Positioning
       extruder_disabled: extruder disabled, below min_extrude_temp (%{min}<small>°C</small>)
       home_xy: Home XY
       home_z: Home Z
       motors_off: MOTORS OFF
       z_tilt_adjust: Z_Tilt_Adjust
       quad_gantry_level: QGL
+      relative_positioning: Relative Positioning
       screws_tilt_calculate: Screws_Tilt_Calculate
       bed_screws_adjust: BED_SCREWS_ADJUST
   version:
