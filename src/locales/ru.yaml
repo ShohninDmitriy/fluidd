@@ -391,6 +391,10 @@ app:
       auto_edit_extensions: Расширения для автоматического открытия в режиме редактирования
       camera_flip_x: Отразить по горизонтали
       camera_flip_y: Отразить по вертикали
+      camera_fullscreen_action:
+        title: Полноэкранное действие
+        embed: Встроить
+        rawstream: Необработанный поток
       camera_rotate_by: Повернуть на
       camera_stream_type: Тип потока
       camera_url: URL камеры
@@ -499,12 +503,14 @@ app:
       home_y: 'Y'
       home_all: Все
     tooltip:
+      absolute_positioning: Абсолютное позиционирование
       extruder_disabled: экструдер отключён, температура ниже чем (%{min}<small>°C</small>)
       home_xy: Домой XY
       home_z: Домой Z
       motors_off: МОТОРЫ ВЫКЛ
       z_tilt_adjust: Z Регулировка наклона
       quad_gantry_level: QGL
+      relative_positioning: Относительное позиционирование
       screws_tilt_calculate: Расчет Наклона Винтами
       bed_screws_adjust: РЕГУЛИРОВКА ВИНТОВ СТОЛА
   version:
