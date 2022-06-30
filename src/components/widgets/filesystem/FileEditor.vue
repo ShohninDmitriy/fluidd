@@ -32,7 +32,11 @@ export default class FileEditor extends Vue {
   @Prop({ type: Boolean, default: false })
   readonly!: boolean;
 
-  @Ref('monaco-editor') monacoEditor!: HTMLElement
+  @Prop({ type: Boolean, default: true })
+  codeLens!: boolean;
+
+  @Ref('monaco-editor')
+  readonly monacoEditor!: HTMLElement
 
   // Our editor, once init'd.
   editor: Monaco.editor.IStandaloneCodeEditor | null = null
@@ -41,6 +45,7 @@ export default class FileEditor extends Vue {
   opts: Monaco.editor.IStandaloneEditorConstructionOptions = {
     contextmenu: false,
     readOnly: this.readonly,
+    codeLens: this.codeLens,
     automaticLayout: true,
     fontSize: 16,
     scrollbar: {

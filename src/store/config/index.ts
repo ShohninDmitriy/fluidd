@@ -58,12 +58,14 @@ export const defaultState = (): ConfigState => {
         enableVersionNotifications: true,
         confirmOnEstop: false,
         confirmOnPowerDeviceChange: false,
+        confirmOnSaveConfigAndRestart: true,
         dateformat: 'MMM. DD,',
         timeformat: 'hh:mm a',
         showRateOfChange: false,
         showRelativeHumidity: true,
         showBarometricPressure: true,
-        flipConsoleLayout: false
+        flipConsoleLayout: false,
+        cameraFullscreenAction: 'embed'
       },
       theme: {
         isDark: true,
@@ -77,7 +79,8 @@ export const defaultState = (): ConfigState => {
       },
       editor: {
         confirmDirtyEditorClose: true,
-        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.md', '.sh', '.txt']
+        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.md', '.sh', '.txt'],
+        codeLens: true
       },
       dashboard: {
         tempPresets: []
