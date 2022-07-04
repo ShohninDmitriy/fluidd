@@ -415,6 +415,7 @@ app:
       camera_url: URL камеры
       confirm_on_estop: Требовать подтверждение при аварийной остановке
       confirm_on_power_device_change: Требуется подтверждение при изменении мощности устройства
+      confirm_on_save_config_and_restart: Просмотрите Ожидающие изменения конфигурации перед сохранением и перезапуском
       confirm_dirty_editor_close: Требовать подтверждения при закрытии редактора с несохраненными изменениями
       contains: Содержит
       dark_mode: Тёмная тема
@@ -425,7 +426,6 @@ app:
       default_toolhead_z_speed: Скорость инструмента для оси Z по умолчанию
       draw_background: Отображать фон
       enable: Включить
-      enable_notifications: Включить оповещения
       enable_notifications: Включить уведомления
       expression: Выражение
       extrusion_line_width: Ширина линии экструзии
