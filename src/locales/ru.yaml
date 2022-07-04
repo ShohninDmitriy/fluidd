@@ -135,6 +135,7 @@ app:
       add_printer: Добавить принтер
       adjust_layout: Настроить компановку интерфейса панели управления
       all: Все
+      auth_unsure: Не уверены, почему вы это видите?
       calibrate: Калибровка
       cancel: Отменить
       clear_profile: Очистить профиль
@@ -144,8 +145,10 @@ app:
       edit: Редактировать
       exit_layout: Выйти из режима редактирования
       extrude: Экструдировать
+      forgot_password: Забыли свой пароль?
       heaters_off: Отключить нагрев
       load_all: Загрузить все
+      login: Логин
       more_information: Больше информации
       pause: Пауза
       preheat: Преднагрев
@@ -169,6 +172,7 @@ app:
       save: Сохранить
       save_as: Сохранить как
       save_restart: Сохранить и перезагрузить
+      save_config_and_restart: Сохранить конфигурацию и перезагрузить
       send: Отправить
       set_color: Установить цвет
       shutdown: Отключение
@@ -200,12 +204,14 @@ app:
       add_user: Добавить пользователя
       api_key: Ключ API
       api_url: API URL
+      auth_source: Источник аутентификации
       category: Категория
       change_password: Изменить пароль
       clear_all: Очистить все
       color: Цвет
       confirm: Подтвердить
       current_password: Текущий пароль
+      current_user: Текущий пользователь
       disabled_while_printing: Отключено во время печати
       edit_camera: Редактировать камеру
       edit_filter: Редактировать фильтр
@@ -223,9 +229,12 @@ app:
       host: Хост
       layer: Слой
       layout: Компоновка интерфейса
+      ldap: LDAP
       longest_job: Самая долгая печать
       low: Ниже
+      user_managed_source: Пользователь, управляемый аутентификацией %{source}
       m117: M117
+      moonraker: Moonraker
       name: Имя
       new_password: Новый пароль
       no_notifications: Нет уведомлений
@@ -257,6 +266,7 @@ app:
       unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
       used: Использованно
+      username: Имя пользователя
       variance: Различие
       velocity: Скорость
       visible: Видимый
@@ -273,6 +283,7 @@ app:
     simple_form:
       error:
         arrayofnums: Только цифры
+        credentials: Неверные учетные данные
         exists: Уже существует
         invalid_number: Неверный номер
         invalid_url: Невалидный URL
@@ -336,6 +347,7 @@ app:
       limits: Лимиты принтера
       macros: Макросы
       other_files: Другие Файлы
+      pending_configuration_changes: Ожидающие Изменения Конфигурации
       retract: Настройки ретракта
       runout_sensors: Датчик контроля филамента
       settings: Настройки
@@ -348,6 +360,7 @@ app:
       tune: Подстройка
     tooltip:
       estop: Немедленная остановка
+      notifications: Уведомления
       reload_klipper: Перезагружает конфигурацию Klipper.
       reload_restart_klipper: Перезагружает конфигурацию Klipper и перезапускает MCU.
       restart_klipper: Перезагружает сервис Klipper.
@@ -389,6 +402,8 @@ app:
       all_off: Всё выключить
       all_on: Всё включить
       auto_edit_extensions: Расширения для автоматического открытия в режиме редактирования
+      auto_follow_on_file_load: Автоматически следить за ходом загрузки файла
+      auto_load_on_print_start: Автоматическая загрузка файла при запуске печати
       camera_flip_x: Отразить по горизонтали
       camera_flip_y: Отразить по вертикали
       camera_fullscreen_action:
@@ -411,6 +426,7 @@ app:
       draw_background: Отображать фон
       enable: Включить
       enable_notifications: Включить оповещения
+      enable_notifications: Включить уведомления
       expression: Выражение
       extrusion_line_width: Ширина линии экструзии
       flip_horizontal: Сдвиг по горизонтали
@@ -435,6 +451,7 @@ app:
       show_code_lens: Показать Код Объектива
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
+      shutdownOnAppBar: Показать значок завершения работы на верхней панели
       starts_with: Начинается с
       theme_preset: Цветовая схема
       thermal_preset_gcode: GCode
@@ -594,4 +611,3 @@ app:
       variable_fps: Переменный FPS
       variable_fps_min: Минимальная Частота Кадров
       variable_fps_max: Максимальная Частота Кадров
-
