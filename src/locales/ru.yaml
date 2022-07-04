@@ -399,8 +399,6 @@ app:
       270: 270°
       none: Нет
     label:
-      all_off: All off
-      all_on: All on
       auto_edit_extensions: Расширения для автоматического открытия в режиме редактирования
       auto_follow_on_file_load: Автоматически следить за ходом загрузки файла
       auto_load_on_print_start: Автоматическая загрузка файла при запуске печати
