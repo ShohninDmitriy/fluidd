@@ -135,6 +135,7 @@ app:
       add_printer: Добавить принтер
       adjust_layout: Настроить компановку интерфейса панели управления
       all: Все
+      auth_unsure: Не уверены, почему вы это видите?
       calibrate: Калибровка
       cancel: Отменить
       clear_profile: Очистить профиль
@@ -144,8 +145,10 @@ app:
       edit: Редактировать
       exit_layout: Выйти из режима редактирования
       extrude: Экструдировать
+      forgot_password: Забыли свой пароль?
       heaters_off: Отключить нагрев
       load_all: Загрузить все
+      login: Логин
       more_information: Больше информации
       pause: Пауза
       preheat: Преднагрев
@@ -169,16 +172,17 @@ app:
       save: Сохранить
       save_as: Сохранить как
       save_restart: Сохранить и перезагрузить
+      save_config_and_restart: Сохранить конфигурацию и перезагрузить
       send: Отправить
       set_color: Установить цвет
       shutdown: Отключение
+      snooze: Вздремнуть
       socket_reconnect: Повторное подключение
       socket_refresh: Принудительно обновление
       upload: Загрузить
       upload_print: Загрузить и напечатать
       view: Вид
       reset_stats: Сбросить Статистику
-      snooze: Вздремнуть
     error:
       app_setup_link: >-
         Требования для установки Fluidd можно посмотреть <a target="_blank"
@@ -228,6 +232,7 @@ app:
       ldap: LDAP
       longest_job: Самая долгая печать
       low: Ниже
+      user_managed_source: Пользователь, управляемый аутентификацией %{source}
       m117: M117
       moonraker: Moonraker
       name: Имя
