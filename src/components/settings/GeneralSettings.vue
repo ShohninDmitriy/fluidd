@@ -84,6 +84,24 @@
       <v-divider />
 
       <app-setting
+        :title="$t('app.setting.label.power_toggle_in_top_nav')"
+      >
+        <v-select
+          v-model="topNavPowerToggle"
+          filled
+          dense
+          single-line
+          hide-details="auto"
+          :items="[{ text: $tc('app.setting.label.none'), value: null }, ...powerDevicesList]"
+          :value="topNavPowerToggle"
+          item-value="value"
+          item-text="text"
+        />
+      </app-setting>
+
+      <v-divider />
+
+      <app-setting
         :title="$t('app.setting.label.confirm_on_power_device_change')"
       >
         <v-switch
@@ -192,6 +210,22 @@ export default class GeneralSettings extends Mixins(StateMixin) {
       value,
       server: true
     })
+  }
+
+  get topNavPowerToggle () {
+    return this.$store.state.config.uiSettings.general.topNavPowerToggle
+  }
+
+  set topNavPowerToggle (value: boolean) {
+    this.$store.dispatch('config/saveByPath', {
+      path: 'uiSettings.general.topNavPowerToggle',
+      value,
+      server: true
+    })
+  }
+
+  get powerDevicesList () {
+    return this.$store.state.power.devices.map((device: { device: string }) => ({ text: device.device, value: device.device }))
   }
 
   get confirmOnPowerDeviceChange () {

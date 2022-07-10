@@ -70,6 +70,31 @@
       </div>
 
       <div
+        v-if="authenticated && socketConnected && topNavPowerToggle"
+      >
+        <v-tooltip bottom>
+          <template #activator="{ on, attrs }">
+            <app-btn
+              fab
+              small
+              :elevation="0"
+              class="mr-1 bg-transparent"
+              color="transparent"
+              :disabled="topNavPowerToggleDisabled"
+              v-bind="attrs"
+              v-on="on"
+              @click="handlePowerToggle()"
+            >
+              <v-icon>
+                {{ topNavPowerDeviceOn ? '$powerOn' : '$powerOff' }}
+              </v-icon>
+            </app-btn>
+          </template>
+          <span>{{ $t(`app.general.label.turn_device_${topNavPowerDeviceOn ? 'off' : 'on'}`, { device: topNavPowerToggle }) }}</span>
+        </v-tooltip>
+      </div>
+
+      <div
         v-if="authenticated && socketConnected"
         class="mr-1"
       >
@@ -135,6 +160,8 @@ import PendingChangesDialog from '@/components/settings/PendingChangesDialog.vue
 import AppSaveConfigAndRestartBtn from './AppSaveConfigAndRestartBtn.vue'
 import { defaultState } from '@/store/layout/index'
 import StateMixin from '@/mixins/state'
+import ServicesMixin from '@/mixins/services'
+import { SocketActions } from '@/api/socketActions'
 
 @Component({
   components: {
@@ -143,7 +170,7 @@ import StateMixin from '@/mixins/state'
     AppSaveConfigAndRestartBtn
   }
 })
-export default class AppBar extends Mixins(StateMixin) {
+export default class AppBar extends Mixins(StateMixin, ServicesMixin) {
   menu = false
   userPasswordDialogOpen = false
   pendingChangesDialogOpen = false
@@ -172,6 +199,10 @@ export default class AppBar extends Mixins(StateMixin) {
     return this.$store.getters['printer/getSaveConfigPending']
   }
 
+  get devicePowerComponentEnabled () {
+    return this.$store.getters['server/componentSupport']('power')
+  }
+
   get theme () {
     return this.$store.getters['config/getTheme']
   }
@@ -182,6 +213,23 @@ export default class AppBar extends Mixins(StateMixin) {
 
   get inLayout (): boolean {
     return (this.$store.state.config.layoutMode)
+  }
+
+  get topNavPowerToggle (): null | string {
+    return this.$store.state.config.uiSettings.general.topNavPowerToggle
+  }
+
+  get topNavPowerDevice () {
+    return this.$store.state.power.devices.find((device: { device: string }) => device.device === this.topNavPowerToggle)
+  }
+
+  get topNavPowerDeviceOn () {
+    return this.topNavPowerDevice?.status === 'on'
+  }
+
+  get topNavPowerToggleDisabled (): boolean {
+    const device = this.topNavPowerDevice
+    return (!device) || (this.printerPrinting && device.locked_while_printing) || ['init', 'error'].includes(device.status) || (!this.devicePowerComponentEnabled)
   }
 
   handleExitLayout () {
@@ -197,6 +245,23 @@ export default class AppBar extends Mixins(StateMixin) {
         container2: layout.layouts.dashboard.container2
       }
     })
+  }
+
+  async handlePowerToggle () {
+    const confirmOnPowerDeviceChange = this.$store.state.config.uiSettings.general.confirmOnPowerDeviceChange
+    let res: boolean | undefined = true
+    if (confirmOnPowerDeviceChange) {
+      res = await this.$confirm(
+        this.$tc('app.general.simple_form.msg.confirm_power_device_toggle'),
+        { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
+      )
+    }
+
+    if (res) {
+      const device = this.topNavPowerDevice
+      const state = (device.status === 'on') ? 'off' : 'on'
+      SocketActions.machineDevicePowerToggle(device.device, state)
+    }
   }
 
   saveConfigAndRestart (force = false) {
@@ -269,18 +334,22 @@ export default class AppBar extends Mixins(StateMixin) {
     text-decoration: none;
   }
 
-  .v-toolbar--extended ::v-deep .v-toolbar__content {
+  .v-toolbar--extended :deep(.v-toolbar__content) {
     box-shadow: 0px 2px 4px -1px rgb(0 0 0 / 20%), 0px 4px 5px 0px rgb(0 0 0 / 14%), 0px 1px 10px 0px rgb(0 0 0 / 12%);
   }
 
-  ::v-deep .v-toolbar__extension {
+  :deep(.v-toolbar__extension) {
     flex: 1 1 auto;
     align-items: center;
     justify-content: center;
     padding: 0;
   }
 
-  ::v-deep .v-toolbar__content {
+  :deep(.v-toolbar__content) {
     padding-left: 0;
+  }
+
+  .v-btn.v-btn--disabled.v-btn--has-bg.bg-transparent {
+    background: none !important;
   }
 </style>

@@ -19,7 +19,7 @@
     </template>
 
     <template #menu>
-      <app-btn-collapse-group>
+      <app-btn-collapse-group :collapsed="menuCollapsed">
         <app-btn
           small
           class="ma-1"
@@ -99,7 +99,10 @@ import { TemperaturePreset } from '@/store/config/types'
 })
 export default class TemperatureCard extends Mixins(StateMixin) {
   @Prop({ type: Boolean, default: true })
-  enabled!: boolean
+  public enabled!: boolean
+
+  @Prop({ type: Boolean, default: false })
+  public menuCollapsed!: boolean
 
   @Ref('thermalchart')
   readonly thermalChart!: ThermalChart
