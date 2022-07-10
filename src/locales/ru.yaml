@@ -112,6 +112,7 @@ app:
       load_current_file: Загрузить текущий файл
     label:
       current_layer_height: Текущая высота слоя
+      exclude_object: Исключить Объект
       follow_progress: Следить за процессом
       layer: Слой
       layers: Слои
@@ -224,7 +225,8 @@ app:
       finish_time: Конец
       flow: Поток
       free: Свободно
-      heaters_busy: Принтер в данный момент занят. Выключение нагревателей может привести к сбою печати.
+      heaters_busy: >-
+        Принтер в данный момент занят. Выключение нагревателей может привести к сбою печати.
       high: Выше
       host: Хост
       layer: Слой
@@ -262,6 +264,8 @@ app:
       total_print_time_avg: Среднее время печати
       total_time: Общее время
       total_time_avg: Среднее время
+      turn_device_on: %{device} включить
+      turn_device_off: %{device} выключить
       uncategorized: Вне категории
       unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
@@ -295,6 +299,7 @@ app:
         required: Требуется
       msg:
         confirm: Вы уверены?
+        confirm_exclude_object: Вы уверены, что хотите исключить этот объект из печати?
         confirm_reboot_host: Вы уверены? Это приведёт к перезагрузке вашей хост системы.
         confirm_shutdown_host: Вы уверены? Это приведёт к выключению вашей хост системы.
         confirm_service_restart: Вы уверены, что хотите перезапустить службу %{name}?
@@ -442,6 +447,7 @@ app:
       invert_z_control: Инвертировать управление по оси Z
       language: Язык интерфейса
       move_line_width: Ширина линии движения
+      none: Никто
       primary_color: Основной цвет
       printer_name: Имя принтера
       reset: Сбросить настройки
