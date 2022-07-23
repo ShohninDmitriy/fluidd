@@ -462,7 +462,7 @@ app:
       show_code_lens: Показать Код Объектива
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
-      shutdownOnAppBar: Показать значок завершения работы на верхней панели
+      show_save_config_and_restart: Показать значок завершения работы на верхней панели
       starts_with: Начинается с
       theme_preset: Цветовая схема
       thermal_preset_gcode: GCode
@@ -493,6 +493,7 @@ app:
       gcode_coords: >-
         Использовать GCode положение вместо положение инструментальной головки
         на панели управления
+      show_manual_probe_dialog_automatically: Автоматически показывает диалоговое окно помощника при запуске инструмента ручного зондирования
   socket:
     msg:
       connecting: Подключение к moonraker...
