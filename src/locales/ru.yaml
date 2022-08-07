@@ -77,6 +77,8 @@ app:
       label:
         print_start_time: Отфильтровать напечатанное
         print_start_time_desc: Отфильтровывает уже напечатанные элементы.
+        hidden_files: Фильтровать скрытые файлы
+        klipper_backup_files: Фильтровать файлы резервных копий Klipper
     label:
       dir_name: Имя папки
       disk_usage: Использование дискового пространства
@@ -138,6 +140,7 @@ app:
       add_file: Добавить файл
       add_printer: Добавить принтер
       adjust_layout: Настроить компановку интерфейса панели управления
+      adjusted: Настроенный
       all: Все
       auth_unsure: Не уверены, почему вы это видите?
       calibrate: Калибровка
@@ -201,6 +204,7 @@ app:
     label:
       accel_to_decel: Ускорения и торможения
       acceleration: Ускорение
+      accepted_screws: Принятые винты
       actual_time: Фактический
       add_camera: Добавить камеру
       add_filter: Добавить фильтр
@@ -246,6 +250,7 @@ app:
       'on': 'Включить'
       'off': Выключить
       password: Пароль
+      partial_of_total: '%{partial} of %{total}'
       power: Питание
       pressure_advance: Повышение давления
       printers: Принтеры
@@ -254,6 +259,9 @@ app:
       retract_length: Длина ретракта
       retract_speed: Скорость ретракта
       save_as: Сохранить как
+      screw_index: Винтовой указатель
+      screw_name: Название винта
+      screw_number: Винт %{index}
       services: Сервисы
       slicer: Слайсер
       smooth_time: Сглаживающее время
@@ -287,6 +295,8 @@ app:
     msg:
       password_changed: Пароль изменен
       wrong_password: Ой, что-то пошло не так. Пароль введен верно?
+      bed_screws_adjust: >-
+        Click <b>Adjusted</b> if a significant adjustment is necessary on the current screw; otherwise, click <b>Accept</b> to continue.
     simple_form:
       error:
         arrayofnums: Только цифры
@@ -473,6 +483,7 @@ app:
       date_time_format: Формат даты и времени
       force_move_toggle_warning: Требуется подтверждение при активации force_move
       show_manual_probe_dialog_automatically: Автоматическое отображение диалогового окна ручного зондирования
+      show_bed_screws_adjust_dialog_automatically: Автоматическое отображение диалогового окна Регулировки винтов станины
     timer_options:
       duration: Только продолжительность
       filament: Оценка филамента
@@ -533,6 +544,9 @@ app:
       home_x: X
       home_y: 'Y'
       home_all: Все
+    title:
+      bed_screws_adjust: Винты Кровати Регулируют
+      manual_probe: Ручной Зонд
     tooltip:
       absolute_positioning: Абсолютное позиционирование
       extruder_disabled: экструдер отключён, температура ниже чем (%{min}<small>°C</small>)
