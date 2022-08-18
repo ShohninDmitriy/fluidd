@@ -275,8 +275,8 @@ app:
       total_print_time_avg: Среднее время печати
       total_time: Общее время
       total_time_avg: Среднее время
-      turn_device_on: . %{device} включить
-      turn_device_off: . %{device} выключить
+      turn_device_on: Включить %{device}
+      turn_device_off: Выключить %{device} 
       uncategorized: Вне категории
       unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
