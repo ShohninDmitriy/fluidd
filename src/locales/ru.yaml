@@ -275,8 +275,8 @@ app:
       total_print_time_avg: Среднее время печати
       total_time: Общее время
       total_time_avg: Среднее время
-      turn_device_on: %{device} включить
-      turn_device_off: %{device} выключить
+      turn_device_on: . %{device} включить
+      turn_device_off: . %{device} выключить
       uncategorized: Вне категории
       unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
@@ -316,8 +316,8 @@ app:
         confirm_forcemove_toggle: Вы уверены? Это может привести к повреждению принтера.
         confirm_reboot_host: Вы уверены? Это приведёт к перезагрузке вашей хост системы.
         confirm_shutdown_host: Вы уверены? Это приведёт к выключению вашей хост системы.
-        confirm_service_restart: Вы уверены, что хотите перезапустить службу %{name}?
-        confirm_service_stop: Вы уверены, что хотите остановить службу %{name}?
+        confirm_service_restart: Вы уверены, что хотите перезапустить службу %{name} ?
+        confirm_service_stop: Вы уверены, что хотите остановить службу %{name} ?
         confirm_power_device_toggle: Вы уверены? Это позволит переключить питание этого устройства.
         unsaved_changes: У вас есть несохраненные изменения. Вы уверены, что хотите закрыть файл?
         apply_z_offset_endstop: >-
