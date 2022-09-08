@@ -386,6 +386,7 @@ app:
       browse_metrics: Доступные в браузере показатели
       estop: Немедленная остановка
       managed_by_moonraker: Управляется вашей конфигурацией moonraker
+      notifications: Уведомления
       reload_klipper: Перезагружает конфигурацию Klipper.
       reload_restart_klipper: Перезагружает конфигурацию Klipper и перезапускает MCU.
       restart_klipper: Перезагружает сервис Klipper.
@@ -532,10 +533,15 @@ app:
       thermal_presets: Температурные профили
       tool: Инструмент
     tooltip:
+      diagnostics_performance: '[БЕТА-ВЕРСИЯ] Регистрация диагностической информации может повлиять на производительность'
       gcode_coords: >-
         Использовать GCode положение вместо положение инструментальной головки
         на панели управления
-      show_manual_probe_dialog_automatically: Автоматически показывает диалоговое окно помощника при запуске инструмента ручного зондирования
+      show_manual_probe_dialog_automatically: >-
+        Автоматически показывает диалоговое окно помощника при запуске инструмента
+	ручного зондирования
+      show_bed_screws_adjust_dialog_automatically: >-
+        Автоматически показывает диалоговое окно помощника при запуске инструмента BED_SCREWS_ADJUST
   socket:
     msg:
       connecting: Подключение к moonraker...
