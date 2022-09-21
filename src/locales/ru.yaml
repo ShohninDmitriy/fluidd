@@ -267,6 +267,7 @@ app:
       smooth_time: Сглаживающее время
       speed: Скорость
       sqv: Скорость прохождения угла
+      thumbnail_size: Размер миниатюры
       total: Весь
       total_filament: Всего использованно филамента
       total_filament_avg: Среднее на печать
