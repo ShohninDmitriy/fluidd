@@ -335,6 +335,8 @@ app:
         estimated_time: Ожидаемое время
         filament: Филамент
         filament_used: Использованный филамент
+        filament_name: Название филамента
+        filament_type: Тип филамента
         filament_weight_total: Вес филамента
         first_layer_bed_temp: Температура стола на первом слое
         first_layer_extr_temp: Температура экструдера на первом слое
@@ -344,6 +346,7 @@ app:
         layer_height: Высота слоя
         modified: Изменён
         name: Имя
+        nozzle_diameter: Диаметр сопла
         print_duration: Продолжительность печати
         size: Размер
         slicer: Слайсер
