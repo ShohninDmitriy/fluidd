@@ -311,6 +311,7 @@ app:
         min_or_0: Мин %{min} или 0
         password_username: Не совпадает имя пользователя
         required: Требуется
+        invalid_aspect: Недопустимое Соотношение Сторон
       msg:
         confirm: Вы уверены?
         confirm_exclude_object: Вы уверены, что хотите исключить этот объект из печати?
@@ -433,6 +434,8 @@ app:
     label:
       all_off: Всё выключить
       all_on: Всё включить
+      aspect_ratio: Соотношение сторон
+      aspect_ratio_format: '[ширина : высота]'
       auto_edit_extensions: Расширения для автоматического открытия в режиме редактирования
       auto_follow_on_file_load: Автоматически следить за ходом загрузки файла
       auto_load_on_print_start: Автоматическая загрузка файла при запуске печати
