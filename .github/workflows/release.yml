@@ -37,13 +37,13 @@ jobs:
         run: |
           echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
 
-      #- name: Read ChangeLog
-      #  uses: pedrolamas/changelog-reader-action@d71e9d8dc93a56c192a84bddd8af46cf3b1d284b
-      #  id: changelog
-      #  with:
-      #    validation_depth: 1
-      #    version: ${{ steps.tag_name.outputs.current_version }}
-      #    path: ./CHANGELOG.md
+      - name: Read ChangeLog
+        uses: mindsers/changelog-reader-action@v2.2.0
+        id: changelog
+        with:
+          validation_depth: 1
+          version: ${{ steps.tag_name.outputs.current_version }}
+          path: ./CHANGELOG.md
 
       - name: Create Release
         id: create_release
