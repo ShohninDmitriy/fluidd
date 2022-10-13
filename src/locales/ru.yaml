@@ -1,6 +1,7 @@
 app:
   bedmesh:
     label:
+      active: активный
       box_scale: Масштаб
       flat_surface: Показать базовую плоскость
       mesh_matrix: Сетчатая матрица
@@ -148,6 +149,7 @@ app:
       clear_profile: Очистить профиль
       close: Закрыть
       config_reference: Примеры конфигураций
+      delete: Удалить
       download: Скачать
       edit: Редактировать
       exit_layout: Выйти из режима редактирования
@@ -156,13 +158,16 @@ app:
       heaters_off: Отключить нагрев
       load_all: Загрузить все
       login: Логин
+      logout: Выход из системы
       more_information: Больше информации
       pause: Пауза
       preheat: Преднагрев
       presets: Предустановки
       preview_gcode: Предпросмотр GCode
+      print: Печать
       quad_gantry_level: QGL
       reboot: Перезагрузка
+      recover: Восстанавить
       refresh: Обновить
       remove: Удалить
       remove_all: Удалить всё
@@ -177,6 +182,7 @@ app:
       restart_service_moonraker: Перезагрузить Moonraker
       resume: Возобновить
       retract: Ретракт
+      return_dashboard: Вернуться на панель управления
       save: Сохранить
       save_as: Сохранить как
       save_restart: Сохранить и перезагрузить
@@ -191,6 +197,7 @@ app:
       upload: Загрузить
       upload_print: Загрузить и напечатать
       view: Вид
+      view_thumbnail: Просмотр миниатюр
       reset_stats: Сбросить Статистику
     error:
       app_setup_link: >-
@@ -243,6 +250,7 @@ app:
       ldap: LDAP
       longest_job: Самая долгая печать
       low: Ниже
+      manage_accounts: Управление учетными записями
       user_managed_source: Пользователь, управляемый аутентификацией %{source}
       m117: M117
       moonraker: Moonraker
@@ -299,7 +307,9 @@ app:
       password_changed: Пароль изменен
       wrong_password: Ой, что-то пошло не так. Пароль введен верно?
       bed_screws_adjust: >-
-        Click <b>Adjusted</b> if a significant adjustment is necessary on the current screw; otherwise, click <b>Accept</b> to continue.
+        Нажмите <b>Скорректировано</b> если требуется значительная регулировка текущего винта; в противном случае нажмите <b>Принять</b> чтобы продолжить.
+      welcome_back: >-
+        С возвращением.<br>Войдите в систему ниже, чтобы оставаться на связи с вашим принтером.
     simple_form:
       error:
         arrayofnums: Только цифры
@@ -330,6 +340,8 @@ app:
         apply_z_offset_probe: >-
           Z-смещение датчика/Bl touch будет рассчитано и обновлено на основе текущего
           Z-Offset.
+        no_file_preview: >-
+          %{name} в настоящее время предварительный просмотр невозможен.
     table:
       header:
         actions: Действия
@@ -377,6 +389,7 @@ app:
       limits: Лимиты принтера
       macros: Макросы
       metrics_explorer: Обозреватель показателей
+      not_found: 404 Не Найдено
       other_files: Другие Файлы
       pending_configuration_changes: Ожидающие Изменения Конфигурации
       retract: Настройки ретракта
@@ -542,6 +555,7 @@ app:
       thermal_presets: Температурные профили
       tool: Инструмент
     tooltip:
+      diagnostics_performance: '[БЕТА-ВЕРСИЯ] Регистрация диагностической информации может повлиять на производительность'
       gcode_coords: >-
         Использовать GCode положение вместо положение инструментальной головки
         на панели управления
