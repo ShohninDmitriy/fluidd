@@ -197,7 +197,6 @@ app:
       upload: Загрузить
       upload_print: Загрузить и напечатать
       view: Вид
-      view_thumbnail: Просмотр миниатюр
       reset_stats: Сбросить Статистику
     error:
       app_setup_link: >-
