@@ -1,6 +1,6 @@
 <template>
   <v-dialog
-    v-model="value"
+    v-model="open"
     :max-width="320"
     persistent
   >
@@ -78,7 +78,7 @@
             color="warning"
             text
             type="button"
-            @click="$emit('input', false)"
+            @click="open=false"
           >
             {{ $t('app.general.btn.cancel') }}
           </app-btn>
@@ -96,8 +96,8 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Prop, Ref, Watch } from 'vue-property-decorator'
-import { Globals, Waits } from '@/globals'
+import { Component, Mixins, Ref, VModel, Watch } from 'vue-property-decorator'
+import { Globals } from '@/globals'
 import Axios, { AxiosError, CancelTokenSource } from 'axios'
 import StateMixin from '@/mixins/state'
 import { Debounce } from 'vue-debounce-decorator'
@@ -107,13 +107,11 @@ import { httpClientActions } from '@/api/httpClientActions'
 
 @Component({})
 export default class AddInstanceDialog extends Mixins(StateMixin) {
-  @Prop({ type: Boolean, required: true })
-  readonly value!: boolean
+  @VModel({ type: Boolean, required: true })
+    open!: boolean
 
   @Ref('form')
   readonly form!: VForm
-
-  waits = Waits
 
   valid = true
   verifying = false

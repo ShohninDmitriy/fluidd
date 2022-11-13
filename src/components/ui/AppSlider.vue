@@ -33,7 +33,7 @@
           single-line
           outlined
           hide-details
-          @change="handleChange($event)"
+          @change="handleChange"
           @focus="$event.target.select()"
         >
           <template #prepend>
@@ -86,7 +86,7 @@
       :disabled="disabled || loading || isLocked || overridden"
       dense
       hide-details
-      @change="handleChange($event)"
+      @change="handleChange"
     />
   </v-form>
 </template>

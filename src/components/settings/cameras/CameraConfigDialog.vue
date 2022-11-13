@@ -1,6 +1,6 @@
 <template>
   <v-dialog
-    v-model="value"
+    v-model="open"
     :max-width="500"
     scrollable
   >
@@ -8,7 +8,7 @@
       ref="form"
       v-model="valid"
       :disabled="camera.source === 'config'"
-      @submit.prevent="handleSave()"
+      @submit.prevent="handleSave"
     >
       <v-card>
         <v-card-title class="card-heading py-2">
@@ -178,7 +178,7 @@
             color="warning"
             text
             type="button"
-            @click="$emit('input', false)"
+            @click="open = false"
           >
             {{ camera.source === 'config' ? $t('app.general.btn.close') : $t('app.general.btn.cancel') }}
           </app-btn>
@@ -196,13 +196,13 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Prop } from 'vue-property-decorator'
+import { Component, Vue, Prop, VModel } from 'vue-property-decorator'
 import { CameraConfig } from '@/store/cameras/types'
 
 @Component({})
 export default class CameraConfigDialog extends Vue {
-  @Prop({ type: Boolean, required: true })
-  readonly value!: boolean
+  @VModel({ type: Boolean, required: true })
+    open!: boolean
 
   @Prop({ type: Object, required: true })
   readonly camera!: CameraConfig
@@ -212,7 +212,7 @@ export default class CameraConfigDialog extends Vue {
   handleSave () {
     if (this.valid) {
       this.$emit('save', this.camera)
-      this.$emit('input', false)
+      this.open = false
     }
   }
 }

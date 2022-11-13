@@ -43,7 +43,7 @@
         class="mr-1"
       >
         <app-save-config-and-restart-btn
-          :loading="hasWait(waits.onSaveConfig)"
+          :loading="hasWait($waits.onSaveConfig)"
           :disabled="printerPrinting"
           @click="saveConfigAndRestart"
         />
@@ -178,7 +178,7 @@ import { Component, Mixins } from 'vue-property-decorator'
 import UserPasswordDialog from '@/components/settings/auth/UserPasswordDialog.vue'
 import PendingChangesDialog from '@/components/settings/PendingChangesDialog.vue'
 import AppSaveConfigAndRestartBtn from './AppSaveConfigAndRestartBtn.vue'
-import { defaultState } from '@/store/layout/index'
+import { defaultState } from '@/store/layout/state'
 import StateMixin from '@/mixins/state'
 import ServicesMixin from '@/mixins/services'
 import { SocketActions } from '@/api/socketActions'
@@ -330,7 +330,7 @@ export default class AppBar extends Mixins(StateMixin, ServicesMixin) {
       }
     }
 
-    this.sendGcode('SAVE_CONFIG', this.waits.onSaveConfig)
+    this.sendGcode('SAVE_CONFIG', this.$waits.onSaveConfig)
   }
 }
 </script>
