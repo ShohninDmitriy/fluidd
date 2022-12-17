@@ -150,6 +150,7 @@ app:
       edit: Редактировать
       exit_layout: Выйти из режима редактирования
       extrude: Экструдировать
+      filter: Фильтр
       forgot_password: Забыли ваш пароль?
       heaters_off: Отключить нагрев
       load_all: Загрузить все
@@ -287,6 +288,7 @@ app:
       uncategorized: Вне категории
       unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
+      upload_and_print: Загрузить и напечатать
       used: Использованно
       username: Имя пользователя
       variance: Различие
@@ -319,7 +321,7 @@ app:
         min_or_0: Мин %{min} или 0
         password_username: Не удается сопоставить имя пользователя
         required: Требуется
-        invalid_aspect: Invalid Aspect Ratio
+        invalid_aspect: Недопустимое соотношение сторон
       msg:
         confirm: Вы уверены?
         confirm_exclude_object: Вы уверены, что хотите исключить этот объект из печати?
@@ -367,7 +369,7 @@ app:
         status: Статус
         total_duration: Общая продолжительность
     title:
-      add_chart: Add Chart
+      add_chart: Добавить диаграмму
       add_printer: Добавить принтер
       bedmesh: Профиль высот стола
       bedmesh_controls: Управление профилями высот стола
@@ -376,7 +378,7 @@ app:
       configure: Конфигурация
       console: Консоль
       diagnostics: Диагностика
-      edit_chart: Edit Chart
+      edit_chart: Редактировать диаграмму
       endstops: Концевики
       fans_outputs: Вентиляторы и выходы
       gcode_preview: Предпросмотр GCode
@@ -385,7 +387,7 @@ app:
       jobs: Файлы для печати
       limits: Лимиты принтера
       macros: Макросы
-      metrics_explorer: Metrics Explorer
+      metrics_explorer: Обозреватель показателей
       not_found: 404 Не найдено
       other_files: Другие файлы
       pending_configuration_changes: Ожидающие изменения конфигурации
@@ -400,14 +402,14 @@ app:
       tool: Инструмент
       tune: Юстировка стола
     tooltip:
-      browse_metrics: Browse available metrics
+      browse_metrics: Просмотр доступных показателей
       estop: Аварийная остановка
       managed_by_moonraker: Управляется вашей конфигурацией moonraker
       notifications: Оповещения
       reload_klipper: Перезагружает конфигурацию Klipper.
       reload_restart_klipper: Перезагружает конфигурацию Klipper и перезапускает MCU.
       restart_klipper: Перезагружает сервис Klipper.
-      run_collector: Run collector
+      run_collector: Запустить коллектор
   history:
     msg:
       confirm_jobs: Вы уверены? Это очистит все выполненые работы.
@@ -428,7 +430,7 @@ app:
       add_camera: Добавить камеру
       add_category: Добавить категорию
       add_filter: Добавить фильтр
-      add_metric: Add Metric
+      add_metric: Добавить метрику
       add_thermal_preset: Добавить температурую предустановку
       add_user: Добавить пользователя
       reset: Сбросить
@@ -461,21 +463,21 @@ app:
       camera_rotate_by: Повернуть на
       camera_stream_type: Тип потока
       camera_url: URL камеры
-      card: Card
-      collector: Collector
+      card: Карта
+      collector: Сборщик
       confirm_on_estop: Требовать подтверждение при аварийной остановке
       confirm_on_power_device_change: Требуется подтверждение при изменении мощности устройства
       confirm_on_save_config_and_restart: Просмотрите отложенные изменения в конфигурации перед сохранением и перезапуском
       confirm_dirty_editor_close: Требовать подтверждения при закрытии редактора с несохраненными изменениями
       contains: Содержит
       dark_mode: Тёмная тема
-      dashed: Dashed
+      dashed: Пунктирный
       default_extrude_length: Длина экструдирования по умолчанию
       default_extrude_speed: Скорость экструдера по умолчанию
       default_toolhead_move_length: Длина перемещения головки по умолчанию
       default_toolhead_xy_speed: Скорость головки для осей XY по умолчанию
       default_toolhead_z_speed: Скорость головки для оси Z по умолчанию
-      dotted: Dotted
+      dotted: штриховой
       draw_background: Отображать фон
       enable: Вкл.
       enable_diagnostics: Включить диагностику
@@ -484,8 +486,8 @@ app:
       extrusion_line_width: Ширина линии экструзии
       flip_horizontal: Сдвиг по горизонтали
       flip_vertical: Сдвиг по вертикали
-      fill_color: Fill color
-      fill_opacity: Fill opacity
+      fill_color: Цвет заливки
+      fill_opacity: Непрозрачность заливки
       filter: Filter | Фильтры
       fps_target: Целевой FPS
       fps_idle_target: Цель FPS, когда она не в фокусе
@@ -498,22 +500,22 @@ app:
       invert_z_control: Инвертировать управление по оси Z
       language: Язык интерфейса
       last_result: Последний результат
-      left_y: Left Y-Axis
+      left_y: Левая ось Y
       line_color: Цвет линии
       line_style: Стиль линии
       min: Мин.
       max: Макс.
-      metrics: Metrics
+      metrics: Метрика
       move_line_width: Ширина линии движения
-      name: Name
-      none: None
-      optional: Optional
+      name: Имя
+      none: Отсутсвие
+      optional: Необязательный
       power_toggle_in_top_nav: Переключатель питания в верхней панели навигации
       primary_color: Основной цвет
       printer_name: Имя принтера
       reset: Сбросить настройки
       retraction_icon_size: Размер иконки ретракта
-      right_y: Right Y-Axis
+      right_y: Правая ось Y
       show_animations: Показывать анимацию
       show_barometric_pressure: Показать атмосферное давление
       show_code_lens: Показывать CodeLens (подсказки в тексте)
@@ -521,7 +523,7 @@ app:
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
       show_save_config_and_restart: Кнопка «Сохранить конфигурацию и перезапустить» в верхней части панели навигации
-      solid: Solid
+      solid: Твердый
       starts_with: Начинается с
       theme_preset: Цветовая схема
       thermal_preset_gcode: GCode
@@ -529,7 +531,7 @@ app:
       title: Заголовок
       toolhead_move_distances: Значения расстояния перемещения головки
       type: Тип
-      unit: Unit
+      unit: Единица измерения
       z_adjust_values: Значения подстройки оси Z
       date_format: Формат даты
       time_format: Формат времени
@@ -555,8 +557,8 @@ app:
     tooltip:
       diagnostics_performance: '[BETA] Логирование диагностики может замедлить работу системы'
       gcode_coords: Использовать GCode положение вместо положение инструментальной головки на панели управления
-      show_manual_probe_dialog_automatically: Automatically shows helper dialog if running a Manual Probe tool
-      show_bed_screws_adjust_dialog_automatically: Automatically shows helper dialog if running BED_SCREWS_ADJUST tool
+      show_manual_probe_dialog_automatically: Автоматически показывает диалоговое окно помощника при запуске инструмента ручного зондирования
+      show_bed_screws_adjust_dialog_automatically: Автоматически показывает диалоговое окно помощника при запуске инструмента BED_SCREWS_ADJUST
   socket:
     msg:
       connecting: Подключение к moonraker...
@@ -592,7 +594,7 @@ app:
   tool:
     btn:
       home_x: X
-      home_y: Y
+      home_y: 'Y'
       home_all: Все
     title:
       bed_screws_adjust: Регулировка винтов стола
