@@ -282,6 +282,7 @@ app:
       smooth_time: Smooth Time
       speed: Speed
       sqv: Square Corner Velocity
+      synced_extruder: Synced Extruder
       thumbnail_size: Thumbnail Size
       total: Total
       total_filament: Total filament used
@@ -471,6 +472,7 @@ app:
       auto_edit_extensions: Extensions to automatically open in edit mode
       auto_follow_on_file_load: Automatically follow progress on file load
       auto_load_on_print_start: Automatically load file on print start
+      auto_load_mobile_on_print_start: Automatically load file on mobile devices
       axes: Axes
       camera_flip_x: Flip horizontally
       camera_flip_y: Flip vertically
@@ -492,6 +494,7 @@ app:
       dashed: Dashed
       default_extrude_length: Default extrude length
       default_extrude_speed: Default extrude speed
+      default_min_layer_height: Default minimum layer height
       default_toolhead_move_length: Default toolhead move length
       default_toolhead_xy_speed: Default toolhead XY speed
       default_toolhead_z_speed: Default toolhead Z speed
@@ -511,7 +514,6 @@ app:
       fps_idle_target: FPS Target when not in focus
       height: Height
       gcode_coords: Use GCode Coordinates
-      group_lower_layers: Group lower layers
       icon: Icon
       invert_x_control: Invert X control
       invert_y_control: Invert Y control

@@ -99,13 +99,6 @@
       v-model="dragState.overlay"
     />
 
-    <file-system-download-dialog
-      v-if="currentDownload !== null"
-      :value="currentDownload !== null"
-      :file="currentDownload"
-      @cancel="handleCancelDownload"
-    />
-
     <file-system-upload-dialog
       v-if="currentUploads.length > 0"
       :value="currentUploads.length > 0"
@@ -151,10 +144,8 @@ import FileSystemContextMenu from './FileSystemContextMenu.vue'
 import FileEditorDialog from './FileEditorDialog.vue'
 import FileNameDialog from './FileNameDialog.vue'
 import FileSystemDragOverlay from './FileSystemDragOverlay.vue'
-import FileSystemDownloadDialog from './FileSystemDownloadDialog.vue'
 import FileSystemUploadDialog from './FileSystemUploadDialog.vue'
 import FilePreviewDialog from './FilePreviewDialog.vue'
-import Axios from 'axios'
 import { AppTableHeader } from '@/types'
 import { FileWithPath, getFilesFromDataTransfer } from '@/util/file-system-entry'
 
@@ -173,7 +164,6 @@ import { FileWithPath, getFilesFromDataTransfer } from '@/util/file-system-entry
     FileSystemDragOverlay,
     FileEditorDialog,
     FileNameDialog,
-    FileSystemDownloadDialog,
     FileSystemUploadDialog,
     FilePreviewDialog
   }
@@ -446,17 +436,12 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
     return this.$store.state.files.uploads
   }
 
-  // Get the state of a currently file being retrieved.
-  get currentDownload () {
-    return this.$store.state.files.download
-  }
-
   get registeredRoots () {
     return this.$store.state.server.info.registered_directories || []
   }
 
   transformTimelapseItems (items: FileBrowserEntry[]) {
-    const timelapses: Record<string, AppFile> = {}
+    const timelapses: Record<string, KlipperFileWithMeta> = {}
 
     for (const item of items) {
       if (item.type === 'file' && item.extension !== 'jpg') {
@@ -468,11 +453,10 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
       if (item.type === 'file' && item.extension === 'jpg') {
         const name = item.filename.slice(0, -4)
         if (name in timelapses) {
-          const url = new URL(this.apiUrl ?? document.location.origin)
-          url.pathname = `/server/files/timelapse${item.path ? `/${item.path}` : ''}/${item.filename}`;
+          const path = item.path ? `timelapse/${item.path}` : 'timelapse'
 
-          (timelapses[name] as KlipperFileWithMeta).thumbnails = [{
-            absolute_path: url.toString(),
+          timelapses[name].thumbnails = [{
+            absolute_path: this.createFileUrl(item.filename, path, item.modified),
             // we have no data regarding the thumbnail other than it's URL, but setting it is mandatory...
             data: '',
             height: 0,
@@ -484,7 +468,10 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
       }
     }
 
-    return [...items.filter(item => item.type === 'directory'), ...Object.values(timelapses)]
+    return [
+      ...items.filter(item => item.type === 'directory'),
+      ...Object.values(timelapses) as AppFile[]
+    ]
   }
 
   // Set the initial root, and load the dir.
@@ -628,7 +615,8 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
     }
 
     // Grab the file. This should provide a dialog.
-    this.cancelTokenSource = Axios.CancelToken.source()
+    this.$store.dispatch('files/createFileTransferCancelTokenSource')
+
     this.getFile(
       file.filename,
       this.currentPath,
@@ -664,11 +652,6 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
       })
       .finally(() => this.$store.dispatch('files/removeFileDownload'))
       .catch(e => e)
-  }
-
-  handleCancelDownload () {
-    if (this.cancelTokenSource) this.cancelTokenSource.cancel('User cancelled.')
-    this.$store.dispatch('files/removeFileDownload')
   }
 
   async handlePreviewGcode (file: AppFile | AppFileWithMeta) {
@@ -840,7 +823,9 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
 
       // Started uploading, but not complete.
       if (file.loaded > 0 && file.loaded < file.size) {
-        if (this.cancelTokenSource) this.cancelTokenSource.cancel('User cancelled.')
+        if (this.cancelTokenSource) {
+          this.$store.dispatch('files/cancelFileTransferWithTokenSource', 'User cancelled.')
+        }
       }
     }
   }
