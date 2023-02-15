@@ -231,8 +231,8 @@ app:
       confirm: Подтверждение
       current_password: Текущий пароль
       current_user: Текущий пользователь
-       default: Default
-     disabled_while_printing: Отключено во время печати
+      default: Default
+      disabled_while_printing: Отключено во время печати
       edit_camera: Редактировать камеру
       edit_filter: Редактировать фильтр
       edit_preset: Редактировать предустановку
@@ -303,8 +303,8 @@ app:
       username: Имя пользователя
       variance: Различие
       velocity: Скорость
-       version_sort: Version sort
-     visible: Видимый
+      version_sort: Version sort
+      visible: Видимый
       z_offset: Смещение Z
       unsaved_changes: Не сохраненные изменения
       alias: Псевдоним
