@@ -136,6 +136,7 @@ app:
       add_dir: Добавить папку
       add_file: Добавить файл
       add_printer: Добавить принтер
+      add_to_queue: Add to Queue
       adjust_layout: Настроить компановку интерфейса панели управления
       adjusted: Настроено
       all: Все
@@ -145,6 +146,7 @@ app:
       clear_profile: Очистить профиль
       close: Закрыть
       config_reference: Примеры конфигураций
+      create_zip_archive: Create ZIP Archive
       delete: Удалить
       download: Скачать
       edit: Редактировать
@@ -153,6 +155,7 @@ app:
       filter: Фильтр
       forgot_password: Забыли ваш пароль?
       heaters_off: Отключить нагрев
+      job_queue: Job Queue
       load_all: Загрузить все
       login: Вход
       logout: Выйти
@@ -166,6 +169,7 @@ app:
       reboot: Перезагрузка
       recover: Восстановить
       refresh: Обновить
+      reload: Reload
       remove: Удалить
       remove_all: Удалить всё
       rename: Переименовать
@@ -192,6 +196,8 @@ app:
       socket_reconnect: Повторное подключение
       socket_refresh: Принудительно обновление
       upload: Загрузить
+      upload_files: Upload Files
+      upload_folder: Upload Folder
       upload_print: Загрузить и напечатать
       view: Вид
       reset_stats: Сбросить Статистику
@@ -225,7 +231,8 @@ app:
       confirm: Подтверждение
       current_password: Текущий пароль
       current_user: Текущий пользователь
-      disabled_while_printing: Отключено во время печати
+       default: Default
+     disabled_while_printing: Отключено во время печати
       edit_camera: Редактировать камеру
       edit_filter: Редактировать фильтр
       edit_preset: Редактировать предустановку
@@ -256,6 +263,7 @@ app:
       no_notifications: Нет уведомлений
       'on': 'Вкл'
       'off': 'Выкл'
+      numeric_prefix_sort: Numeric Prefix sort
       password: Пароль
       partial_of_total: '%{partial} of %{total}'
       power: Питание
@@ -274,6 +282,8 @@ app:
       smooth_time: Сглаживающее время P.Advance
       speed: Скорость
       sqv: Скорость прохождения угла
+      stepper_enabled: Stepper Enabled
+      synced_extruder: Synced Extruder
       thumbnail_size: Размер эскиза
       total: Всего
       total_filament: Всего использованно филамента
@@ -293,7 +303,8 @@ app:
       username: Имя пользователя
       variance: Различие
       velocity: Скорость
-      visible: Видимый
+       version_sort: Version sort
+     visible: Видимый
       z_offset: Смещение Z
       unsaved_changes: Не сохраненные изменения
       alias: Псевдоним
@@ -308,6 +319,8 @@ app:
         Нажмите <b>Скорректировать</b>, если требуется корректировка текущего винта; в противном случае нажмите <b>Принять</b>, чтобы продолжить
       welcome_back: >-
         С возвращением.<br>Войдите в систему, чтобы подключится к принтеру.
+      offline_ready: Fluidd is now ready to work offline.
+      needs_refresh: New content available, please click the <b>Reload</b> button to update.
     simple_form:
       error:
         arrayofnums: Только цифры
@@ -362,7 +375,9 @@ app:
         name: Имя
         nozzle_diameter: Диаметр сопла
         print_duration: Продолжительность печати
-        size: Размер
+        time_added: Time Added
+        time_in_queue: Time In Queue
+        size: Size
         slicer: Слайсер
         slicer_version: Версия слайсера
         start_time: Время начала
@@ -385,6 +400,7 @@ app:
       history: История печати
       home: Панель управления
       jobs: Файлы для печати
+      job_queue: Job Queue
       limits: Лимиты принтера
       macros: Макросы
       metrics_explorer: Обозреватель показателей
@@ -413,6 +429,10 @@ app:
   history:
     msg:
       confirm_jobs: Вы уверены? Это очистит все выполненые работы.
+  job_queue:
+    msg:
+      confirm: Are you sure? This will clear the entire printer queue
+      confirm_jobs: Are you sure? This will clear all jobs.
       confirm_stats: Вы уверены? Это очистит всю статистику.
   printer:
     state:
@@ -453,6 +473,7 @@ app:
       auto_edit_extensions: Расширения для автоматического открытия в режиме редактирования
       auto_follow_on_file_load: Автоматически наблюдать за прогрессом печати при загрузке файла
       auto_load_on_print_start: Автоматически загружать файл при старте печати
+      auto_load_mobile_on_print_start: Automatically load file on mobile devices
       axes: Axes
       camera_flip_x: Отразить по горизонтали
       camera_flip_y: Отразить по вертикали
@@ -474,6 +495,7 @@ app:
       dashed: Пунктирный
       default_extrude_length: Длина экструдирования по умолчанию
       default_extrude_speed: Скорость экструдера по умолчанию
+      default_min_layer_height: Default minimum layer height
       default_toolhead_move_length: Длина перемещения головки по умолчанию
       default_toolhead_xy_speed: Скорость головки для осей XY по умолчанию
       default_toolhead_z_speed: Скорость головки для оси Z по умолчанию
@@ -493,7 +515,6 @@ app:
       fps_idle_target: Цель FPS, когда она не в фокусе
       height: Высота
       gcode_coords: Испрользовать координаты GCode
-      group_lower_layers: Показывать напечатанные слои (большая нагрузка на CPU)
       icon: Иконка
       invert_x_control: Инвертировать управление по оси X
       invert_y_control: Инвертировать управление по оси Y
@@ -523,6 +544,7 @@ app:
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
       show_save_config_and_restart: Кнопка «Сохранить конфигурацию и перезапустить» в верхней части панели навигации
+      show_upload_and_print: Show Upload and Print button in top navigation
       solid: Твердый
       starts_with: Начинается с
       theme_preset: Цветовая схема
@@ -535,6 +557,7 @@ app:
       z_adjust_values: Значения подстройки оси Z
       date_format: Формат даты
       time_format: Формат времени
+      text_sort_order: Text Sort Order
       force_move_toggle_warning: Требовать поддтверждения при активации "Форсированного перемещения"
       show_manual_probe_dialog_automatically: Автоматически показывать диалоговое окно "Ручная настройка стола"
       show_bed_screws_adjust_dialog_automatically: Автоматически показывать диалоговое окно "Регулировка винтов стола"
@@ -583,6 +606,7 @@ app:
       micro_controller: Микроконтроллер
       model: Модель CPU
       moonraker_load: Moonraker
+      network: Network
       processor_desc: Процессор
       product_name: Название
       serial_number: Серийный номер
@@ -590,7 +614,9 @@ app:
       system_memory: Оперативная память
       system_utilization: Загрузка ОС
       total_memory: Всего памяти
+      operating_system: Operating System
       version: Версия
+      virtualization: Virtualization
   tool:
     btn:
       home_x: X
@@ -702,6 +728,8 @@ app:
         center: Центр
         back_left: Задний Левый
         back_right: Задний Правый
+        x_only: Move X only
+        y_only: Move Y only
       previewimage: Создавать Скриншот
       saveframes: Сохранение Кадров
       stream_delay_compensation: Компенсация Задержки
