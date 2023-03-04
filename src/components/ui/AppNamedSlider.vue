@@ -16,15 +16,13 @@
       />
 
       <!-- Current value -->
-      <v-col
-        class="py-0"
-      >
+      <v-col class="py-0">
         <v-text-field
-          v-model.number="internalValue"
+          v-model="currentValue"
+          :prefix="prefix"
           :suffix="suffix"
           :rules="textRules"
-          :readonly="isLocked"
-          :disabled="disabled || loading || isLocked"
+          :disabled="disabled || loading || internalLocked"
           :step="step"
           class="v-input--text-right"
           type="number"
@@ -32,20 +30,21 @@
           single-line
           outlined
           hide-details
-          @change="handleChange"
-          @focus="$event.target.select()"
+          @focus="handleFocus"
+          @blur="handleBlur"
+          @keyup.enter.exact="handleSubmit(+currentValue)"
         >
           <template #prepend>
             <v-btn
-              v-if="isMobile"
+              v-if="locked && isMobileViewport"
               icon
               small
               :disabled="disabled"
               style="margin-top: -4px;"
-              @click="lockState = !lockState"
+              @click="internalLocked = !internalLocked"
             >
               <v-icon
-                v-if="isLocked"
+                v-if="internalLocked"
                 small
               >
                 $pencil
@@ -60,7 +59,7 @@
 
             <app-btn
               v-if="resetValue !== undefined"
-              :disabled="disabled"
+              :disabled="disabled || loading"
               style="margin-top: -4px;"
               color=""
               icon
@@ -77,37 +76,38 @@
     </v-row>
 
     <v-slider
-      v-model="internalValue"
-      :rules="rules"
+      v-model="sliderValue"
       :min="min"
       :max="internalMax"
       :step="step"
-      :disabled="disabled || loading || isLocked || overridden"
+      :disabled="disabled || loading || internalLocked || overridden"
       dense
       hide-details
+      @start="handleStart"
+      @end="handleEnd"
       @change="handleChange"
     />
   </v-form>
 </template>
 
 <script lang="ts">
-import { Component, Prop, Watch, Mixins, Ref } from 'vue-property-decorator'
-import StateMixin from '@/mixins/state'
+import { Component, Prop, Watch, Ref, VModel, Mixins } from 'vue-property-decorator'
 import { VForm } from '@/types'
+import BrowserMixin from '@/mixins/browser'
 
 @Component({})
-export default class AppSlider extends Mixins(StateMixin) {
-  @Prop({ type: Number, required: true })
-  readonly value!: number
+export default class AppNamedSlider extends Mixins(BrowserMixin) {
+  @VModel({ type: Number })
+    inputValue!: number
 
-  @Prop({ type: Number, required: false })
-  readonly resetValue!: number
+  @Prop({ type: Number })
+  readonly resetValue?: number
 
   @Prop({ type: String, required: true })
   readonly label!: string
 
-  @Prop({ type: Array, default: () => { return [] } })
-  readonly rules!: []
+  @Prop({ type: Array })
+  readonly rules?: []
 
   @Prop({ type: Boolean, default: false })
   readonly disabled!: boolean
@@ -131,7 +131,10 @@ export default class AppSlider extends Mixins(StateMixin) {
   readonly step!: number
 
   @Prop({ type: String })
-  readonly suffix!: string
+  readonly prefix?: string
+
+  @Prop({ type: String })
+  readonly suffix?: string
 
   @Prop({ type: Boolean, default: false })
   readonly fullWidth!: boolean
@@ -139,59 +142,52 @@ export default class AppSlider extends Mixins(StateMixin) {
   @Ref('form')
   readonly form!: VForm
 
-  lockState = false
-  overridden = false
-  internalValue = 0
-  internalMax = 0
-  pending = false
-
-  // If the parent updates the value.
   @Watch('value')
-  onValue (value: string | number) {
-    value = +value
-    if (value !== this.internalValue) {
-      this.internalValue = value
+  onValue (value: number) {
+    if (!this.hasFocus) {
+      this.currentValue = value.toString()
     }
-    this.pending = false
+  }
+
+  @Watch('currentValue')
+  onCurrentValue (value: string) {
+    const valueAsNumber = +value
+
+    if (!isNaN(valueAsNumber)) {
+      this.checkOverride(valueAsNumber)
+      this.sliderValue = valueAsNumber
+    }
+  }
+
+  @Watch('sliderValue')
+  onSliderValue (value: number) {
+    if (!this.hasFocus) {
+      this.currentValue = value.toString()
+    }
+    this.$emit('input', value)
+  }
+
+  @Watch('locked')
+  onLocked (value: boolean) {
+    this.internalLocked = value
   }
 
   @Watch('max')
   onMax () {
-    this.checkOverride()
+    this.checkOverride(this.sliderValue)
   }
 
-  // If one of our controls updates the value.
-  @Watch('internalValue')
-  onInternalValue (value: number) {
-    if (this.form.validate()) {
-      this.checkOverride()
-
-      this.$emit('input', value)
-    }
-  }
-
-  get isLocked () {
-    return this.lockState
-  }
-
-  set isLocked (val: boolean) {
-    this.lockState = val
-    this.$emit('update:locked', val)
-  }
-
-  @Watch('locked')
-  onLockedChange (val: boolean) {
-    this.lockState = val
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
-  }
+  currentValue = ''
+  sliderValue = 0
+  internalLocked = false
+  internalMax = 0
+  overridden = false
+  hasFocus = false
 
   get textRules () {
     // Apply a min and max rule as per the slider.
     const rules = [
-      ...this.rules,
+      ...this.rules || [],
       this.$rules.numberValid,
       this.$rules.numberGreaterThanOrEqual(this.min)
     ]
@@ -203,18 +199,12 @@ export default class AppSlider extends Mixins(StateMixin) {
     return rules
   }
 
-  created () {
-    this.lockState = this.locked
-    this.internalValue = this.value
-    this.internalMax = this.max
-  }
-
-  checkOverride () {
-    if (this.internalValue > this.max && this.overridable) {
+  checkOverride (value: number) {
+    if (value > this.max && this.overridable) {
       // This is overridable, and the user wants to increase
       // past the given max. So, disable the slider - and let it be.
       this.overridden = true
-      this.internalMax = this.internalValue
+      this.internalMax = value
     } else {
       // This is not overridable, or the user has reverted back to a value
       // within the given max. So, re-enable the slider - and let it be.
@@ -223,25 +213,66 @@ export default class AppSlider extends Mixins(StateMixin) {
     }
   }
 
-  handleChange (value: number) {
-    if (
-      value !== this.value &&
-      !this.pending
-    ) {
-      if (this.form.validate()) {
-        this.pending = true
-        this.$emit('change', value)
-      } else {
-        this.internalValue = this.value
-      }
-      this.lockState = this.locked
+  submitValue (value: number) {
+    if (this.form.validate()) {
+      this.currentValue = value.toString()
+
+      this.internalLocked = this.locked
+
+      this.$emit('submit', value)
     }
   }
 
   handleReset () {
-    this.internalValue = this.resetValue
-    this.lockState = this.locked
-    this.$emit('change', this.resetValue)
+    if (this.resetValue !== undefined) {
+      this.$emit('change', this.resetValue)
+
+      this.submitValue(this.resetValue)
+    }
+  }
+
+  handleFocus (event: FocusEvent) {
+    this.hasFocus = true
+
+    const input = event.target as HTMLInputElement
+
+    input.select()
+  }
+
+  handleBlur () {
+    if (this.hasFocus) {
+      this.$emit('change', this.currentValue)
+
+      this.currentValue = this.inputValue.toString()
+
+      this.hasFocus = false
+    }
+  }
+
+  handleSubmit (value: number) {
+    this.submitValue(value)
+  }
+
+  handleStart (value: number) {
+    this.hasFocus = false
+    this.$emit('start', value)
+  }
+
+  handleEnd (value: number) {
+    this.$emit('end', value)
+  }
+
+  handleChange (value: number) {
+    this.$emit('change', value)
+
+    this.submitValue(value)
+  }
+
+  created () {
+    this.currentValue = this.inputValue.toString()
+    this.sliderValue = this.inputValue
+    this.internalLocked = this.locked
+    this.internalMax = this.max
   }
 }
 </script>

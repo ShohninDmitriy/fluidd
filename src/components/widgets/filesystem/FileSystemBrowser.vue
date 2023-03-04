@@ -10,9 +10,9 @@
       :headers="headers"
       :items="files"
       :dense="dense"
-      :disable-pagination="true"
+      disable-pagination
       :loading="loading"
-      :sort-desc="true"
+      sort-desc
       :custom-sort="customSort"
       :search="search"
       :show-select="bulkActions"
@@ -261,7 +261,7 @@
             :headers="headers"
             item-value="modified"
           >
-            <span v-if="item.modified !== undefined && item.modified !== null">
+            <span v-if="item.modified !== undefined && item.name !== '..'">
               {{ $filters.formatDateTime(item.modified * 1000) }}
             </span>
           </file-row-item>
@@ -270,7 +270,7 @@
             :headers="headers"
             item-value="size"
           >
-            <span v-if="item.size !== undefined && item.size !== 0">
+            <span v-if="item.size !== undefined && item.name !== '..'">
               {{ $filters.getReadableFileSizeString(item.size) }}
             </span>
           </file-row-item>

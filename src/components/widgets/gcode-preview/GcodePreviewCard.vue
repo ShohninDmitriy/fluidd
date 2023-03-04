@@ -11,7 +11,7 @@
         <app-btn
           :disabled="!printerFile || printerFileLoaded"
           small
-          class="ml-1"
+          class="ms-1 my-1"
           @click="loadCurrent"
         >
           {{ $t('app.gcode.btn.load_current_file') }}
@@ -23,7 +23,7 @@
           fab
           x-small
           text
-          class="ml-1"
+          class="ms-1 my-1"
           @click="$filters.routeTo($router, '/preview')"
         >
           <v-icon>$fullScreen</v-icon>
@@ -47,29 +47,24 @@
         >
           <v-row>
             <v-col>
-              <app-slider
+              <app-named-slider
                 :label="$t('app.gcode.label.layer')"
                 :value="(!fileLoaded) ? 0 : currentLayer + 1"
                 :min="(!fileLoaded) ? 0 : 1"
                 :max="layerCount"
                 :disabled="!fileLoaded"
-                :locked="isMobile"
-                input-md
                 @input="setCurrentLayer($event - 1)"
               />
             </v-col>
           </v-row>
           <v-row>
             <v-col>
-              <app-slider
+              <app-named-slider
                 :label="$t('app.general.label.progress')"
                 :value="moveProgress - currentLayerMoveRange.min"
                 :min="0"
                 :max="currentLayerMoveRange.max - currentLayerMoveRange.min"
                 :disabled="!fileLoaded"
-                value-suffix="moves"
-                :locked="isMobile"
-                input-md
                 @input="setMoveProgress($event + currentLayerMoveRange.min)"
               />
             </v-col>
@@ -135,6 +130,7 @@
 import { Component, Mixins, Prop, Ref, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import FilesMixin from '@/mixins/files'
+import BrowserMixin from '@/mixins/browser'
 import GcodePreview from './GcodePreview.vue'
 import GcodePreviewParserProgressDialog from './GcodePreviewParserProgressDialog.vue'
 import { AppFile } from '@/store/files/types'
@@ -146,7 +142,7 @@ import { MinMax } from '@/store/gcodePreview/types'
     GcodePreview
   }
 })
-export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin) {
+export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin, BrowserMixin) {
   @Prop({ type: Boolean, default: false })
   readonly menuCollapsed!: boolean
 
@@ -241,10 +237,6 @@ export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin) {
 
   get fileLoaded (): boolean {
     return this.$store.getters['gcodePreview/getMoves'].length > 0
-  }
-
-  get isMobile (): boolean {
-    return this.$vuetify.breakpoint.mobile
   }
 
   get parserProgress (): number {
@@ -355,7 +347,7 @@ export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin) {
   }
 
   get autoLoadOnPrintStart () {
-    if (this.isMobile) {
+    if (this.isMobileViewport) {
       return this.$store.state.config.uiSettings.gcodePreview.autoLoadMobileOnPrintStart
     }
 

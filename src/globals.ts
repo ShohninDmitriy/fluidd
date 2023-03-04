@@ -11,6 +11,7 @@ import {
   mdiPrinter3dNozzle,
   mdiPrinter3dNozzleOutline,
   mdiFileCodeOutline,
+  mdiFileRefreshOutline,
   mdiConsole,
   mdiChevronUp,
   mdiChevronDown,
@@ -135,7 +136,8 @@ import {
   mdiArchivePlus,
   mdiTrayFull,
   mdiTrayPlus,
-  mdiFolderArrowUp
+  mdiFolderArrowUp,
+  mdiShape
 } from '@mdi/js'
 
 /**
@@ -287,6 +289,7 @@ export const Icons = Object.freeze({
   chevronLeft: mdiChevronLeft,
   timer: mdiTimerSand,
   fileCode: mdiFileCodeOutline,
+  fileRefresh: mdiFileRefreshOutline,
   files: mdiFileTableOutline,
   file: mdiFile,
   fileCancel: mdiFileCancel,
@@ -350,6 +353,7 @@ export const Icons = Object.freeze({
   moves: mdiVectorLine,
   extrusions: mdiPrinter3dNozzle,
   retractions: mdiSwapVertical,
+  parts: mdiShape,
   folderOpen: mdiFolderOpen,
   fileZip: mdiArchive,
   fileZipAdd: mdiArchivePlus,

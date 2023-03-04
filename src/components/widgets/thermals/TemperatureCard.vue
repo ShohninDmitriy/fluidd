@@ -3,7 +3,7 @@
     :title="$t('app.general.title.temperature')"
     icon="$fire"
     :lazy="false"
-    :draggable="true"
+    draggable
     layout-path="dashboard.temperature-card"
   >
     <template #title>
@@ -23,7 +23,7 @@
         <app-btn
           small
           :disabled="!klippyReady"
-          class="ml-1"
+          class="ms-1 my-1"
           @click="chartVisible = !chartVisible"
         >
           <v-icon left>
@@ -39,7 +39,7 @@
       </app-btn-collapse-group>
 
       <app-btn-collapse-group
-        :collapsed="true"
+        collapsed
         menu-icon="$cog"
       >
         <v-checkbox
@@ -47,21 +47,21 @@
           :label="$t('app.setting.label.show_rate_of_change')"
           color="primary"
           hide-details
-          class="mx-2 mt-2 mb-2"
+          class="mx-2 my-2"
         />
         <v-checkbox
           v-model="showRelativeHumidity"
           :label="$t('app.setting.label.show_relative_humidity')"
           color="primary"
           hide-details
-          class="mx-2 mt-2 mb-2"
+          class="mx-2 my-2"
         />
         <v-checkbox
           v-model="showBarometricPressure"
           :label="$t('app.setting.label.show_barometric_pressure')"
           color="primary"
           hide-details
-          class="mx-2 mt-2 mb-2"
+          class="mx-2 my-2"
         />
       </app-btn-collapse-group>
     </template>
@@ -76,7 +76,7 @@
 
       <thermal-chart
         ref="thermalchart"
-        :height="(isMobile) ? '180px' : '260px'"
+        :height="(isMobileViewport) ? '180px' : '260px'"
       />
     </template>
   </collapsable-card>
@@ -85,6 +85,7 @@
 <script lang="ts">
 import { Component, Mixins, Prop, Ref } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
+import BrowserMixin from '@/mixins/browser'
 import { Fan, Heater } from '@/store/printer/types'
 
 import ThermalChart from '@/components/widgets/thermals/ThermalChart.vue'
@@ -99,7 +100,7 @@ import { TemperaturePreset } from '@/store/config/types'
     TemperaturePresetsMenu
   }
 })
-export default class TemperatureCard extends Mixins(StateMixin) {
+export default class TemperatureCard extends Mixins(StateMixin, BrowserMixin) {
   @Prop({ type: Boolean, default: false })
   readonly menuCollapsed!: boolean
 
@@ -180,10 +181,6 @@ export default class TemperatureCard extends Mixins(StateMixin) {
       value,
       server: true
     })
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
   }
 
   handleApplyPreset (preset: TemperaturePreset) {

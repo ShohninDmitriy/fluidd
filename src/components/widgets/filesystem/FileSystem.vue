@@ -389,12 +389,12 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
       for (const filter of this.filters) {
         switch (filter) {
           case 'hidden_files':
-            if (file.name?.match(/^\.(?!\.$)/)) {
+            if (file.filename.match(/^\.(?!\.$)/)) {
               return false
             }
             break
           case 'klipper_backup_files':
-            if (file.name?.match(/^printer-\d{8}_\d{6}\.cfg$/)) {
+            if (file.filename.match(/^printer-\d{8}_\d{6}\.cfg$/)) {
               return false
             }
             break
@@ -521,43 +521,54 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
 
   // Handles a user clicking a file row.
   handleRowClick (item: FileBrowserEntry, e: MouseEvent) {
-    if (!this.contextMenuState.open && !this.disabled) {
-      if (item.type === 'directory' && e.type !== 'contextmenu') {
-        const dir = item as AppDirectory
-        if (item.name === '..') {
-          const dirs = this.currentPath.split('/')
-          const newpath = dirs.slice(0, -1).join('/')
-          if (newpath === this.currentRoot) {
-            this.loadFiles(this.currentRoot)
-          } else {
-            this.loadFiles(newpath)
-          }
-        } else {
-          this.loadFiles(`${this.currentPath}/${dir.dirname}`)
-        }
-        // Clear selected bulk items if we're navigating folders.
-        this.selected = []
-      } else {
-        if (
-          e.type === 'click' && item.type === 'file' &&
-          (
-            this.$store.state.config.uiSettings.editor.autoEditExtensions.includes(`.${item.extension}`) ||
-            this.currentRoot === 'timelapse'
-          )
-        ) {
-          // Open the file editor
-          this.handleFileOpenDialog(item)
-        } else {
-          // Open the context menu
-          this.contextMenuState.x = e.clientX
-          this.contextMenuState.y = e.clientY
-          this.contextMenuState.file = item
-          this.$nextTick(() => {
-            this.contextMenuState.open = true
-          })
-        }
+    if (this.disabled) {
+      return
+    }
+
+    if (this.contextMenuState.open) {
+      this.contextMenuState.open = false
+
+      if (e.type !== 'contextmenu') {
+        return
       }
     }
+
+    if (item.type === 'directory') {
+      if (e.type === 'click') {
+        if (item.dirname === '..') {
+          const dirs = this.currentPath.split('/')
+          const newpath = dirs.slice(0, -1).join('/')
+
+          this.loadFiles(newpath)
+        } else {
+          this.loadFiles(`${this.currentPath}/${item.dirname}`)
+        }
+
+        // Clear selected bulk items if we're navigating folders.
+        this.selected = []
+
+        return
+      } else if (item.dirname === '..') {
+        return
+      }
+    } else if (
+      e.type === 'click' && (
+        this.$store.state.config.uiSettings.editor.autoEditExtensions.includes(`.${item.extension}`) ||
+        this.currentRoot === 'timelapse'
+      )
+    ) {
+      this.handleFileOpenDialog(item)
+
+      return
+    }
+
+    // Open the context menu
+    this.contextMenuState.x = e.clientX
+    this.contextMenuState.y = e.clientY
+    this.contextMenuState.file = item
+    this.$nextTick(() => {
+      this.contextMenuState.open = true
+    })
   }
 
   /**
@@ -677,15 +688,17 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
 
   async handleViewThumbnail (file: AppFileWithMeta) {
     const thumb = this.getThumb(file.thumbnails ?? [], file.path, true)
-    if (!thumb) return
-    const thumbUrl = this.getThumbUrl([thumb], file.path, true)
 
-    this.filePreviewState = {
-      open: true,
-      src: thumbUrl,
-      type: 'image',
-      filename: file.filename,
-      width: thumb.width
+    if (thumb) {
+      const thumbUrl = thumb.absolute_path || thumb.data || ''
+
+      this.filePreviewState = {
+        open: true,
+        src: thumbUrl,
+        type: 'image',
+        filename: file.filename,
+        width: thumb.width
+      }
     }
   }
 
@@ -783,44 +796,43 @@ export default class FileSystem extends Mixins(StateMixin, FilesMixin, ServicesM
     SocketActions.serverFilesMove(src, dest)
   }
 
-  async handleRemove (file: FileBrowserEntry | FileBrowserEntry[], callback?: () => void) {
+  async handleRemove (file: FileBrowserEntry | FileBrowserEntry[]) {
     if (this.disabled) return
-
-    const items = (Array.isArray(file)) ? file.filter(item => (item.name !== '..')) : [file]
-
-    if (this.currentRoot === 'timelapse') {
-      // Override thumbnails for timelapse browser
-      const thumbnails = []
-
-      const allFiles = this.getAllFiles()
-      for (const item of items) {
-        if (item.type === 'file') {
-          const name = item.filename.slice(0, -(item.extension.length + 1))
-
-          for (const file of allFiles) {
-            if (file.type === 'file' && file.extension === 'jpg' && file.filename.startsWith(name)) {
-              thumbnails.push(file)
-            }
-          }
-        }
-      }
-
-      items.push(...thumbnails)
-    }
 
     const res = await this.$confirm(
       this.$tc('app.file_system.msg.confirm'),
       { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
     )
-    if (res) {
-      items.forEach((item) => {
-        if (item.type === 'directory') SocketActions.serverFilesDeleteDirectory(`${this.currentPath}/${item.name}`, true)
-        if (item.type === 'file') SocketActions.serverFilesDeleteFile(`${this.currentPath}/${item.name}`)
-      })
 
-      if (callback) {
-        callback()
+    if (res) {
+      this.filePreviewState.open = false
+
+      const items = (Array.isArray(file)) ? file.filter(item => (item.name !== '..')) : [file]
+
+      if (this.currentRoot === 'timelapse') {
+      // Override thumbnails for timelapse browser
+        const thumbnails = []
+
+        const allFiles = this.getAllFiles()
+        for (const item of items) {
+          if (item.type === 'file') {
+            const name = item.filename.slice(0, -(item.extension.length + 1))
+
+            for (const file of allFiles) {
+              if (file.type === 'file' && file.extension === 'jpg' && file.filename.startsWith(name)) {
+                thumbnails.push(file)
+              }
+            }
+          }
+        }
+
+        items.push(...thumbnails)
       }
+
+      items.forEach((item) => {
+        if (item.type === 'directory') SocketActions.serverFilesDeleteDirectory(`${this.currentPath}/${item.dirname}`, true)
+        if (item.type === 'file') SocketActions.serverFilesDeleteFile(`${this.currentPath}/${item.filename}`)
+      })
     }
   }
 
