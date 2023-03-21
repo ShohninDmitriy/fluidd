@@ -38,32 +38,74 @@
         />
       </app-btn-collapse-group>
 
-      <app-btn-collapse-group
-        collapsed
-        menu-icon="$cog"
+      <v-menu
+        bottom
+        left
+        offset-y
+        transition="slide-y-transition"
+        :close-on-content-click="false"
       >
-        <v-checkbox
-          v-model="showRateOfChange"
-          :label="$t('app.setting.label.show_rate_of_change')"
-          color="primary"
-          hide-details
-          class="mx-2 my-2"
-        />
-        <v-checkbox
-          v-model="showRelativeHumidity"
-          :label="$t('app.setting.label.show_relative_humidity')"
-          color="primary"
-          hide-details
-          class="mx-2 my-2"
-        />
-        <v-checkbox
-          v-model="showBarometricPressure"
-          :label="$t('app.setting.label.show_barometric_pressure')"
-          color="primary"
-          hide-details
-          class="mx-2 my-2"
-        />
-      </app-btn-collapse-group>
+        <template #activator="{ on, attrs }">
+          <v-btn
+            fab
+            x-small
+            text
+            v-bind="attrs"
+            class="ms-1 my-1"
+            v-on="on"
+          >
+            <v-icon>
+              $cog
+            </v-icon>
+          </v-btn>
+        </template>
+
+        <v-list dense>
+          <v-list-item @click="showRateOfChange = !showRateOfChange">
+            <v-list-item-action class="my-0">
+              <v-checkbox :input-value="showRateOfChange" />
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>
+                {{ $t('app.setting.label.show_rate_of_change') }}
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item @click="showRelativeHumidity = !showRelativeHumidity">
+            <v-list-item-action class="my-0">
+              <v-checkbox :input-value="showRelativeHumidity" />
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>
+                {{ $t('app.setting.label.show_relative_humidity') }}
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item @click="showBarometricPressure = !showBarometricPressure">
+            <v-list-item-action class="my-0">
+              <v-checkbox :input-value="showBarometricPressure" />
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>
+                {{ $t('app.setting.label.show_barometric_pressure') }}
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item @click="showGasResistance = !showGasResistance">
+            <v-list-item-action class="my-0">
+              <v-checkbox :input-value="showGasResistance" />
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>
+                {{ $t('app.setting.label.show_gas_resistance') }}
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </template>
 
     <temperature-targets
@@ -178,6 +220,18 @@ export default class TemperatureCard extends Mixins(StateMixin, BrowserMixin) {
   set showBarometricPressure (value: boolean) {
     this.$store.dispatch('config/saveByPath', {
       path: 'uiSettings.general.showBarometricPressure',
+      value,
+      server: true
+    })
+  }
+
+  get showGasResistance () {
+    return this.$store.state.config.uiSettings.general.showGasResistance
+  }
+
+  set showGasResistance (value: boolean) {
+    this.$store.dispatch('config/saveByPath', {
+      path: 'uiSettings.general.showGasResistance',
       value,
       server: true
     })

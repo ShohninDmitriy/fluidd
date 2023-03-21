@@ -101,6 +101,7 @@ app:
       upload_file: Uploading file | Uploading files
     tooltip:
       low_on_space: Low on disk space
+      move_item: Move item | Move {count} items
       root_disabled: '{root} root is not available. Please check your logs.'
     url:
       klipper_config: 'https://www.klipper3d.org/Config_Reference.html#%{hash}'
@@ -551,6 +552,7 @@ app:
       show_animations: Show animations
       show_barometric_pressure: Show barometric pressure
       show_code_lens: Show CodeLens
+      show_gas_resistance: Show gas resistance
       show_legend: Show legend
       show_rate_of_change: Show temperature rate of change
       show_relative_humidity: Show relative humidity
@@ -642,13 +644,9 @@ app:
       home_xy: Home XY
       home_z: Home Z
       manual_probe: Manual Probe
-      motors_off: MOTORS OFF
-      z_tilt_adjust: Z_Tilt_Adjust
-      quad_gantry_level: QGL
+      motors_off: Motors Off
       relative_positioning: Relative Positioning
-      screws_tilt_calculate: Screws_Tilt_Calculate
-      bed_screws_adjust: BED_SCREWS_ADJUST
-      force_move: FORCE_MOVE
+      tools: Tools
     label:
       stats_active_extruder: >-
         <span class="secondary--text">The active extruder configuration is set for</span>

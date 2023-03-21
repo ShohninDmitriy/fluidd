@@ -375,6 +375,8 @@ export const Waits = Object.freeze({
   onZTilt: 'onZTilt',
   onBedScrewsAdjust: 'onBedScrewAdjust',
   onBedScrewsCalculate: 'onBedScrewsCalculate',
+  onBedTiltCalibrate: 'onBedTiltCalibrate',
+  onDeltaCalibrate: 'onDeltaCalibrate',
   onPrintPause: 'onPrintPause',
   onPrintCancel: 'onPrintCancel',
   onPrintResume: 'onPrintResume',
@@ -406,6 +408,8 @@ export const Waits = Object.freeze({
   onJobQueue: 'onJobQueue',
   onTimelapseSaveFrame: 'onTimelapseSaveFrame',
   onManualProbe: 'onManualProbe',
+  onProbeCalibrate: 'onProbeCalibrate',
+  onZEndstopCalibrate: 'onZEndstopCalibrate',
   onQueryEndstops: 'onQueryEndstops',
   onQueryProbe: 'onQueryProbe',
   onVersionRefresh: 'onVersionRefresh',
@@ -440,7 +444,7 @@ type DateTimeFormat = {
 
 export const DateFormats = Object.freeze<Record<string, DateTimeFormat>>({
   iso: {
-    locale: 'sv-SE',
+    locale: 'lt',
     options: { day: '2-digit', month: '2-digit', year: 'numeric' },
     suffix: ' (ISO 8601)'
   },
@@ -454,7 +458,7 @@ export const DateFormats = Object.freeze<Record<string, DateTimeFormat>>({
 
 export const TimeFormats = Object.freeze<Record<string, DateTimeFormat>>({
   iso: {
-    locale: 'sv-SE',
+    locale: 'lt',
     options: { hour: '2-digit', minute: '2-digit', hour12: false },
     suffix: ' (ISO 8601)'
   },
