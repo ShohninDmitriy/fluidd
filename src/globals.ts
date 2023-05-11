@@ -139,7 +139,9 @@ import {
   mdiTrayFull,
   mdiTrayPlus,
   mdiFolderArrowUp,
-  mdiShape
+  mdiTableColumn,
+  mdiShape,
+  mdiContentDuplicate
 } from '@mdi/js'
 
 /**
@@ -307,6 +309,7 @@ export const Icons = Object.freeze({
   printer: mdiPrinter,
   download: mdiDownload,
   rename: mdiFormTextbox,
+  duplicate: mdiContentDuplicate,
   delete: mdiDelete,
   camera: mdiCamera,
   fan: mdiFan,
@@ -357,6 +360,7 @@ export const Icons = Object.freeze({
   moves: mdiVectorLine,
   extrusions: mdiPrinter3dNozzle,
   retractions: mdiSwapVertical,
+  tableColumn: mdiTableColumn,
   parts: mdiShape,
   folderOpen: mdiFolderOpen,
   fileZip: mdiArchive,
@@ -434,6 +438,7 @@ export const SupportedLocales = Object.freeze([
   { name: 'Nederlands', code: 'nl' },
   { name: 'Português', code: 'pt' },
   { name: 'Русский', code: 'ru' },
+  { name: 'Slovenščina', code: 'sl' },
   { name: 'Українська', code: 'uk' },
   { name: '한국어', code: 'ko' },
   { name: 'العربية', code: 'ar' },
