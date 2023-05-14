@@ -72,7 +72,9 @@ app:
       label:
         print_start_time: Фильтровать напечатанное
         print_start_time_desc: Фильтровывать уже напечатанные элементы.
+        hidden_files_folders: Фильтровать скрытые файлы и папки
         klipper_backup_files: Фильтровать резервные копии klipperа
+        rolled_log_files: Фильтровать свернутые файлы журнала
     label:
       dir_name: Имя папки
       disk_usage: Использование дискового пространства
@@ -94,11 +96,15 @@ app:
       add_file: Добавить файл
       command_palette: Команды
       download_file: Получение файла
+      duplicate_dir: Дублирующийся каталог
+      duplicate_file: Дублирующийся файл
+      go_to_file: Перейти к файлу
       rename_dir: Переименовать папку
       rename_file: Переименовать файл
       upload_file: Загрузка файла(ов)
     tooltip:
       low_on_space: Мало места на диске
+      move_item: Переместить элемент | Переместить {count} элементов
       root_disabled: Root недоступен. Проверьте файлы логов.
     url:
       klipper_config: 'https://www.klipper3d.org/Config_Reference.html#%{hash}'
@@ -118,6 +124,7 @@ app:
       show_extrusions: Показывать экструдер
       show_moves: Показывать перемещения
       show_next_layer: Показывать следующий слой
+      show_parts: Показать детали
       show_previous_layer: Отображать предыдущий слой
       show_retractions: Отображать ретракты
       parsing_file: Анализ файла
@@ -146,11 +153,13 @@ app:
       create_zip_archive: Create ZIP Archive
       delete: Удалить
       download: Скачать
+      duplicate: Дубликат
       edit: Редактировать
       exit_layout: Выйти из режима редактирования
       extrude: Экструдировать
       filter: Фильтр
       forgot_password: Забыли ваш пароль?
+      go_to_file: Перейти к файлу
       heaters_off: Отключить нагрев
       job_queue: Job Queue
       load_all: Загрузить все
@@ -185,6 +194,7 @@ app:
       save_as: Сохранить как
       save_restart: Сохранить и перезагрузить
       save_config_and_restart: Сохранить настройки и перезагрузить
+      select_columns: Выберите столбцы
       send: Отправить
       set_color: Установить цвет
       set_default_layout: Установить по умолчанию
@@ -192,6 +202,7 @@ app:
       snooze: Вздремнуть
       socket_reconnect: Повторное подключение
       socket_refresh: Принудительно обновление
+      thumbnail_size: Размер миниатюры
       upload: Загрузить
       upload_files: Upload Files
       upload_folder: Upload Folder
@@ -218,6 +229,7 @@ app:
       add_filter: Добавить фильтр
       add_preset: Добавить предустановку
       add_user: Добавить пользователя
+      all: Все
       api_key: Ключ API
       api_url: API URL
       auth_source: Источник аутентификации
@@ -225,6 +237,7 @@ app:
       change_password: Изменить пароль
       clear_all: Очистить все
       color: Цвет
+      command: Команда
       confirm: Подтверждение
       current_password: Текущий пароль
       current_user: Текущий пользователь
@@ -263,6 +276,9 @@ app:
       numeric_prefix_sort: Numeric Prefix sort
       password: Пароль
       partial_of_total: '%{partial} of %{total}'
+      pause_at_layer: Пауза на слое
+      pause_at_next_layer: Сделайте паузу на следующем слое
+      pause_at_layer_number: Сделайте паузу на номере слоя
       power: Питание
       pressure_advance: Pressure Advance
       printers: Принтеры
@@ -316,8 +332,11 @@ app:
         Нажмите <b>Скорректировать</b>, если требуется корректировка текущего винта; в противном случае нажмите <b>Принять</b>, чтобы продолжить
       welcome_back: >-
         С возвращением.<br>Войдите в систему, чтобы подключится к принтеру.
-      offline_ready: Fluidd is now ready to work offline.
-      needs_refresh: New content available, please click the <b>Reload</b> button to update.
+      offline_ready: Теперь Fluid готов к работе в автономном режиме.
+      needs_refresh: Доступен новый контент, пожалуйста, нажмите на <b>Reload</b> кнопка для обновления.
+      pending_configuration_sections_deleted: Следующие разделы помечены для удаления
+      rolledover_logs: >-
+        Были перенесены следующие журналы приложений: %{applications}
     simple_form:
       error:
         arrayofnums: Только цифры
@@ -334,6 +353,7 @@ app:
         invalid_aspect: Недопустимое соотношение сторон
       msg:
         confirm: Вы уверены?
+        confirm_delete: Aты уверен? Это приведет к удалению выбранного элемента. | Ты уверен? Это приведет к удалению {count} выбранных элементов.
         confirm_exclude_object: Вы уверены, что хотите исключить этот объект из печати?
         confirm_forcemove_toggle: Вы уверены? Это может повредить принтер
         confirm_reboot_host: Вы уверены? Это приведёт к перезагрузке вашей хост системы.
@@ -399,6 +419,7 @@ app:
       other_files: Другие файлы
       pending_configuration_changes: Ожидающие изменения конфигурации
       retract: Настройки ретракта
+      rollover_logs: Журналы опрокидывания
       runout_sensors: Датчик контроля филамента
       settings: Настройки
       stats: Статистика принтера
@@ -417,13 +438,14 @@ app:
       reload_restart_klipper: Перезагружает конфигурацию Klipper и перезапускает MCU.
       restart_klipper: Перезагружает сервис Klipper.
       run_collector: Запустить коллектор
+      rollover_logs: Журналы опрокидывания
   history:
     msg:
       confirm_jobs: Вы уверены? Это очистит все выполненые работы.
   job_queue:
     msg:
-      confirm: Are you sure? This will clear the entire printer queue
-      confirm_jobs: Are you sure? This will clear all jobs.
+      confirm: Ты уверен? Это очистит всю очередь принтера
+      confirm_jobs: Ты уверен? Это очистит все задания.
       confirm_stats: Вы уверены? Это очистит всю статистику.
   printer:
     state:
@@ -449,6 +471,7 @@ app:
     camera_type_options:
       mjpegadaptive: Адаптивный MJPEG
       mjpegstream: MJPEG поток
+      hlsstream: HLS Поток
       video: IP Камера
       iframe: Страница HTTP
     camera_rotate_options:
@@ -507,6 +530,7 @@ app:
       height: Высота
       gcode_coords: Испрользовать координаты GCode
       icon: Иконка
+      ignore_default_bed_mesh_pending_configuration_changes: Игнорировать плохую сетку по умолчанию в ожидании изменений конфигурации
       invert_x_control: Инвертировать управление по оси X
       invert_y_control: Инвертировать управление по оси Y
       invert_z_control: Инвертировать управление по оси Z
@@ -520,6 +544,7 @@ app:
       metrics: Метрика
       move_line_width: Ширина линии движения
       name: Имя
+      never: Никогда
       none: Отсутсвие
       optional: Необязательный
       power_toggle_in_top_nav: Переключатель питания в верхней панели навигации
@@ -528,9 +553,11 @@ app:
       reset: Сбросить настройки
       retraction_icon_size: Размер иконки ретракта
       right_y: Правая ось Y
+      save_and_restore_view_state: Сохранение и восстановление состояния просмотра
       show_animations: Показывать анимацию
       show_barometric_pressure: Показать атмосферное давление
       show_code_lens: Показывать CodeLens (подсказки в тексте)
+      show_gas_resistance: Проявляют газостойкость
       show_legend: Показывать легенду
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
@@ -542,6 +569,8 @@ app:
       thermal_preset_gcode: GCode
       thermal_preset_name: Имя профиля
       title: Заголовок
+      to_browser_local_storage: В локальное хранилище браузера
+      to_browser_session_storage: В хранилище сеансов браузера
       toolhead_move_distances: Значения расстояния перемещения головки
       type: Тип
       unit: Единица измерения
@@ -624,6 +653,7 @@ app:
       manual_probe: Ручная регулировка стола
       motors_off: Моторы Выкл
       relative_positioning: Относительная позиция
+      tools: Инструменты
     label:
       stats_active_extruder: >-
         <span class="secondary--text">Активный экструдер настроен на </span>
