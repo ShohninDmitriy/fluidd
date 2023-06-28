@@ -176,6 +176,7 @@ app:
       reboot: Перезагрузка
       recover: Восстановить
       refresh: Обновить
+      refresh_metadata: Обновить метаданные
       reload: Перезагрузить
       remove: Удалить
       remove_all: Удалить всё
