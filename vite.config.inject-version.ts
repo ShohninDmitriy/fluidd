@@ -18,7 +18,7 @@ const writeReleaseInfoFile = async () => {
 
   await releaseInfoFile.writeFile(JSON.stringify({
     project_name: 'fluidd',
-    project_owner: 'ShohninDmitriy',
+    project_owner: 'fluidd-core',
     version: `v${version}`
   }))
 
