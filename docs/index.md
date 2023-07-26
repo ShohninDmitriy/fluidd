@@ -16,8 +16,8 @@ firmware.
 {: .fs-6 .fw-300 }
 
 [Get Started](/installation){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[View on GitHub](https://github.com/fluidd-core/fluidd){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[Release Notes](https://github.com/fluidd-core/fluidd/releases){: .btn .fs-5 .mb-4 .mb-md-0 }
+[View on GitHub](https://github.com/ShohninDmitriy/fluidd){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Release Notes](https://github.com/ShohninDmitriy/fluidd/releases){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ![screenshot](/assets/images/preview_sliced.png)
 
@@ -51,14 +51,14 @@ printer communities and you, the user.
 ## Docker
 
 Fluidd ships with Docker support built in. The official docker can be found
-[here](https://github.com/fluidd-core/fluidd/pkgs/container/fluidd), and further information can be found [here](/installation/docker).
+[here](https://github.com/ShohninDmitriy/fluidd/pkgs/container/fluidd), and further information can be found [here](/installation/docker).
 
 ## Support
 
 Primary support is provided via Discord, or Github Issues.
 
 [Discord](https://discord.gg/GZ3D5tqfcF){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2 }
-[GitHub Issues](https://github.com/fluidd-core/fluidd/issues){: .btn .fs-5 .mb-4 .mb-md-0 }
+[GitHub Issues](https://github.com/ShohninDmitriy/fluidd/issues){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ## Did you know?
 
@@ -67,7 +67,7 @@ to edit this page. Any help is appreciated.
 
 ## Architecture
 
-Fluidd relies on [Moonraker](https://github.com/Arksine/moonraker/tree/master/docs) and
+Fluidd relies on [Moonraker](https://github.com/ShohninDmitriy/moonraker/tree/master/docs) and
 [Klipper](https://www.klipper3d.org/) to function. To learn more about the
 architecture and how these components work together, visit the development
 resources [here](/development).

@@ -33,11 +33,11 @@ use [KIAUH](/installation/kiauh) to install Fluidd.
 FluiddPI is a Raspberry Pi OS Lite image, preconfigured with Klipper, Moonraker and
 Fluidd.
 
-[View on GitHub](https://github.com/fluidd-core/FluiddPi){: .btn .fs-5 .mb-4 .mb-md-0 }
+[View on GitHub](https://github.com/ShohninDmitriy/fluiddPi){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ## Download
 
-Start by downloading the latest release of [FluiddPI](https://github.com/fluidd-core/FluiddPi/releases/latest).
+Start by downloading the latest release of [FluiddPI](https://github.com/ShohninDmitriy/fluiddPi/releases/latest).
 
 ## Flash
 

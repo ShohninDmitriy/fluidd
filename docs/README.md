@@ -1,4 +1,4 @@
 # Notes
 
-https://socialify.git.ci/fluidd-core/fluidd
+https://socialify.git.ci/ShohninDmitriy/fluidd
 Font = Raleway

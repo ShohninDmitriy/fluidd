@@ -58,6 +58,6 @@ subscriptions:
 
 [update_manager fluidd]
 type: web
-repo: fluidd-core/fluidd
+repo: ShohninDmitriy/fluidd
 path: ~/fluidd
 ```

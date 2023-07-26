@@ -122,7 +122,7 @@ enable_auto_refresh: True
 
 [update_manager fluidd]
 type: web
-repo: fluidd-core/fluidd
+repo: ShohninDmitriy/fluidd
 path: ~/fluidd
 ```
 

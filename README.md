@@ -19,13 +19,13 @@ Join our [Discord!](https://discord.gg/GZ3D5tqfcF).
 
 ## Where to download?
 
-You can download the latest release [here](https://github.com/fluidd-core/fluidd/releases/latest).
+You can download the latest release [here](https://github.com/ShohninDmitriy/fluidd/releases/latest).
 
-Older releases can be found [here](https://github.com/fluidd-core/fluidd/releases).
+Older releases can be found [here](https://github.com/ShohninDmitriy/fluidd/releases).
 
 ## Docker
 
-We have an [official docker image](https://github.com/fluidd-core/fluidd/pkgs/container/fluidd). This is updated for each release and on each commit.
+We have an [official docker image](https://github.com/ShohninDmitriy/fluidd/pkgs/container/fluidd). This is updated for each release and on each commit.
 
 ## How to use?
 
@@ -38,6 +38,6 @@ Please see the [docs](https://docs.fluidd.xyz) for help with installation and co
 A big thank you to:
 
 - the [Voron Community](http://vorondesign.com/)
-- Kevin O'Connor for [Klipper](https://github.com/Klipper3d/klipper)
-- Eric Callahan for [Moonraker](https://github.com/Arksine/moonraker)
+- Kevin O'Connor for [Klipper](https://github.com/ShohninDmitriy/klipper)
+- Eric Callahan for [Moonraker](https://github.com/ShohninDmitriy/moonraker)
 - Ray for [MainsailOS](https://github.com/raymondh2/MainsailOS)

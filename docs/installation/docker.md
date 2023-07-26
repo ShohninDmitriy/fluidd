@@ -26,4 +26,4 @@ This is a list of the available docker image tags:
 - `latest-develop`: points to the most recent commit to the "develop" branch
 - `sha-<hash>`: points to a specific git commit hash
 
-[View on GitHub Container registry](https://github.com/fluidd-core/fluidd/pkgs/container/fluidd){: .btn .fs-5 .mb-4 .mb-md-0 }
+[View on GitHub Container registry](https://github.com/ShohninDmitriy/fluidd/pkgs/container/fluidd){: .btn .fs-5 .mb-4 .mb-md-0 }
