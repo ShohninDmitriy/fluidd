@@ -500,7 +500,8 @@ app:
         rawstream: Чистый поток
       camera_rotate_by: Повернуть на
       camera_stream_type: Тип потока
-      camera_url: URL камеры
+      camera_url_snapshot: Снимок Url-адрес камеры
+      camera_url_stream: Поток URL-адрес камеры
       card: Карта
       collector: Сборщик
       confirm_on_estop: Требовать подтверждение при аварийной остановке
