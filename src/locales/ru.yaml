@@ -88,6 +88,9 @@ app:
     msg:
       not_found: Файлы не найдены
       processing: Обработка...
+    overlay:
+      drag_files_folders_upload: <strong>Drag</strong> files and folders here to upload
+      drag_files_enqueue: <strong>Drag</strong> files here to enqueue
     title:
       add_dir: Добавить папку
       add_file: Добавить файл
@@ -130,6 +133,8 @@ app:
       confirm: >-
         Файл "%{filename}" имеет размер %{size}, это может быть ресурсоемким для
         вашей системы. Вы уверены?
+    overlay:
+      drag_file_load: <strong>Drag</strong> a gcode file here to load
   general:
     btn:
       abort: Отменить
@@ -232,12 +237,14 @@ app:
       api_key: Ключ API
       api_url: URL-адрес API
       auth_source: Источник аутентификации
+      bars: Bars
       category: Категория
       change_password: Изменить пароль
       clear_all: Очистить все
       color: Цвет
       command: Команда
       confirm: Подтверждение
+      cross: Пересекать
       current_password: Текущий пароль
       current_user: Текущий пользователь
       default: По умолчанию
@@ -437,14 +444,15 @@ app:
       reload_restart_klipper: Перезагружает конфигурацию Klipper и перезапускает MCU.
       restart_klipper: Перезагружает сервис Klipper.
       run_collector: Запустить сбор данных
+      rollover_logs: Журналы опрокидывания
   history:
     msg:
       confirm_jobs: Вы уверены? Это очистит все выполненые работы.
+      confirm_jobs: Ты уверен? Это очистит все задания.
+      confirm_stats: Вы уверены? Это очистит всю статистику.
   job_queue:
     msg:
       confirm: Ты уверен? Это очистит всю очередь принтера
-      confirm_jobs: Ты уверен? Это очистит все задания.
-      confirm_stats: Вы уверены? Это очистит всю статистику.
   printer:
     state:
       busy: Занят
@@ -571,7 +579,10 @@ app:
       title: Заголовок
       to_browser_local_storage: В локальное хранилище браузера
       to_browser_session_storage: В хранилище сеансов браузера
+      toolhead_control_style: Стиль управления инструментальной головкой
       toolhead_move_distances: Значения расстояния перемещения головки
+      toolhead_xy_move_distances: Значения расстояния XY до головки инструмента
+      toolhead_z_move_distances: Значения расстояния Z от головки инструмента
       type: Тип
       unit: Единица измерения
       z_adjust_values: Значения подстройки оси Z
@@ -653,6 +664,7 @@ app:
       manual_probe: Ручная регулировка стола
       motors_off: Моторы Выкл
       relative_positioning: Относительная позиция
+      select_tool: Выберите инструмент %{tool}
       tools: Инструменты
     label:
       stats_active_extruder: >-
@@ -811,3 +823,10 @@ app:
       auto_select_spool_on_match: Автоматически фиксировать выбор катушки при совпадении QR-кода
       prefer_device_camera: Использовать камеру устройства для обнаружения QR-кода, если она доступна
       show_spool_selection_dialog_on_print_start: Показывать диалоговое окно выбора катушки при запуске печати
+      warn_on_not_enough_filament: >-
+       Выводит предупреждение, если на выбранной катушке осталось недостаточно нити для завершения печати
+      warn_on_filament_type_mismatch: >-
+        Выводит предупреждение, если тип нити на катушках и выбранный в слайсере тип нити не совпадают
+  sensors:
+    title:
+      sensors: Датчики
