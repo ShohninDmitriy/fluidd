@@ -448,7 +448,6 @@ app:
   history:
     msg:
       confirm_jobs: Вы уверены? Это очистит все выполненые работы.
-      confirm_jobs: Ты уверен? Это очистит все задания.
       confirm_stats: Вы уверены? Это очистит всю статистику.
   job_queue:
     msg:
