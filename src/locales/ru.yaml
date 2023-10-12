@@ -88,9 +88,6 @@ app:
     msg:
       not_found: Файлы не найдены
       processing: Обработка...
-    overlay:
-      drag_files_folders_upload: <strong>Drag</strong> файлы и папки для загрузки находятся здесь
-      drag_files_enqueue: <strong>Drag</strong> файлы здесь для постановки в очередь
     title:
       add_dir: Добавить папку
       add_file: Добавить файл
