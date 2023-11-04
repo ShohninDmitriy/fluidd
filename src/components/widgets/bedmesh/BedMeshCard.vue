@@ -3,12 +3,12 @@
     :title="$t('app.general.title.bedmesh')"
     :lazy="false"
     icon="$bedMesh"
-    :draggable="!fullScreen"
-    :collapsable="!fullScreen"
+    :draggable="!fullscreen"
+    :collapsable="!fullscreen"
     layout-path="dashboard.bed-mesh-card"
   >
     <template
-      v-if="!fullScreen"
+      v-if="!fullscreen"
       #menu
     >
       <app-btn
@@ -61,8 +61,8 @@ import type { AppMeshes } from '@/store/mesh/types'
   }
 })
 export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin, BrowserMixin) {
-  @Prop({ type: Boolean, default: false })
-  readonly fullScreen!: boolean
+  @Prop({ type: Boolean })
+  readonly fullscreen?: boolean
 
   get options () {
     const map_scale = this.scale / 2
@@ -81,7 +81,7 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin, Brows
     const zBoxMin = -Math.abs(this.mesh[this.matrix].mid - box_scale)
     const zBoxMax = this.mesh[this.matrix].mid + box_scale
 
-    const legends = this.series.reduce((obj, series: any) => {
+    const legends = this.series.reduce((obj, series) => {
       return Object.assign(
         obj,
         {
@@ -118,7 +118,7 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin, Brows
   get series () {
     const matrix = this.matrix
     const wireframe = this.wireframe
-    const series: any[] = [
+    const series = [
       {
         type: 'surface',
         name: matrix,
