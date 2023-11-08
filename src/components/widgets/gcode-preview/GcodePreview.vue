@@ -30,11 +30,11 @@
           />
         </pattern>
         <clipPath
-          v-if="isDelta"
+          v-if="hasRoundBed"
           id="clipCircle"
         >
           <circle
-            :r="bedSize.x.max"
+            :r="bedSize.maxX"
             cx="0"
             cy="0"
           />
@@ -115,12 +115,12 @@
           id="background"
         >
           <rect
-            :height="bedSize.y.max - bedSize.y.min"
-            :width="bedSize.x.max - bedSize.x.min"
+            :height="bedSize.maxY - bedSize.minY"
+            :width="bedSize.maxX - bedSize.minX"
             fill="url(#backgroundPattern)"
-            :clip-path="isDelta ? 'url(#clipCircle)' : undefined"
-            :x="bedSize.x.min"
-            :y="bedSize.y.min"
+            :clip-path="hasRoundBed ? 'url(#clipCircle)' : undefined"
+            :x="bedSize.minX"
+            :y="bedSize.minY"
           />
         </g>
         <g v-if="drawOrigin">
@@ -322,12 +322,13 @@ import { Component, Mixins, Prop, Ref, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import BrowserMixin from '@/mixins/browser'
 import panzoom, { type PanZoom } from 'panzoom'
-import type { BBox, LayerNr, LayerPaths } from '@/store/gcodePreview/types'
+import type { BBox, Layer, LayerNr, LayerPaths } from '@/store/gcodePreview/types'
 import type { GcodePreviewConfig } from '@/store/config/types'
 import AppFocusableContainer from '@/components/ui/AppFocusableContainer.vue'
 import ExcludeObjects from '@/components/widgets/exclude-objects/ExcludeObjects.vue'
 import GcodePreviewButton from './GcodePreviewButton.vue'
 import type { AppFile } from '@/store/files/types'
+import type { BedSize } from '@/store/printer/types'
 
 @Component({
   components: {
@@ -362,15 +363,6 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
   panzoom?: PanZoom
 
   panning = false
-
-  get isDelta (): boolean {
-    const kinematics = this.$store.getters['printer/getPrinterSettings']('printer.kinematics')
-    return kinematics === 'delta' || kinematics === 'rotary_delta'
-  }
-
-  get printerRadius (): number {
-    return this.$store.getters['printer/getPrinterSettings']('printer.print_radius') ?? 100.0
-  }
 
   get themeIsDark (): boolean {
     return this.$store.state.config.uiSettings.theme.isDark
@@ -425,15 +417,18 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
   get showExcludeObjects () {
     if (!this.klippyReady || !(this.printerPrinting || this.printerPaused)) return false
 
-    const file = this.$store.getters['gcodePreview/getFile']
+    const file = this.$store.getters['gcodePreview/getFile'] as AppFile | undefined
+
     if (!file) {
       return true
     }
-    const printerFile = this.$store.state.printer.printer.current_file
+
+    const printerFile = this.$store.state.printer.printer.current_file as AppFile
 
     if (printerFile.filename) {
-      return (file.path + '/' + file.filename) === (printerFile.path + '/' + printerFile.filename)
+      return `${file.path}/${file.filename}` === `${printerFile.path}/${printerFile.filename}`
     }
+
     return false
   }
 
@@ -446,19 +441,12 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
   }
 
   get flipTransform () {
-    const {
-      x,
-      y
-    } = this.viewBox
+    const { x, y } = this.viewBox
 
     const scale = [
       this.flipX ? -1 : 1,
       this.flipY ? -1 : 1
     ]
-
-    if (this.isDelta) {
-      return `scale(${scale.join()}) translate(0,0)`
-    }
 
     const transform = [
       this.flipX ? -(x.max + x.min) : 0,
@@ -468,64 +456,26 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
     return `scale(${scale.join()}) translate(${transform.join()})`
   }
 
-  get bedSize (): BBox {
-    const {
-      stepper_x: stepperX,
-      stepper_y: stepperY
-    } = this.$store.getters['printer/getPrinterSettings']()
+  get hasRoundBed (): boolean {
+    return this.$store.getters['printer/getHasRoundBed'] as boolean
+  }
 
-    if (this.isDelta) {
-      const radius = this.printerRadius
-      return {
-        x: {
-          min: -radius,
-          max: radius
-        },
-        y: {
-          min: -radius,
-          max: radius
-        }
-      }
-    }
+  get bedSize (): BedSize {
+    const bedSize = this.$store.getters['printer/getBedSize'] as BedSize | undefined
 
-    return {
-      x: {
-        min: stepperX?.position_min ?? 0,
-        max: stepperX?.position_max ?? 100
-      },
-      y: {
-        min: stepperY?.position_min ?? 0,
-        max: stepperY?.position_max ?? 100
-      }
+    return bedSize ?? {
+      minX: 0,
+      minY: 0,
+      maxX: 100,
+      maxY: 100
     }
   }
 
   get viewBox (): BBox {
-    const bounds = this.$store.getters['gcodePreview/getBounds']
+    const bounds = this.bounds
 
-    const {
-      stepper_x: stepperX,
-      stepper_y: stepperY
-    } = this.$store.getters['printer/getPrinterSettings']()
-
-    if (this.isDelta) {
-      const radius = this.printerRadius
-      return {
-        x: {
-          min: -radius,
-          max: radius * 2
-        },
-        y: {
-          min: -radius,
-          max: radius * 2
-        }
-      }
-    }
-
-    if (stepperX === undefined || stepperY === undefined || this.autoZoom) {
-      const padding = this.autoZoom
-        ? Math.min(bounds.x.max - bounds.x.min, bounds.y.max - bounds.y.min) * 0.05
-        : 0
+    if (this.autoZoom) {
+      const padding = Math.min(bounds.x.max - bounds.x.min, bounds.y.max - bounds.y.min) * 0.05
 
       return {
         x: {
@@ -539,29 +489,24 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
       }
     }
 
+    const bedSize = this.bedSize
+
     return {
       x: {
-        min: Math.min(stepperX.position_min, bounds.x.min),
-        max: Math.max(stepperX.position_max, bounds.x.max)
+        min: Math.min(bedSize.minX, bounds.x.min) - 2,
+        max: Math.max(bedSize.maxX, bounds.x.max) + 2
       },
       y: {
-        min: Math.min(stepperY.position_min, bounds.y.min),
-        max: Math.max(stepperY.position_max, bounds.y.max)
+        min: Math.min(bedSize.minY, bounds.y.min) - 2,
+        max: Math.max(bedSize.maxY, bounds.y.max) + 2
       }
     }
   }
 
   get svgViewBox () {
-    const {
-      x,
-      y
-    } = this.viewBox
+    const { x, y } = this.viewBox
 
-    if (this.isDelta) {
-      return `${x.min - 2} ${y.min - 2} ${x.max + 4} ${y.max + 4}`
-    }
-
-    return `${x.min - 2} ${y.min - 2} ${x.max - x.min + 4} ${y.max - y.min + 4}`
+    return `${x.min} ${y.min} ${x.max - x.min} ${y.max - y.min}`
   }
 
   get defaultLayerPaths (): LayerPaths {
@@ -582,7 +527,7 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
       return this.defaultLayerPaths
     }
 
-    const layer = this.$store.getters['gcodePreview/getLayers'][this.layer]
+    const layer = this.$store.getters['gcodePreview/getLayers'][this.layer] as Layer | undefined
 
     if (this.getViewerOption('followProgress')) {
       const end = this.$store.getters['gcodePreview/getMoveIndexByFilePosition'](this.filePosition)
@@ -610,7 +555,7 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
   }
 
   get svgPathNext (): LayerPaths {
-    const layers = this.$store.getters['gcodePreview/getLayers']
+    const layers = this.$store.getters['gcodePreview/getLayers'] as Layer[]
 
     if (this.disabled || this.layer >= layers.length) {
       return this.defaultLayerPaths
@@ -619,12 +564,16 @@ export default class GcodePreview extends Mixins(StateMixin, BrowserMixin) {
     return this.$store.getters['gcodePreview/getLayerPaths'](this.layer + 1)
   }
 
-  get svgPathParts () {
-    return this.$store.getters['gcodePreview/getPartPaths']
+  get svgPathParts (): string[] {
+    return this.$store.getters['gcodePreview/getPartPaths'] as string[]
   }
 
   get file (): AppFile | undefined {
-    return this.$store.getters['gcodePreview/getFile']
+    return this.$store.getters['gcodePreview/getFile'] as AppFile | undefined
+  }
+
+  get bounds (): BBox {
+    return this.$store.getters['gcodePreview/getBounds'] as BBox
   }
 
   @Watch('focused')
