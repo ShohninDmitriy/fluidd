@@ -2,6 +2,7 @@ app:
   bedmesh:
     label:
       active: Активно
+      base: Базовый
       box_scale: Масштаб
       flat_surface: Показать базовую плоскость
       mesh_matrix: Сетчатая матрица
@@ -37,8 +38,9 @@ app:
       auto_scroll: Автоматическое пролистывание
       flip_layout: Перевернутое отображение
       hide_temp_waits: Скрыть временные ожидания
-    placeholder:
-      command: '''tab'' для автокомплита, ''help'' for для списка комманд ''↑ и ↓'' история команд'
+    tooltip:
+      help: >-
+        Введите "справка" для команд<br />Use <kbd>Tab</kbd> для автозаполнения<br />Use <kbd>&uarr;</kbd> и <kbd>&darr;</kbd> для истории
   endpoint:
     error:
       cant_connect: >-
@@ -87,8 +89,8 @@ app:
       not_found: Файлы не найдены
       processing: Обработка...
     overlay:
-      drag_files_folders_upload: <strong>Drag</strong> files and folders here to upload
-      drag_files_enqueue: <strong>Drag</strong> files here to enqueue
+      drag_files_folders_upload: <strong>Drag</strong> файлы и папки для загрузки находятся здесь
+      drag_files_enqueue: <strong>Drag</strong> файлы здесь для постановки в очередь
     title:
       add_dir: Добавить папку
       add_file: Добавить файл
@@ -132,7 +134,7 @@ app:
         Файл "%{filename}" имеет размер %{size}, это может быть ресурсоемким для
         вашей системы. Вы уверены?
     overlay:
-      drag_file_load: <strong>Drag</strong> a gcode file here to load
+      drag_file_load: <strong>Drag</strong> файл gcode здесь для загрузки
   general:
     btn:
       abort: Отменить
@@ -167,6 +169,7 @@ app:
       login: Вход
       logout: Выйти
       more_information: Больше информации
+      multiply: Умножать
       pause: Пауза
       preheat: Преднагрев
       presets: Предустановки
@@ -191,6 +194,7 @@ app:
       restart_service_moonraker: Перезагрузить Moonraker
       resume: Возобновить
       retract: Втянуть
+      retry: Повторить
       return_dashboard: Вернуться к дашборду
       save: Сохранить
       save_as: Сохранить как
@@ -235,7 +239,7 @@ app:
       api_key: Ключ API
       api_url: URL-адрес API
       auth_source: Источник аутентификации
-      bars: Bars
+      bars: Панели
       category: Категория
       change_password: Изменить пароль
       clear_all: Очистить все
@@ -287,6 +291,7 @@ app:
       pressure_advance: Pressure Advance
       printers: Принтеры
       progress: Прогресс
+      range: Range
       requested_speed: Запрошенная скорость
       retract_length: Длина ретракта
       retract_speed: Скорость ретракта
@@ -444,11 +449,16 @@ app:
       rollover_logs: Журналы опрокидывания
   history:
     msg:
+      confirm: Вы уверены? Это очистит всю историю и статистику принтера
       confirm_jobs: Вы уверены? Это очистит все выполненые работы.
       confirm_stats: Вы уверены? Это очистит всю статистику.
   job_queue:
     msg:
       confirm: Ты уверен? Это очистит всю очередь принтера
+    label:
+      number_of_copies: Количество экземпляров
+    title:
+      multiply_job: Умножение задания | Несколько заданий
   printer:
     state:
       busy: Занят
@@ -460,6 +470,8 @@ app:
       printing: Идёт печать
       ready: Готов
       standby: Режим ожидания
+    title:
+      printer_status: Состояние принтера
   setting:
     btn:
       add_camera: Добавить камеру
@@ -519,6 +531,7 @@ app:
       default_toolhead_z_speed: Скорость головки для оси Z по умолчанию
       dotted: штриховой
       draw_background: Отображать фон
+      draw_origin: Оригинальный фон
       enable: Вкл.
       enable_diagnostics: Включить диагностику
       enable_notifications: Включить оповещения
@@ -557,8 +570,10 @@ app:
       retraction_icon_size: Размер иконки ретракта
       right_y: Правая ось Y
       save_and_restore_view_state: Сохранение и восстановление состояния просмотра
+      sections_to_ignore_pending_configuration_changes: Разделы для игнорирования ожидающих изменений конфигурации
       show_animations: Показывать анимацию
       show_barometric_pressure: Показать атмосферное давление
+      show_chart: Показать диаграмму
       show_code_lens: Показывать CodeLens (подсказки в тексте)
       show_gas_resistance: Проявляют газостойкость
       show_legend: Показывать легенду
@@ -587,6 +602,7 @@ app:
       force_move_toggle_warning: Требовать подтверждение при активации "Форсированного перемещения"
       show_manual_probe_dialog_automatically: Автоматически показывать диалоговое окно "Ручная настройка стола"
       show_bed_screws_adjust_dialog_automatically: Автоматически показывать диалоговое окно "Регулировка винтов стола"
+      show_screws_tilt_adjust_dialog_automatically: Автоматическое отображение диалогового окна регулировки наклона винтов
     timer_options:
       duration: Только продолжительность
       filament: Оценка филамента
@@ -608,6 +624,7 @@ app:
       gcode_coords: Использовать GCode положение вместо положение инструментальной головки на панели управления
       show_manual_probe_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента ручного зондирования.
       show_bed_screws_adjust_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента BED_SCREWS_ADJUST.
+      show_screws_tilt_adjust_dialog_automatically: Автоматически показывает вспомогательное диалоговое окно при запуске инструмента SCREWS_TILT_CALCULATE
   socket:
     msg:
       connecting: Подключение к moonraker...
@@ -651,6 +668,7 @@ app:
     title:
       bed_screws_adjust: Регулировка винтов стола
       manual_probe: Ручная регулировка стола
+      screws_tilt_adjust: Регулировка наклона винтов
     tooltip:
       absolute_positioning: Абсолютная позиция
       extruder_disabled: Экструдер отключён, температура ниже чем (%{min}<small>°C</small>)
