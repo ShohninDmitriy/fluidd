@@ -22,6 +22,7 @@ app:
       delete: Удалить профиль
       load: Загрузить профиль
       save: Сохранить откалиброванный профиль в printer.cfg
+      copy_image: Copy bed mesh image
   chart:
     label:
       current: Текущее значение
@@ -74,6 +75,7 @@ app:
         print_start_time_desc: Фильтровывать уже напечатанные элементы.
         hidden_files_folders: Фильтровать скрытые файлы и папки
         klipper_backup_files: Фильтровать резервные копии Klipperа
+        moonraker_backup_files: Filter Moonraker backup files
         rolled_log_files: Фильтровать файлы перезаписанных логов
     label:
       dir_name: Имя папки
@@ -247,6 +249,7 @@ app:
       command: Команда
       confirm: Подтверждение
       cross: Пересекать
+      circle: Circle
       current_password: Текущий пароль
       current_user: Текущий пользователь
       default: По умолчанию
@@ -273,6 +276,7 @@ app:
       longest_job: Самая долгая печать
       low: Ниже
       manage_accounts: Управление аккаунтами
+      minimum_cruise_ratio: Minimum Cruise Ratio
       user_managed_source: Пользователь аутентифицируется с помощью %{source}
       m117: M117
       moonraker: Moonraker
@@ -447,6 +451,10 @@ app:
       restart_klipper: Перезагружает сервис Klipper.
       run_collector: Запустить сбор данных
       rollover_logs: Журналы опрокидывания
+      file_browser_help: >-
+        Drag and drop files or folders from outside the browser to upload them here<br>Move files and folders by dragging and dropping them onto sub-folders or ".."
+      file_browser_configuration_help: >-
+        Copy files and folders to the Configuration Files by dragging them from here and dropping them there
   history:
     msg:
       confirm: Вы уверены? Это очистит всю историю и статистику принтера
@@ -459,6 +467,9 @@ app:
       number_of_copies: Количество экземпляров
     title:
       multiply_job: Умножение задания | Несколько заданий
+    tooltip:
+      help: >-
+        Queue jobs by dragging files from the Jobs and dropping them here<br>Adjust the order of queued jobs by dragging them up or down
   printer:
     state:
       busy: Занят
@@ -489,6 +500,7 @@ app:
       webrtc_camera_streamer: WebRTC (camera-streamer)
       video: IP Камера
       iframe: Страница HTTP
+      webrtc_gortc: WebRTC (go2rtc)
     camera_rotate_options:
       '90': 90°
       '180': 180°
@@ -535,6 +547,7 @@ app:
       enable: Вкл.
       enable_diagnostics: Включить диагностику
       enable_notifications: Включить оповещения
+      enable_xy_homing: Разрешить парковку XY
       expression: Выражение
       extrusion_line_width: Ширина линии экструзии
       flip_horizontal: Сдвиг по горизонтали
@@ -577,6 +590,7 @@ app:
       show_code_lens: Показывать CodeLens (подсказки в тексте)
       show_gas_resistance: Проявляют газостойкость
       show_legend: Показывать легенду
+      show_logo_on_background: Показывать логотип на фоне
       show_rate_of_change: Показать скорость изменения температуры
       show_relative_humidity: Показать относительную влажность
       show_save_config_and_restart: Кнопка «Сохранить конфигурацию и перезапустить» в верхней части панели навигации
@@ -612,6 +626,7 @@ app:
       authentication: Аутентификация
       console: Консоль
       camera: Камера | Камеры
+      file_browser: File Browser
       file_editor: Редактор конфигурационных файлов
       gcode_preview: Предпросмотр GCode
       general: Общие
@@ -625,6 +640,12 @@ app:
       show_manual_probe_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента ручного зондирования.
       show_bed_screws_adjust_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента BED_SCREWS_ADJUST.
       show_screws_tilt_adjust_dialog_automatically: Автоматически показывает вспомогательное диалоговое окно при запуске инструмента SCREWS_TILT_CALCULATE
+      theme_disclaimer: >-
+        These themes feature brand names and logos that are the intellectual property of their respective owners.<br>
+        The inclusion of these names and logos is done with permission from the brands.<br>
+        However, please note that these themes are not officially maintained by the respective brands.<br>
+        Any issues or inquiries related to the themes should be directed to the Fluidd team.<br>
+        The use of brand names and logos is for decorative and aesthetic purposes only, and no official association with or endorsement by the brands is implied.
   socket:
     msg:
       connecting: Подключение к moonraker...
