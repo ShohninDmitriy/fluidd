@@ -75,7 +75,7 @@ app:
         print_start_time_desc: Фильтровывать уже напечатанные элементы.
         hidden_files_folders: Фильтровать скрытые файлы и папки
         klipper_backup_files: Фильтровать резервные копии Klipperа
-        moonraker_backup_files: Filter Moonraker backup files
+        moonraker_backup_files: Фильтровать резервные копии Moonraker
         rolled_log_files: Фильтровать файлы перезаписанных логов
     label:
       dir_name: Имя папки
@@ -249,7 +249,7 @@ app:
       command: Команда
       confirm: Подтверждение
       cross: Пересекать
-      circle: Circle
+      circle: Круг
       current_password: Текущий пароль
       current_user: Текущий пользователь
       default: По умолчанию
@@ -276,7 +276,7 @@ app:
       longest_job: Самая долгая печать
       low: Ниже
       manage_accounts: Управление аккаунтами
-      minimum_cruise_ratio: Minimum Cruise Ratio
+      minimum_cruise_ratio: Минимальный коэффициент круиза
       user_managed_source: Пользователь аутентифицируется с помощью %{source}
       m117: M117
       moonraker: Moonraker
@@ -295,7 +295,7 @@ app:
       pressure_advance: Pressure Advance
       printers: Принтеры
       progress: Прогресс
-      range: Range
+      range: Диапазон
       requested_speed: Запрошенная скорость
       retract_length: Длина ретракта
       retract_speed: Скорость ретракта
@@ -452,9 +452,9 @@ app:
       run_collector: Запустить сбор данных
       rollover_logs: Журналы опрокидывания
       file_browser_help: >-
-        Drag and drop files or folders from outside the browser to upload them here<br>Move files and folders by dragging and dropping them onto sub-folders or ".."
+        Перетаскивайте файлы или папки из-за пределов браузера, чтобы загрузить их сюда<br>Перемещайте файлы и папки, перетаскивая их во вложенные папки или ".."
       file_browser_configuration_help: >-
-        Copy files and folders to the Configuration Files by dragging them from here and dropping them there
+        Скопируйте файлы и папки в файлы конфигурации, перетащив их отсюда и поместив туда
   history:
     msg:
       confirm: Вы уверены? Это очистит всю историю и статистику принтера
@@ -469,7 +469,7 @@ app:
       multiply_job: Умножение задания | Несколько заданий
     tooltip:
       help: >-
-        Queue jobs by dragging files from the Jobs and dropping them here<br>Adjust the order of queued jobs by dragging them up or down
+        Поставьте задания в очередь, перетащив файлы из заданий и поместив их сюда<br>Отрегулируйте порядок заданий в очереди, перетащив их вверх или вниз
   printer:
     state:
       busy: Занят
@@ -510,7 +510,7 @@ app:
       all_off: Всё выключить
       all_on: Всё включить
       aspect_ratio: Соотношение сторон
-      aspect_ratio_format: '[width : height]'
+      aspect_ratio_format: '[ширина: высота]'
       auto_edit_extensions: Расширения для автоматического открытия в режиме редактирования
       auto_follow_on_file_load: Автоматически наблюдать за прогрессом печати при загрузке файла
       auto_load_on_print_start: Автоматически загружать файл при старте печати
@@ -641,11 +641,11 @@ app:
       show_bed_screws_adjust_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента BED_SCREWS_ADJUST.
       show_screws_tilt_adjust_dialog_automatically: Автоматически показывает вспомогательное диалоговое окно при запуске инструмента SCREWS_TILT_CALCULATE
       theme_disclaimer: >-
-        These themes feature brand names and logos that are the intellectual property of their respective owners.<br>
-        The inclusion of these names and logos is done with permission from the brands.<br>
-        However, please note that these themes are not officially maintained by the respective brands.<br>
-        Any issues or inquiries related to the themes should be directed to the Fluidd team.<br>
-        The use of brand names and logos is for decorative and aesthetic purposes only, and no official association with or endorsement by the brands is implied.
+        Эти темы содержат названия брендов и логотипы, которые являются интеллектуальной собственностью их соответствующих владельцев.<br>
+        Включение этих названий и логотипов осуществляется с разрешения брендов.<br>
+        Однако, пожалуйста, обратите внимание, что эти темы официально не поддерживаются соответствующими брендами.<br>
+        Любые вопросы или запросы, связанные с темами, следует направлять команде Fluid.<br>
+        Названия брендов и логотипы используются исключительно в декоративных и эстетических целях, и никакая официальная ассоциация с брендами или их одобрение не подразумеваются.
   socket:
     msg:
       connecting: Подключение к moonraker...
