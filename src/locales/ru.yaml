@@ -75,6 +75,7 @@ app:
   file_system:
     filters:
       label:
+        crowsnest_backup_files: Filter Crowsnest backup files
         print_start_time: Фильтровать напечатанное
         print_start_time_desc: Фильтровывать уже напечатанные элементы.
         hidden_files_folders: Фильтровать скрытые файлы и папки
@@ -254,6 +255,7 @@ app:
       confirm: Подтверждение
       cross: Пересекать
       circle: Круг
+      compact: Компактный
       current_password: Текущий пароль
       current_user: Текущий пользователь
       default: По умолчанию
@@ -369,10 +371,15 @@ app:
         invalid_aspect: Недопустимое соотношение сторон
       msg:
         confirm: Вы уверены?
+        confirm_cancel_print: Вы уверены, что хотите отменить текущую печать?
+        confirm_clear_mesh: Принтер в данный момент занят. Вы уверены, что хотите снять сетку с кровати?
         confirm_delete: Вы уверены? Это приведет к удалению выбранного элемента. | Вы уверены? Это приведет к удалению {count} выбранных элементов.
+        confirm_emergency_stop: Вы уверены, что хотите аварийно остановить принтер?
         confirm_exclude_object: Вы уверены, что хотите исключить этот объект из печати?
         confirm_forcemove_toggle: Вы уверены? Это может повредить принтер
+        confirm_load_bedmesh_profile: Принтер в данный момент занят. Вы уверены, что хотите загрузить профиль %{name}?
         confirm_reboot_host: Вы уверены? Это приведёт к перезагрузке вашей хост системы.
+        confirm_remove_user: Вы уверены, что хотите удалить пользователя %{username}?
         confirm_shutdown_host: Вы уверены? Это приведёт к выключению вашей хост системы.
         confirm_service_start: Вы уверены, что хотите запустить службу %{name}?
         confirm_service_restart: Вы уверены, что хотите перезапустить службу %{name}?
@@ -583,6 +590,7 @@ app:
       optional: Необязательный
       power_toggle_in_top_nav: Переключатель питания в верхней панели навигации
       primary_color: Основной цвет
+      print_in_progress_layout: Макет в процессе печати
       printer_name: Имя принтера
       reset: Сбросить настройки
       retraction_icon_size: Размер иконки ретракта
@@ -817,6 +825,7 @@ app:
       spool_selection: Выбор катушки
       scan_spool: Сканировать катушку
     label:
+      active_spool: Активная катушка
       change_spool: Изменить катушку
       comment: Комментарий
       device_camera: Устройство
