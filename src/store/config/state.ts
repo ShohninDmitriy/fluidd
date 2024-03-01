@@ -62,7 +62,8 @@ export const defaultState = (): ConfigState => {
         forceMoveToggleWarning: true,
         printInProgressLayout: 'default',
         enableDiagnostics: false,
-        thumbnailSize: 32
+        thumbnailSize: 32,
+        colorPickerValueRange: 'absolute'
       },
       theme: {
         isDark: true,
@@ -74,7 +75,7 @@ export const defaultState = (): ConfigState => {
       },
       editor: {
         confirmDirtyEditorClose: true,
-        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.md', '.sh', '.txt'],
+        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.sh', '.txt'],
         restoreViewState: 'session',
         codeLens: true
       },
