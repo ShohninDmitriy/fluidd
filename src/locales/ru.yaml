@@ -102,6 +102,7 @@ app:
       add_dir: Добавить папку
       add_file: Добавить файл
       command_palette: Команды
+      devices: Устройства
       download_file: Получение файла
       duplicate_dir: Копировать папку
       duplicate_file: Копировать файл
@@ -160,6 +161,8 @@ app:
       clear_profile: Очистить профиль
       close: Закрыть
       config_reference: Примеры конфигураций
+      copied: Скопированный
+      copy: Копировать
       create_zip_archive: Создать ZIP-архив
       delete: Удалить
       download: Скачать
@@ -328,6 +331,7 @@ app:
       turn_device_on: Вкл %{device}
       turn_device_off: Выкл %{device}
       uncategorized: Вне категории
+      unknown: Неизвестный
       unretract_extra_length: Дополнительная длина
       unretract_speed: Скорость деретракта
       upload_and_print: Загрузить и напечатать
@@ -590,7 +594,9 @@ app:
       optional: Необязательный
       power_toggle_in_top_nav: Переключатель питания в верхней панели навигации
       primary_color: Основной цвет
+      print_eta_calculation: Расчет времени печати
       print_in_progress_layout: Макет в процессе печати
+      print_progress_calculation: Расчет хода печати
       printer_name: Имя принтера
       reset: Сбросить настройки
       retraction_icon_size: Размер иконки ретракта
@@ -635,6 +641,7 @@ app:
       filament: Оценка филамента
       file: Оценка времени на основе файла
       slicer: Слайсер
+      slicer_m73: Слайсер (M73)
     title:
       authentication: Аутентификация
       console: Консоль
@@ -648,6 +655,7 @@ app:
       thermal_presets: Температурные профили
       tool: Инструменты
     tooltip:
+      average_calculation: Если выбрано более одного параметра, будет рассчитано среднее значение
       diagnostics_performance: '[BETA] Логирование диагностики может замедлить работу системы'
       gcode_coords: Использовать GCode положение вместо положение инструментальной головки на панели управления
       show_manual_probe_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента ручного зондирования.
@@ -667,7 +675,9 @@ app:
     label:
       awake_time: время бодрствования
       capacity: Емкость
+      constants: Константы
       cpu_desc: Описание CPU
+      devices: Устройства
       distribution_codename: Кодовое название
       distribution_like: Тип дистрибутива
       distribution_name: Дистрибутив
@@ -686,6 +696,7 @@ app:
       micro_controller: Микроконтроллер
       model: Модель CPU
       moonraker_load: Moonraker
+      last_stats: Последняя статистика
       network: Сеть
       processor_desc: Процессор
       product_name: Название
@@ -697,6 +708,13 @@ app:
       operating_system: Операционная система
       version: Версия
       virtualization: Виртуализация
+    msg:
+      canbus_warning: >-
+        Могут быть обнаружены только неназначенные узлы шины CAN.<br>
+        Рекомендуется подключать к шине CAN только одно неназначенное устройство, чтобы избежать проблем со связью.<br>
+        Более подробную информацию можно найти <a target="_blank" href="https://moonraker.readthedocs.io/en/latest/web_api/#query-unassigned-canbus-uuids">здесь.</a>
+      no_devices_found: Устройства не найдены
+      no_devices_searched: Используйте кнопку обновить для поиска устройств
   tool:
     btn:
       home_x: X
@@ -752,6 +770,8 @@ app:
       package_list: Список пакетов
       up_to_date: Актуальная версия
       updates_available: Доступны обновления
+      old_component_version: >-
+        Вы используете старую версию %{name}, которая не поддерживает все функции Fluidd.<br>Обновите %{name} как минимум до %{version}.
     status:
       finished: Обновление завершено
       updating: Обновление...
