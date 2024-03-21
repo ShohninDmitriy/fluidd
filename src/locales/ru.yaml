@@ -77,7 +77,6 @@ app:
       label:
         crowsnest_backup_files: Filter Crowsnest backup files
         print_start_time: Фильтровать напечатанное
-        print_start_time_desc: Фильтровывать уже напечатанные элементы.
         hidden_files_folders: Фильтровать скрытые файлы и папки
         klipper_backup_files: Фильтровать резервные копии Klipperа
         moonraker_backup_files: Фильтровать резервные копии Moonraker
