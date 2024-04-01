@@ -109,6 +109,7 @@ app:
       rename_dir: Переименовать папку
       rename_file: Переименовать файл
       upload_file: Загрузка файла | Загрузка файлов
+      devices: Устройства
     tooltip:
       low_on_space: Мало места на диске
       items_count: '{count} элемент | {count} элементов'
@@ -151,7 +152,7 @@ app:
       add_file: Добавить файл
       add_printer: Добавить принтер
       add_to_queue: Добавить в очередь
-      adjust_layout: Настроить компановку интерфейса панели управления
+      adjust_layout: Настроить компоновку интерфейса панели управления
       adjusted: Настроено
       all: Все
       auth_unsure: Не знаете, почему вы это видите?
@@ -195,8 +196,8 @@ app:
       rename: Переименовать
       reprint: Перепечатать
       reset_file: Сбросить файл
-      reset_layout: Сбросить компановку интерфейса
-      reset_default_layout: Сбросить компановку интерфейса
+      reset_layout: Сбросить компоновку интерфейса
+      reset_default_layout: Сбросить компоновку интерфейса
       restart_firmware: Перезагрузить прошивку
       restart_service: Перезапустить %{service}
       restart_service_klipper: Перезагрузить Klipper
@@ -769,8 +770,8 @@ app:
       package_list: Список пакетов
       up_to_date: Актуальная версия
       updates_available: Доступны обновления
-      old_component_version: >-
-        Вы используете старую версию %{name}, которая не поддерживает все функции Fluidd.<br>Обновите %{name} как минимум до %{version}.
+      old_component_version: Вы используете старую версию %{name}, которая не поддерживает
+        все функции Fluidd.<br>Обновите %{name} как минимум до %{version}.
     status:
       finished: Обновление завершено
       updating: Обновление...
