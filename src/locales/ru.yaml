@@ -109,7 +109,6 @@ app:
       rename_dir: Переименовать папку
       rename_file: Переименовать файл
       upload_file: Загрузка файла | Загрузка файлов
-      devices: Устройства
     tooltip:
       low_on_space: Мало места на диске
       items_count: '{count} элемент | {count} элементов'
