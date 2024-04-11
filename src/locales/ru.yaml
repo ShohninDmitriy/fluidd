@@ -514,7 +514,7 @@ app:
       webrtc_camera_streamer: WebRTC (camera-streamer)
       video: IP Камера
       iframe: Страница HTTP
-      webrtc_gortc: WebRTC (go2rtc)
+      webrtc_go2rtc: WebRTC (go2rtc)
     camera_rotate_options:
       '90': 90°
       '180': 180°
@@ -708,10 +708,11 @@ app:
       version: Версия
       virtualization: Виртуализация
     msg:
-      canbus_warning: >-
-        Могут быть обнаружены только неназначенные узлы шины CAN.<br>
-        Рекомендуется подключать к шине CAN только одно неназначенное устройство, чтобы избежать проблем со связью.<br>
-        Более подробную информацию можно найти <a target="_blank" href="https://moonraker.readthedocs.io/en/latest/web_api/#query-unassigned-canbus-uuids">здесь.</a>
+      canbus_warning: Только не назначенные узлы CAN могут быть обнаружены.<br> Рекомендуется
+        иметь не более одного не назначенного устройства, подключённого к шине CAN,
+        во избежание проблем с обменом данными. Дополнительную информацию можно найти
+        <a target="_blank"
+        href="https://moonraker.readthedocs.io/en/latest/web_api/#query-unassigned-canbus-uuids">здесь.</a>
       no_devices_found: Устройства не найдены
       no_devices_searched: Используйте кнопку обновить для поиска устройств
   tool:
