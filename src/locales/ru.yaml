@@ -75,7 +75,7 @@ app:
   file_system:
     filters:
       label:
-        crowsnest_backup_files: Filter Crowsnest backup files
+        crowsnest_backup_files: Фильтровать файлы резервных копий Crowsnest
         print_start_time: Фильтровать напечатанное
         hidden_files_folders: Фильтровать скрытые файлы и папки
         klipper_backup_files: Фильтровать резервные копии Klipperа
@@ -346,6 +346,8 @@ app:
       edit_category: Редактировать категорию
       add_category: Добавить категорию
       file_time: Файл
+      stepper_driver: >-
+        %{name} Driver
     msg:
       password_changed: Пароль изменен
       wrong_password: Ой, что-то пошло не так. Пароль введен верно?
@@ -358,6 +360,9 @@ app:
       pending_configuration_sections_deleted: Следующие разделы помечены для удаления.
       rolledover_logs: >-
         Логи следующих приложений были перезаписаны: %{applications}
+      not_valid_fluidd_backup_file: Недопустимый файл резервной копии Fluidd!
+      fluidd_settings_backup_failed: Не удалось создать резервную копию настроек Fluidd!
+      fluidd_settings_restore_failed: Не удалось восстановить настройки Fluidd!
     simple_form:
       error:
         arrayofnums: Только цифры
@@ -505,7 +510,9 @@ app:
       add_metric: Добавить метрику
       add_thermal_preset: Добавить температурую предустановку
       add_user: Добавить пользователя
+      backup: Резервная копия
       reset: Сбросить
+      restore: Восстанавливать
       select_theme: Выбрать тему
     camera_type_options:
       mjpegadaptive: Адаптивный MJPEG
@@ -515,6 +522,7 @@ app:
       video: IP Камера
       iframe: Страница HTTP
       webrtc_go2rtc: WebRTC (go2rtc)
+      webrtc_mediamtx: WebRTC (MediaMTX)
     camera_rotate_options:
       '90': 90°
       '180': 180°
@@ -569,6 +577,7 @@ app:
       fill_color: Цвет заливки
       fill_opacity: Заполнить непрозрачность
       filter: Filter | Фильтры
+      fluidd_settings_in_moonraker_db: Настройки Fluidd в базе данных Moonraker
       fps_target: Целевой FPS
       fps_idle_target: Цель FPS, когда она не в фокусе
       height: Высота
@@ -578,6 +587,7 @@ app:
       invert_x_control: Инвертировать управление по оси X
       invert_y_control: Инвертировать управление по оси Y
       invert_z_control: Инвертировать управление по оси Z
+      keyboard_shortcuts: Сочетания клавиш
       language: Язык интерфейса
       last_result: Последний результат
       left_y: Левая ось Y
@@ -636,9 +646,11 @@ app:
       show_bed_screws_adjust_dialog_automatically: Автоматически показывать диалоговое окно "Регулировка винтов стола"
       show_screws_tilt_adjust_dialog_automatically: Автоматическое отображение диалогового окна регулировки наклона винтов
     timer_options:
+      absolute_file_position: Абсолютное положение файла
       duration: Только продолжительность
       filament: Оценка филамента
       file: Оценка времени на основе файла
+      relative_file_position: Относительное положение файла
       slicer: Слайсер
       slicer_m73: Слайсер (M73)
     title:
@@ -657,6 +669,8 @@ app:
       average_calculation: Если выбрано более одного параметра, будет рассчитано среднее значение
       diagnostics_performance: '[BETA] Логирование диагностики может замедлить работу системы'
       gcode_coords: Использовать GCode положение вместо положение инструментальной головки на панели управления
+      keyboard_shortcuts: >-
+        [BETA] Enable and press '?' to view the list of available keyboard shortcuts
       show_manual_probe_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента ручного зондирования.
       show_bed_screws_adjust_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента BED_SCREWS_ADJUST.
       show_screws_tilt_adjust_dialog_automatically: Автоматически показывает вспомогательное диалоговое окно при запуске инструмента SCREWS_TILT_CALCULATE
@@ -903,3 +917,16 @@ app:
   sensors:
     title:
       sensors: Датчики
+  keyboard_shortcuts:
+    title:
+      keyboard_shortcuts: Keyboard Shortcuts
+    label:
+      actions: Actions
+      cancel: Cancel
+      emergency_stop: Emergency stop
+      home_all: Home all
+      navigation: Navigation
+      open_keyboard_shortcut_help: Open keyboard shortcut help
+      pause: Pause
+      printing: Printing
+      tool: Tool
