@@ -134,18 +134,18 @@ jobs:
 #          zip -r fluidd.zip ./
 #          cd ..
 
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE }}
+#      - uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-region: us-east-1
+#          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE }}
 
-      - name: Deploy to Host
-        uses: reggionick/s3-deploy@v4
-        with:
-          folder: dist
-          bucket: ${{ secrets.DEV_S3_BUCKET_NAME }}
-          bucket-region: us-east-1
-          dist-id: ${{ secrets.DEV_CF_DISTRIBUTION_ID }}
-          delete-removed: true
-          no-cache: true
-          private: true
+#      - name: Deploy to Host
+#        uses: reggionick/s3-deploy@v4
+#        with:
+#          folder: dist
+#          bucket: ${{ secrets.DEV_S3_BUCKET_NAME }}
+#          bucket-region: us-east-1
+#          dist-id: ${{ secrets.DEV_CF_DISTRIBUTION_ID }}
+#          delete-removed: true
+#          no-cache: true
+#          private: true
