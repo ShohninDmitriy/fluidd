@@ -115,6 +115,7 @@ app:
       root_disabled: Root недоступен. Проверьте файлы логов.
     url:
       klipper_config: 'https://www.klipper3d.org/Config_Reference.html#%{hash}'
+      danger_klipper_config: 'https://dangerklipper.io/Config_Reference.html#%{hash}'
       moonraker_config: 'https://moonraker.readthedocs.io/en/latest/configuration/#%{hash}'
       moonraker_telegram_bot_config: 'https://github.com/nlef/moonraker-telegram-bot/wiki/Sample-config#%{hash}'
       crowsnest_config: 'https://crowsnest.mainsail.xyz/configuration/%{hash}-section'
@@ -347,7 +348,7 @@ app:
       add_category: Добавить категорию
       file_time: Файл
       stepper_driver: >-
-        %{name} Driver
+        %{name} Драйвер
     msg:
       password_changed: Пароль изменен
       wrong_password: Ой, что-то пошло не так. Пароль введен верно?
@@ -670,7 +671,7 @@ app:
       diagnostics_performance: '[BETA] Логирование диагностики может замедлить работу системы'
       gcode_coords: Использовать GCode положение вместо положение инструментальной головки на панели управления
       keyboard_shortcuts: >-
-        [BETA] Enable and press '?' to view the list of available keyboard shortcuts
+        [БЕТА-версия] Включите и нажмите "?", чтобы просмотреть список доступных сочетаний клавиш
       show_manual_probe_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента ручного зондирования.
       show_bed_screws_adjust_dialog_automatically: Автоматически отображает вспомогательное диалоговое окно при запуске инструмента BED_SCREWS_ADJUST.
       show_screws_tilt_adjust_dialog_automatically: Автоматически показывает вспомогательное диалоговое окно при запуске инструмента SCREWS_TILT_CALCULATE
@@ -872,6 +873,8 @@ app:
       material: Тип
       remaining_weight: Оставшийся вес
       vendor: Производитель
+      weight: Вес
+      length: Длина
     msg:
       no_spool: >-
         Вы не выбрали катушку.
@@ -919,14 +922,14 @@ app:
       sensors: Датчики
   keyboard_shortcuts:
     title:
-      keyboard_shortcuts: Keyboard Shortcuts
+      keyboard_shortcuts: Сочетания клавиш
     label:
-      actions: Actions
-      cancel: Cancel
-      emergency_stop: Emergency stop
-      home_all: Home all
-      navigation: Navigation
-      open_keyboard_shortcut_help: Open keyboard shortcut help
-      pause: Pause
-      printing: Printing
-      tool: Tool
+      actions: Действия
+      cancel: Отменить
+      emergency_stop: Аварийный останов
+      home_all: Домой все
+      navigation: Навигация
+      open_keyboard_shortcut_help: Откройте справку по сочетанию клавиш
+      pause: Пауза
+      printing: Печать
+      tool: Инструмент
