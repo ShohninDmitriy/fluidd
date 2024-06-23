@@ -503,6 +503,11 @@ app:
       standby: Режим ожидания
     title:
       printer_status: Статус принтера
+      stepper_driver_overheating: Перегревается драйвер шагового двигателя '%{name}'
+    msg:
+      possible_print_failure: Это может привести к сбою печати
+    url:
+      stepper_driver_overheating: '%{klipperDomain}/TMC_Drivers.html#tmc-reports-error-ot1overtemperror'
   setting:
     btn:
       add_camera: Добавить камеру
