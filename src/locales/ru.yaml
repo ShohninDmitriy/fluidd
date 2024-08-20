@@ -519,8 +519,6 @@ app:
       reset: Сбросить
       restore: Восстанавливать
       select_theme: Выбрать тему
-      backup: Резервная копия
-      restore: Восстановление
     camera_type_options:
       mjpegadaptive: Адаптивный MJPEG
       mjpegstream: MJPEG поток
