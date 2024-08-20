@@ -93,7 +93,7 @@ app:
         Просмотр '%{section}' документации
     msg:
       not_found: Файлы не найдены
-      processing: Обработка...
+      processing: Обработка
     overlay:
       drag_files_folders_upload: <strong>Перетащите</strong> файлы и папки сюда для загрузки 
       drag_files_enqueue: <strong>Перетащите</strong> файлы сюда для добавления в очередь
@@ -341,7 +341,7 @@ app:
       version_sort: Сортировка по версии
       visible: Видимый
       z_offset: Смещение Z
-      unsaved_changes: Не сохраненные изменения
+      unsaved_changes: Несохраненные изменения
       alias: Псевдоним
       apply_z_offset: Применить и сохранить Z_Offset
       edit_category: Редактировать категорию
@@ -361,7 +361,7 @@ app:
       pending_configuration_sections_deleted: Следующие разделы помечены для удаления.
       rolledover_logs: >-
         Логи следующих приложений были перезаписаны: %{applications}
-      not_valid_fluidd_backup_file: Недопустимый файл резервной копии Fluidd!
+      not_valid_fluidd_backup_file: Неверный файл файл резервной копии Fluidd!
       fluidd_settings_backup_failed: Не удалось создать резервную копию настроек Fluidd!
       fluidd_settings_restore_failed: Не удалось восстановить настройки Fluidd!
     simple_form:
@@ -381,7 +381,7 @@ app:
       msg:
         confirm: Вы уверены?
         confirm_cancel_print: Вы уверены, что хотите отменить текущую печать?
-        confirm_clear_mesh: Принтер в данный момент занят. Вы уверены, что хотите снять сетку с кровати?
+        confirm_clear_mesh: Принтер в данный момент занят. Вы уверены, что хотите снять сетку стола?
         confirm_delete: Вы уверены? Это приведет к удалению выбранного элемента. | Вы уверены? Это приведет к удалению {count} выбранных элементов.
         confirm_emergency_stop: Вы уверены, что хотите аварийно остановить принтер?
         confirm_exclude_object: Вы уверены, что хотите исключить этот объект из печати?
@@ -520,6 +520,8 @@ app:
       reset: Сбросить
       restore: Восстанавливать
       select_theme: Выбрать тему
+      backup: Резервная копия
+      restore: Восстановление
     camera_type_options:
       mjpegadaptive: Адаптивный MJPEG
       mjpegstream: MJPEG поток
