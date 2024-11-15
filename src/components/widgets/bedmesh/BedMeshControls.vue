@@ -89,7 +89,7 @@
                     v-on="on"
                   >
                     <v-icon color="">
-                      $close
+                      $delete
                     </v-icon>
                   </app-btn>
                 </template>
@@ -406,7 +406,7 @@ export default class BedMesh extends Mixins(StateMixin, ToolheadMixin) {
     this.sendGcode(`BED_MESH_PROFILE REMOVE="${name}"`)
   }
 
-  handleMeshSave (config: {name: string; removeDefault: boolean}) {
+  handleMeshSave (config: { name: string; removeDefault: boolean }) {
     if (config.name !== this.currentMesh.profile_name) {
       this.sendGcode(`BED_MESH_PROFILE SAVE="${config.name}"`)
     }

@@ -295,7 +295,7 @@ import type { TextSortOrder } from '@/store/config/types'
 })
 export default class FileSystemBrowser extends Mixins(FilesMixin) {
   @VModel({ type: Array<FileBrowserEntry>, required: true })
-    selected!: FileBrowserEntry[]
+  selected!: FileBrowserEntry[]
 
   @Prop({ type: String, required: true })
   readonly root!: string
@@ -317,7 +317,7 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
   readonly search?: string
 
   @PropSync('dragState', { type: Boolean, required: true })
-    dragStateModel!: boolean
+  dragStateModel!: boolean
 
   @Prop({ type: Boolean })
   readonly disabled?: boolean
@@ -352,6 +352,10 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
 
   get textSortOrder (): TextSortOrder {
     return this.$store.state.config.uiSettings.general.textSortOrder
+  }
+
+  get filesAndFoldersDragAndDrop (): boolean {
+    return this.$store.state.config.uiSettings.general.filesAndFoldersDragAndDrop
   }
 
   get draggedItems () {
@@ -430,6 +434,7 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
   // Determines if a row is currently in a draggable state or not.
   isItemDraggable (item: FileBrowserEntry) {
     return (
+      this.filesAndFoldersDragAndDrop &&
       item.name !== '..' &&
       this.files.length > 0 &&
       (
