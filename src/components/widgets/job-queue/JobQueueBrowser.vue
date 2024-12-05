@@ -28,28 +28,26 @@
         @click:row="handleRowClick"
         @contextmenu:row.prevent="handleContextMenu"
       >
+        <template #[`item.data-table-select`]="{ isSelected, select }">
+          <v-simple-checkbox
+            v-ripple
+            :value="isSelected"
+            color=""
+            class="mt-1"
+            @click.stop="select(!isSelected)"
+          />
+        </template>
         <template #[`item.handle`]>
-          <v-icon
-            class="handle"
-            left
-          >
-            $drag
-          </v-icon>
+          <app-drag-icon />
         </template>
-        <template #[`item.filename`]="{ item }">
-          <span>
-            {{ item.filename }}
-          </span>
+        <template #[`item.filename`]="{ value }">
+          {{ value }}
         </template>
-        <template #[`item.time_added`]="{ item }">
-          <span class="text-no-wrap">
-            {{ $filters.formatAbsoluteDateTime(item.time_added * 1000) }}
-          </span>
+        <template #[`item.time_added`]="{ value }">
+          {{ $filters.formatAbsoluteDateTime(value * 1000) }}
         </template>
-        <template #[`item.time_in_queue`]="{ item }">
-          <span class="text-no-wrap">
-            {{ $filters.formatCounterSeconds(item.time_in_queue) }}
-          </span>
+        <template #[`item.time_in_queue`]="{ value }">
+          {{ $filters.formatCounterSeconds(value) }}
         </template>
       </v-data-table>
     </app-draggable>
@@ -60,9 +58,8 @@
 import { Component, Mixins, Prop, VModel } from 'vue-property-decorator'
 import type { QueuedJob } from '@/store/jobQueue/types'
 import { SocketActions } from '@/api/socketActions'
-import type { AppTableHeader } from '@/types'
 import StateMixin from '@/mixins/state'
-import type { DataTableItemProps } from 'vuetify'
+import type { DataTableHeader, DataTableItemProps } from 'vuetify'
 
 type QueueJobWithKey = QueuedJob & {
   key: string
@@ -79,8 +76,8 @@ export default class JobQueueBrowser extends Mixins(StateMixin) {
   @Prop({ type: Boolean })
   readonly bulkActions?: boolean
 
-  @Prop({ type: Array<AppTableHeader>, required: true })
-  readonly headers!: AppTableHeader[]
+  @Prop({ type: Array<DataTableHeader>, required: true })
+  readonly headers!: DataTableHeader[]
 
   get jobs (): QueuedJob[] {
     this.selected = []
@@ -126,9 +123,5 @@ export default class JobQueueBrowser extends Mixins(StateMixin) {
   // Lighten up dark mode checkboxes.
   .theme--dark :deep(.v-simple-checkbox .v-icon) {
     color: rgba(map-deep-get($material-dark, 'inputs', 'box'), 0.25);
-  }
-
-  .handle {
-    cursor: pointer;
   }
 </style>

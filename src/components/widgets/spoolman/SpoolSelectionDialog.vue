@@ -77,7 +77,7 @@
 
       <app-column-picker
         key-name="spoolman"
-        :headers="headers"
+        :headers="configurableHeaders"
       />
 
       <v-text-field
@@ -92,10 +92,10 @@
       />
     </v-toolbar>
 
-    <v-card-text class="fill-height pt-0">
+    <v-card-text class="pa-0">
       <v-data-table
         :items="availableSpools"
-        :headers="visibleHeaders"
+        :headers="headers"
         :search="search"
         :custom-filter="filterResults"
         :no-data-text="$t('app.file_system.msg.not_found')"
@@ -109,14 +109,15 @@
         @update:sort-by="handleSortOrderKeyChange"
         @update:sort-desc="handleSortOrderDescChange"
       >
-        <template #item="{ item }">
-          <tr
-            :class="{ 'v-data-table__selected': (item.id === selectedSpool) }"
-            class="row-select px-1"
+        <template #item="{ headers, item }">
+          <app-data-table-row
+            :headers="headers"
+            :item="item"
+            :is-selected="item.id === selectedSpool"
             @click.prevent="selectedSpool = selectedSpool === item.id ? null : item.id"
           >
-            <td>
-              <div class="d-flex">
+            <template #[`item.filament_name`]>
+              <div class="d-flex my-1">
                 <v-icon
                   :color="`#${item.filament.color_hex ?? ($vuetify.theme.dark ? 'fff' : '000')}`"
                   size="42px"
@@ -140,20 +141,16 @@
                   </div>
                 </div>
               </div>
-            </td>
-            <td
-              v-for="header in visibleHeaders.filter(h => h.value !== 'filament_name')"
-              :key="header.value"
-            >
-              <template v-if="header.value === 'last_used'">
-                {{ item[header.value] ? $filters.formatRelativeTimeToNow(item[header.value]) : $tc('app.setting.label.never') }}
-              </template>
+            </template>
 
-              <template v-else>
-                {{ item[header.value] }}
-              </template>
-            </td>
-          </tr>
+            <template #[`item.last_used`]="{ value }">
+              {{
+                value
+                  ? $filters.formatRelativeTimeToNow(value)
+                  : $tc('app.setting.label.never')
+              }}
+            </template>
+          </app-data-table-row>
         </template>
       </v-data-table>
     </v-card-text>
@@ -185,7 +182,11 @@
         color="primary"
         @click="handleSelectSpool"
       >
-        {{ filename ? $t('app.general.btn.print') : $tc('app.spoolman.btn.select', targetMacro ? 2 : 1, { macro: targetMacro }) }}
+        {{
+          filename
+            ? $t('app.general.btn.print')
+            : $tc('app.spoolman.btn.select', targetMacro ? 2 : 1, { macro: targetMacro })
+        }}
       </app-btn>
     </template>
 
@@ -208,9 +209,12 @@ import type { WebcamConfig } from '@/store/webcams/types'
 import QrScanner from 'qr-scanner'
 import type { AppTableHeader } from '@/types'
 import getFilePaths from '@/util/get-file-paths'
+import type { DataTableHeader } from 'vuetify'
 
 @Component({
-  components: { QRReader }
+  components: {
+    QRReader
+  }
 })
 export default class SpoolSelectionDialog extends Mixins(StateMixin, BrowserMixin) {
   search = ''
@@ -229,7 +233,7 @@ export default class SpoolSelectionDialog extends Mixins(StateMixin, BrowserMixi
     if (this.open) {
       this.selectedSpoolId = this.$store.state.spoolman.activeSpool ?? null
       if (this.targetMacro) {
-        const macro: MacroWithSpoolId | undefined = this.$store.getters['macros/getMacroByName'](this.targetMacro.toLowerCase())
+        const macro: MacroWithSpoolId | undefined = this.$store.getters['macros/getMacroByName'](this.targetMacro)
         this.selectedSpoolId = macro?.variables.spool_id ?? null
       }
 
@@ -290,25 +294,44 @@ export default class SpoolSelectionDialog extends Mixins(StateMixin, BrowserMixi
     return spools
   }
 
-  get headers (): AppTableHeader[] {
-    const headers = [
-      'filament_name',
-      'id',
-      'material',
-      'location',
-      'comment',
-      'last_used'
-    ].map((value) => ({
-      text: this.$tc(`app.spoolman.label.${value}`),
-      value,
-      configurable: value !== 'filament_name'
-    }))
+  get configurableHeaders (): AppTableHeader[] {
+    const headers: AppTableHeader[] = [
+      {
+        text: this.$tc('app.spoolman.label.id'),
+        value: 'id'
+      },
+      {
+        text: this.$tc('app.spoolman.label.material'),
+        value: 'material'
+      },
+      {
+        text: this.$tc('app.spoolman.label.location'),
+        value: 'location'
+      },
+      {
+        text: this.$tc('app.spoolman.label.comment'),
+        value: 'comment'
+      },
+      {
+        text: this.$tc('app.spoolman.label.last_used'),
+        value: 'last_used'
+      },
+    ]
 
-    return this.$store.getters['config/getMergedTableHeaders'](headers, 'spoolman')
+    const mergedTableHeaders = this.$store.getters['config/getMergedTableHeaders'](headers, 'spoolman') as AppTableHeader[]
+
+    return mergedTableHeaders
   }
 
-  get visibleHeaders (): AppTableHeader[] {
-    return this.headers.filter(header => header.visible || header.visible === undefined)
+  get headers (): DataTableHeader[] {
+    return [
+      {
+        text: this.$tc('app.spoolman.label.filament_name'),
+        value: 'filament_name'
+      },
+      ...this.configurableHeaders
+        .filter(header => header.visible !== false)
+    ]
   }
 
   get selectedSpool () {
@@ -414,7 +437,7 @@ export default class SpoolSelectionDialog extends Mixins(StateMixin, BrowserMixi
 
       await SocketActions.printerGcodeScript(commands.join('\n'))
 
-      const macro: MacroWithSpoolId | undefined = this.$store.getters['macros/getMacroByName'](this.targetMacro.toLowerCase())
+      const macro: MacroWithSpoolId | undefined = this.$store.getters['macros/getMacroByName'](this.targetMacro)
       if (macro?.variables.active) {
         // selected tool is active, update active spool
         await SocketActions.serverSpoolmanPostSpoolId(this.selectedSpool ?? undefined)
@@ -555,10 +578,3 @@ export default class SpoolSelectionDialog extends Mixins(StateMixin, BrowserMixi
   }
 }
 </script>
-
-<style lang="scss" scoped>
-  .spool-table tr td {
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-  }
-</style>

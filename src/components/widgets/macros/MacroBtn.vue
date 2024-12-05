@@ -42,6 +42,7 @@
                 v-for="(param, i) in paramList"
                 :key="param"
                 v-model="params[param].value"
+                :type="isBasicGcodeCommand && !paramNameForRawGcodeCommand ? 'number' : undefined"
                 :label="param"
                 persistent-placeholder
                 outlined
@@ -89,20 +90,30 @@ import { Component, Prop, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import type { Macro } from '@/store/macros/types'
 import gcodeMacroParams from '@/util/gcode-macro-params'
+import { gcodeCommandBuilder, isBasicGcodeCommand, getParamNameForRawGcodeCommand } from '@/util/gcode-command-builder'
+
+type MacroParameter = {
+  value: string | number
+  reset: string | number
+}
 
 @Component({})
 export default class MacroBtn extends Mixins(StateMixin) {
   @Prop({ type: Object, required: true })
   readonly macro!: Macro
 
-  params: { [index: string]: { value: string | number; reset: string | number } } = {}
+  params: Record<string, MacroParameter> = {}
 
-  get isMacroWithRawParam () {
-    return ['m117', 'm118'].includes(this.macro.name)
+  get macroName () {
+    return this.macro.name.toUpperCase()
   }
 
-  get isMacroForGcodeCommand () {
-    return /^[gm]\d+$/i.test(this.macro.name)
+  get isBasicGcodeCommand () {
+    return isBasicGcodeCommand(this.macroName)
+  }
+
+  get paramNameForRawGcodeCommand () {
+    return getParamNameForRawGcodeCommand(this.macroName)
   }
 
   get filteredListeners () {
@@ -120,38 +131,7 @@ export default class MacroBtn extends Mixins(StateMixin) {
    * The formatted run command for a macro.
    */
   get runCommand () {
-    const command = this.macro.name.toUpperCase()
-    const isMacroForGcodeCommand = this.isMacroForGcodeCommand
-
-    if (this.params) {
-      const params = this.isMacroWithRawParam
-        ? this.params.message.value.toString()
-        : Object.entries(this.params)
-          .map(([key, param]) => {
-            const value = param.value.toString()
-
-            if (!value) {
-              return null
-            }
-
-            const valueDelimiter = value.includes(' ')
-              ? '"'
-              : ''
-            const paramSeparator = isMacroForGcodeCommand && !valueDelimiter
-              ? ''
-              : '='
-
-            return `${key.toUpperCase()}${paramSeparator}${valueDelimiter}${value}${valueDelimiter}`
-          })
-          .filter(x => x != null)
-          .join(' ')
-
-      if (params) {
-        return `${command} ${params}`
-      }
-    }
-
-    return command
+    return gcodeCommandBuilder(this.macroName, this.params)
   }
 
   get borderStyle () {
@@ -162,14 +142,16 @@ export default class MacroBtn extends Mixins(StateMixin) {
   }
 
   handleClick () {
-    this.$emit('click', this.macro.name.toUpperCase())
+    this.$emit('click', this.macroName)
   }
 
   mounted () {
-    if (!this.macro.config || !this.macro.config.gcode) return []
+    if (!this.macro.config || !this.macro.config.gcode) return
 
-    if (this.isMacroWithRawParam) {
-      this.$set(this.params, 'message', { value: '', reset: '' })
+    const paramNameForRawGcodeCommand = this.paramNameForRawGcodeCommand
+
+    if (paramNameForRawGcodeCommand) {
+      this.$set(this.params, paramNameForRawGcodeCommand, { value: '', reset: '' })
     } else {
       for (const { name, value } of gcodeMacroParams(this.macro.config.gcode)) {
         if (!name.startsWith('_') && !this.params[name]) {
