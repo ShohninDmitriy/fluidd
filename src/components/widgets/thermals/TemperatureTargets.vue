@@ -28,6 +28,7 @@
         <tr
           v-for="item in heaters"
           :key="item.key"
+          @contextmenu.prevent="handleHeaterRowClick(item, $event)"
         >
           <td>
             <v-icon
@@ -74,7 +75,7 @@
             {{ (item.temperature) ? item.temperature.toFixed(1) : 0 }}<small>°C</small>
           </td>
           <td>/</td>
-          <td>
+          <td @contextmenu.stop>
             <app-text-field
               v-if="klippyReady"
               :value="item.target"
@@ -157,7 +158,7 @@
             </span>
           </td>
           <td>/</td>
-          <td>
+          <td @contextmenu.stop>
             <app-text-field
               v-if="klippyReady && item.type === 'temperature_fan'"
               :value="item.target"
@@ -293,26 +294,75 @@
         </tr>
       </tbody>
     </v-simple-table>
+
+    <heater-context-menu
+      v-if="contextMenuState.open"
+      v-model="contextMenuState.open"
+      :heater="contextMenuState.heater"
+      :position-x="contextMenuState.x"
+      :position-y="contextMenuState.y"
+      @pid-calibrate="handlePidCalibrateDialog"
+      @mpc-calibrate="handleMpcCalibrateDialog"
+      @turn-off="handleTurnOff"
+    />
+
+    <heater-pid-calibrate-dialog
+      v-if="heaterPidCalibrateDialog.open"
+      v-model="heaterPidCalibrateDialog.open"
+      :heater="heaterPidCalibrateDialog.heater"
+      @save="handlePidCalibrate"
+    />
+
+    <heater-mpc-calibrate-dialog
+      v-if="heaterMpcCalibrateDialog.open"
+      v-model="heaterMpcCalibrateDialog.open"
+      :heater="heaterMpcCalibrateDialog.heater"
+      @save="handleMpcCalibrate"
+    />
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Mixins } from 'vue-property-decorator'
 import TemperaturePresetsMenu from './TemperaturePresetsMenu.vue'
+import HeaterContextMenu from './HeaterContextMenu.vue'
+import HeaterPidCalibrateDialog from './HeaterPidCalibrateDialog.vue'
+import HeaterMpcCalibrateDialog from './HeaterMpcCalibrateDialog.vue'
 import StateMixin from '@/mixins/state'
 import type { Fan, Heater, Sensor } from '@/store/printer/types'
 import { takeRightWhile } from 'lodash-es'
 import type { ChartData, ChartSelectedLegends } from '@/store/charts/types'
 import { encodeGcodeParamValue } from '@/util/gcode-helpers'
+import isNullOrEmpty, { type NullableOrEmpty } from '@/util/is-null-or-empty'
 
 @Component({
   components: {
-    TemperaturePresetsMenu
+    TemperaturePresetsMenu,
+    HeaterContextMenu,
+    HeaterPidCalibrateDialog,
+    HeaterMpcCalibrateDialog
   }
 })
 export default class TemperatureTargets extends Mixins(StateMixin) {
-  get heaters () {
-    return this.$store.getters['printer/getHeaters']
+  contextMenuState: any = {
+    open: false,
+    x: 0,
+    y: 0,
+    heater: null
+  }
+
+  heaterPidCalibrateDialog: any = {
+    heater: null,
+    open: false
+  }
+
+  heaterMpcCalibrateDialog: any = {
+    heater: null,
+    open: false
+  }
+
+  get heaters (): Heater[] {
+    return this.$store.getters['printer/getHeaters'] as Heater[]
   }
 
   get fans () {
@@ -463,6 +513,50 @@ export default class TemperatureTargets extends Mixins(StateMixin) {
           )
         }
       })
+  }
+
+  handleHeaterRowClick (item: Heater, event: MouseEvent) {
+    if (this.contextMenuState.open) {
+      this.contextMenuState.open = false
+
+      if (event.type !== 'contextmenu') {
+        return
+      }
+    }
+
+    // Open the context menu
+    this.contextMenuState.x = event.clientX
+    this.contextMenuState.y = event.clientY
+    this.contextMenuState.heater = item
+    this.$nextTick(() => {
+      this.contextMenuState.open = true
+    })
+  }
+
+  handleTurnOff (heater: Heater) {
+    this.setHeaterTargetTemp(heater.name, 0)
+  }
+
+  handlePidCalibrateDialog (heater: Heater) {
+    this.heaterPidCalibrateDialog = {
+      heater,
+      open: true
+    }
+  }
+
+  handlePidCalibrate (heater: Heater, targetTemperature: number) {
+    this.sendGcode(`PID_CALIBRATE HEATER=${encodeGcodeParamValue(heater.name)} TARGET=${targetTemperature}`)
+  }
+
+  handleMpcCalibrateDialog (heater: Heater) {
+    this.heaterMpcCalibrateDialog = {
+      heater,
+      open: true
+    }
+  }
+
+  handleMpcCalibrate (heater: Heater, targetTemperature: number, fanBreakpoints: NullableOrEmpty<number>) {
+    this.sendGcode(`MPC_CALIBRATE HEATER=${encodeGcodeParamValue(heater.name)} TARGET=${targetTemperature}${!isNullOrEmpty(fanBreakpoints) ? ` FAN_BREAKPOINTS=${fanBreakpoints}` : ''}`)
   }
 }
 </script>

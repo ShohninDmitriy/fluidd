@@ -75,10 +75,14 @@ export type StepperType<T = Record<string, any>> = {
 
 export interface MCU {
   name: string;
+  prettyName: string;
   last_stats?: Record<string, string | number>;
   mcu_build_versions?: string;
   mcu_constants?: Record<string, string | number>;
   mcu_version?: string;
+  app?: string;
+  non_critical_disconnected?: boolean;
+  config: Record<string, any>;
 }
 
 export type OutputType<T = Record<string, any>> = {
@@ -93,8 +97,8 @@ export interface Heater extends OutputType {
   temperature: number;
   target: number;
   power: number;
-  minTemp?: number;
-  maxTemp?: number;
+  minTemp: number;
+  maxTemp: number;
 }
 
 export interface Fan extends OutputType<FanConfig> {
@@ -299,8 +303,29 @@ export interface BeaconModel {
   active: boolean;
 }
 
+export type SupportedKlipperServices = keyof typeof Globals.SUPPORTED_SERVICES.KLIPPER
+
 export interface KlippyApp {
-  name: keyof typeof Globals.SUPPORTED_SERVICES.klipper;
+  name: SupportedKlipperServices;
+  isKalico: boolean;
+  isKalicoOrDangerKlipper: boolean;
   domain: string;
   minVersion: string;
+}
+
+export interface ExcludeObjectState {
+  objects: ExcludeObjectObject[];
+  current_object: string | null;
+  excluded_objects: string[];
+}
+
+export interface ExcludeObjectObject {
+  name: string;
+  polygon?: [number, number][];
+  center?: [number, number] | [number, number, number];
+}
+
+export interface ExcludeObjectPart extends ExcludeObjectObject {
+  isExcluded: boolean;
+  isCurrent: boolean;
 }

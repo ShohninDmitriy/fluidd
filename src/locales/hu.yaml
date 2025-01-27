@@ -30,11 +30,18 @@ app:
       power: Kapacitás
       target: Cél
       rate_of_change: Változás
+      pid_calibration: PID kalibrálás
+      target_temperature: Cél hőmérséklet
+      turn_off: Kikapcsolás
+      fan_breakpoints: Ventilátor töréspontok
     tooltip:
       help: >-
         A nagyításhoz tartsd lenyomva a <kbd>Shift</kbd> billentyűt.<br />Kattints
         egy elemre a grafikonon való váltáshoz.<br />Kattints egy teljesítményre a
         grafikonon való váltáshoz.
+    title:
+      pid_calibrate: PID kalibrálás {name}
+      mpc_calibrate: MPC kalibrálás {name}
   console:
     label:
       auto_scroll: Automatikus görgetés
@@ -74,7 +81,7 @@ app:
     filters:
       label:
         print_start_time: Nyomtatottak szűrése
-        hidden_files_folders: Rejtett fájlok és mappák szűrése
+        hidden_files: Rejtett fájlok és mappák szűrése
         klipper_backup_files: Klipper biztonsági fájlok szűrése
         moonraker_backup_files: Moonraker biztonsági fájlok szűrése
         rolled_log_files: A gördített naplófájlok szűrése
@@ -774,6 +781,10 @@ app:
       constants: Állandók
       devices: Eszközök
       last_stats: Utolsó statisztika
+      non_critical_connection: Nem kritikus kapcsolat
+      application: Alkalmazás
+      disconnected: Leválasztva
+      connected: Kapcsolódva
     msg:
       no_devices_found: Nem találhatóak eszközök
       no_devices_searched: Eszközök kereséséhez használd a frissítés gombot

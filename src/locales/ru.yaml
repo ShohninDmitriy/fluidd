@@ -75,12 +75,12 @@ app:
   file_system:
     filters:
       label:
-        crowsnest_backup_files: Фильтровать файлы резервных копий Crowsnest
-        print_start_time: Фильтровать напечатанное
-        hidden_files_folders: Фильтровать скрытые файлы и папки
-        klipper_backup_files: Фильтровать резервные копии Klipperа
-        moonraker_backup_files: Фильтровать резервные копии Moonraker
-        rolled_log_files: Фильтровать файлы перезаписанных логов
+        crowsnest_backup_files: Скрыть файлы резервных копий Crowsnest
+        print_start_time: Скрыть напечатанное
+        hidden_files: Скрыть скрытые файлы и папки
+        klipper_backup_files: Скрыть файлы резервных копий Klipper
+        moonraker_backup_files: Скрыть файлы резервных копий Moonraker
+        rolled_log_files: Скрыть старые файлы журналов
     label:
       dir_name: Имя папки
       disk_usage: Использование дискового пространства

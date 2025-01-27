@@ -41,7 +41,8 @@ export interface SpoolmanConfig {
     key: string | null;
     desc: boolean | null;
   },
-  remainingFilamentUnit: 'weight' | 'length'
+  remainingFilamentUnit: 'weight' | 'length';
+  selectedCardFields: string[];
 }
 
 export interface HostConfig {
@@ -94,6 +95,7 @@ export interface GeneralConfig {
   showUploadAndPrint: boolean;
   flipConsoleLayout: boolean;
   cameraFullscreenAction: CameraFullscreenAction;
+  printerPowerDevice: null | string;
   topNavPowerToggle: null | string;
   showManualProbeDialogAutomatically: boolean;
   showBedScrewsAdjustDialogAutomatically: boolean;
