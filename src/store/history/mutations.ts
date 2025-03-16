@@ -1,9 +1,9 @@
 import Vue from 'vue'
 import type { MutationTree } from 'vuex'
 import { defaultState } from './state'
-import type { HistoryItem, HistoryState } from './types'
+import type { HistoryState, MoonrakerHistoryItem } from './types'
 
-export const mutations: MutationTree<HistoryState> = {
+export const mutations = {
   /**
    * Reset state
    */
@@ -29,7 +29,7 @@ export const mutations: MutationTree<HistoryState> = {
   /**
    * Adds a history item.
    */
-  setAddHistory (state, payload: HistoryItem) {
+  setAddHistory (state, payload: MoonrakerHistoryItem) {
     if (payload) {
       state.jobs.push(payload)
       state.count++
@@ -39,7 +39,7 @@ export const mutations: MutationTree<HistoryState> = {
   /**
    * Updates a history item.
    */
-  setUpdateHistory (state, payload: HistoryItem) {
+  setUpdateHistory (state, payload: MoonrakerHistoryItem) {
     if (payload) {
       const i = state.jobs.findIndex(job => job.job_id === payload.job_id)
       if (i >= 0) {
@@ -72,4 +72,4 @@ export const mutations: MutationTree<HistoryState> = {
       })
     }
   }
-}
+} satisfies MutationTree<HistoryState>

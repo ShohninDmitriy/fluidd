@@ -30,13 +30,17 @@ export default class CameraMixin extends Vue {
   }
 
   get apiUrl (): string {
-    return this.$store.state.config.apiUrl
+    return this.$typedState.config.apiUrl
   }
 
   get cameraStyle () {
     return {
       transform: this.cameraTransformStyle || undefined
     }
+  }
+
+  get autoRaiseFrameEvent () {
+    return true
   }
 
   createTransform (): string {
@@ -80,6 +84,10 @@ export default class CameraMixin extends Vue {
 
       if (this.streamingElement) {
         this.cameraTransformStyle = this.createTransform()
+
+        if (this.autoRaiseFrameEvent) {
+          this.$emit('frame', this.streamingElement)
+        }
       }
 
       this.updateCameraTransformStyle()

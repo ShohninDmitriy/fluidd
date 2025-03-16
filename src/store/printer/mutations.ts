@@ -4,7 +4,7 @@ import type { PrinterState } from './types'
 import { defaultState } from './state'
 import { get } from 'lodash-es'
 
-export const mutations: MutationTree<PrinterState> = {
+export const mutations = {
   /**
    * Reset state
    */
@@ -57,7 +57,7 @@ export const mutations: MutationTree<PrinterState> = {
     state.printer.screws_tilt_adjust = {
       ...state.printer.screws_tilt_adjust,
       error: false,
-      max_deviation: 0,
+      max_deviation: null,
       results: {}
     }
   },
@@ -87,5 +87,4 @@ export const mutations: MutationTree<PrinterState> = {
       }
     }
   }
-
-}
+} satisfies MutationTree<PrinterState>

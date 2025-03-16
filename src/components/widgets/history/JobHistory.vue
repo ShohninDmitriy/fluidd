@@ -42,18 +42,20 @@
     >
       <template #item="{ headers, item }">
         <app-data-table-row
+          :key="item.job_id"
           :headers="headers"
           :item="item"
           :class="{
             'v-data-table__inactive': !item.exists
           }"
+          :custom-getter="getItemValue"
         >
           <template #[`item.data-table-icons`]>
             <!-- If the item no longer exists. -->
             <v-icon
               v-if="!item.exists"
               class="mr-2"
-              color="secondary"
+              color="grey"
             >
               $fileCancel
             </v-icon>
@@ -62,7 +64,7 @@
             <v-icon
               v-else-if="!item.metadata.thumbnails?.length"
               class="mr-2"
-              color="secondary"
+              color="grey"
             >
               $file
             </v-icon>
@@ -77,159 +79,32 @@
             >
           </template>
 
-          <template #[`item.filename`]="{ value }">
-            {{ value }}
-          </template>
-
           <template #[`item.status`]>
             <job-history-item-status :job="item" />
           </template>
 
-          <template #[`item.start_time`]="{ value }">
-            {{ $filters.formatDateTime(value * 1000) }}
+          <template #[`item-value.metadata.filament_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
           </template>
 
-          <template #[`item.end_time`]="{ value }">
-            {{
-              item.status !== 'in_progress'
-                ? $filters.formatDateTime(value * 1000)
-                : '--'
-            }}
+          <template #[`item-value.metadata.extruder_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
           </template>
 
-          <template #[`item.print_duration`]="{ value }">
-            {{ $filters.formatCounterSeconds(value) }}
+          <template #[`item-value.metadata.filament_temps`]="{ value }">
+            <app-data-table-cell-temps :temps="value" />
           </template>
 
-          <template #[`item.total_duration`]="{ value }">
-            {{ $filters.formatCounterSeconds(value) }}
+          <template #[`item-value.metadata.first_layer_bed_temp`]="{ value }">
+            {{ value }}<small>°C</small>
           </template>
 
-          <template #[`item.filament_used`]="{ value }">
-            {{ $filters.getReadableLengthString(value) }}
+          <template #[`item-value.metadata.first_layer_extr_temp`]="{ value }">
+            {{ value }}<small>°C</small>
           </template>
 
-          <template #[`item.user`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.metadata.object_height`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableLengthString(value)
-                : '-- '
-            }}
-          </template>
-
-          <template #[`item.metadata.first_layer_height`]="{ value }">
-            {{
-              value != null
-                ? `${value} mm`
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.layer_height`]="{ value }">
-            {{
-              value != null
-                ? `${value} mm`
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.filament_name`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.metadata.filament_type`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.metadata.filament_total`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableLengthString(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.filament_weight_total`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableWeightString(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.nozzle_diameter`]="{ value }">
-            {{
-              value != null
-                ? `${value} mm`
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.slicer`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.metadata.slicer_version`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.metadata.estimated_time`]="{ value }">
-            {{
-              value != null
-                ? $filters.formatCounterSeconds(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.first_layer_bed_temp`]="{ value }">
-            <template v-if="value != null">
-              {{ value }}<small>°C</small>
-            </template>
-            <template v-else>
-              --
-            </template>
-          </template>
-
-          <template #[`item.metadata.first_layer_extr_temp`]="{ value }">
-            <template v-if="value != null">
-              {{ value }}<small>°C</small>
-            </template>
-            <template v-else>
-              --
-            </template>
-          </template>
-
-          <template #[`item.metadata.chamber_temp`]="{ value }">
-            <template v-if="value != null">
-              {{ value }}<small>°C</small>
-            </template>
-            <template v-else>
-              --
-            </template>
-          </template>
-
-          <template #[`item.metadata.file_processors`]="{ value }">
-            {{
-              value != null && value.length > 0
-                ? value.map($filters.prettyCase).join(', ')
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.metadata.modified`]="{ value }">
-            {{ $filters.formatDateTime(value * 1000) }}
-          </template>
-
-          <template #[`item.metadata.size`]="{ value }">
-            {{ $filters.getReadableFileSizeString(value) }}
-          </template>
-
-          <template #[`item.data-table-default`]="{ header, value }">
-            {{ getFormattedValue(item, header, value) }}
+          <template #[`item-value.metadata.chamber_temp`]="{ value }">
+            {{ value }}<small>°C</small>
           </template>
 
           <template #[`item.actions`]>
@@ -258,6 +133,7 @@ import { SocketActions } from '@/api/socketActions'
 import type { AppDataTableHeader } from '@/types'
 import type { DataTableHeader } from 'vuetify'
 import type { MoonrakerSensor } from '@/store/sensors/types'
+import type { DefaultGetterFunction } from '@/components/ui/AppDataTableRow.vue'
 
 @Component({
   components: {
@@ -269,7 +145,7 @@ export default class JobHistory extends Mixins(FilesMixin) {
 
   get auxiliaryDataHeaders (): AppDataTableHeader[] {
     const auxiliaryDataHeaders = this.history
-      .reduce((headers, item) => {
+      .reduce<Record<string, string>>((headers, item) => {
         if (item.auxiliary_data) {
           for (const auxiliaryDataItem of item.auxiliary_data) {
             headers[auxiliaryDataItem.name] = auxiliaryDataItem.description
@@ -277,7 +153,7 @@ export default class JobHistory extends Mixins(FilesMixin) {
         }
 
         return headers
-      }, {} as Record<string, string>)
+      }, {})
 
     for (const sensor of this.sensors) {
       if (sensor.history_fields) {
@@ -360,6 +236,24 @@ export default class JobHistory extends Mixins(FilesMixin) {
         cellClass: 'text-no-wrap'
       },
       {
+        text: this.$tc('app.general.table.header.filament_colors'),
+        value: 'metadata.filament_colors',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.extruder_colors'),
+        value: 'metadata.extruder_colors',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_temps'),
+        value: 'metadata.filament_temps',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
         text: this.$tc('app.general.table.header.filament_type'),
         value: 'metadata.filament_type',
         visible: false,
@@ -372,8 +266,32 @@ export default class JobHistory extends Mixins(FilesMixin) {
         cellClass: 'text-no-wrap'
       },
       {
+        text: this.$tc('app.general.table.header.filament_change_count'),
+        value: 'metadata.filament_change_count',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
         text: this.$tc('app.general.table.header.filament_weight_total'),
         value: 'metadata.filament_weight_total',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_weights'),
+        value: 'metadata.filament_weights',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.mmu_print'),
+        value: 'metadata.mmu_print',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.referenced_tools'),
+        value: 'metadata.referenced_tools',
         visible: false,
         cellClass: 'text-no-wrap'
       },
@@ -440,7 +358,7 @@ export default class JobHistory extends Mixins(FilesMixin) {
       },
     ]
 
-    const mergedTableHeaders: AppDataTableHeader[] = this.$store.getters['config/getMergedTableHeaders'](headers, 'history')
+    const mergedTableHeaders: AppDataTableHeader[] = this.$typedGetters['config/getMergedTableHeaders'](headers, 'history')
 
     return mergedTableHeaders
   }
@@ -469,11 +387,11 @@ export default class JobHistory extends Mixins(FilesMixin) {
   }
 
   get sensors (): MoonrakerSensor[] {
-    return this.$store.getters['sensors/getSensors']
+    return this.$typedGetters['sensors/getSensors']
   }
 
   get history (): HistoryItem[] {
-    return this.$store.getters['history/getHistory']
+    return this.$typedGetters['history/getHistory']
   }
 
   getFilePaths (filename: string) {
@@ -492,35 +410,95 @@ export default class JobHistory extends Mixins(FilesMixin) {
   }
 
   handleJobThumbnailError (job: HistoryItem) {
-    this.$store.dispatch('history/clearHistoryThumbnails', job.job_id)
+    this.$typedDispatch('history/clearHistoryThumbnails', job.job_id)
   }
 
-  getFormattedValue (item: HistoryItem, header: AppDataTableHeader, value: unknown) {
-    const auxiliaryDataItemName = header.value.startsWith('auxiliary_data.')
-      ? header.value.substring(15)
-      : undefined
-    const auxiliaryDataItem = auxiliaryDataItemName && item.auxiliary_data
-      ? item.auxiliary_data
-        .find(x => x.name === auxiliaryDataItemName)
-      : undefined
+  getItemValue (item: HistoryItem, header: DataTableHeader, defaultGetter: DefaultGetterFunction) {
+    if (header.value.startsWith('auxiliary_data.')) {
+      const auxiliaryDataItemName = header.value.substring(15)
 
-    value = auxiliaryDataItem
-      ? auxiliaryDataItem.value
-      : value
+      const { value, units } = item.auxiliary_data?.find(x => x.name === auxiliaryDataItemName) ?? {}
 
-    if (value == null || value === '') {
-      return '--'
+      if (
+        Array.isArray(value) &&
+        value.length > 0
+      ) {
+        return value
+          .map(x => this.formatValueWithUnits(x, units))
+      }
+
+      return this.formatValueWithUnits(value, units)
     }
 
-    const units = auxiliaryDataItem?.units
-      ? ` ${auxiliaryDataItem.units}`
-      : ''
+    const value = defaultGetter(item, header)
 
     if (typeof value === 'number') {
-      return `${Math.round(value * 100) / 100}${units}`
+      switch (header.value) {
+        case 'start_time':
+        case 'end_time':
+        case 'metadata.modified': {
+          return this.$filters.formatDateTime(value * 1000)
+        }
+
+        case 'metadata.size':
+          return this.$filters.getReadableFileSizeString(value)
+
+        case 'print_duration':
+        case 'total_duration':
+        case 'metadata.estimated_time':
+          return this.$filters.formatCounterSeconds(value)
+
+        case 'filament_used':
+        case 'metadata.filament_total':
+        case 'metadata.object_height':
+          return this.$filters.getReadableLengthString(value)
+
+        case 'metadata.filament_weight_total':
+          return this.$filters.getReadableWeightString(value)
+
+        case 'metadata.first_layer_height':
+        case 'metadata.layer_height':
+        case 'metadata.nozzle_diameter':
+          return `${value} mm`
+      }
     }
 
-    return `${value}${units}`
+    if (Array.isArray(value) && value.length > 0) {
+      switch (header.value) {
+        case 'metadata.filament_weights':
+          return value
+            .map(x => typeof x === 'number'
+              ? this.$filters.getReadableWeightString(x)
+              : x
+            )
+
+        case 'metadata.file_processors':
+        case 'metadata.referenced_tools':
+          return value
+            .map(x => typeof x === 'string'
+              ? this.$filters.prettyCase(x)
+              : x
+            )
+      }
+    }
+
+    return value
+  }
+
+  formatValueWithUnits (value: unknown, units?: string | null) {
+    if (typeof value === 'number') {
+      const roundedValue = Math.round(value * 100) / 100
+
+      return units
+        ? `${roundedValue} ${units}`
+        : roundedValue.toString()
+    }
+
+    if (typeof value === 'string' && units) {
+      return `${value} ${units}`
+    }
+
+    return value
   }
 }
 </script>

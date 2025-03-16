@@ -66,7 +66,7 @@ export default class AppColumnPicker extends Vue {
   @Prop({ type: String, required: true })
   readonly keyName!: string
 
-  @Prop({ type: Array<AppDataTableHeader>, required: true })
+  @Prop({ type: Array, required: true })
   readonly headers!: AppDataTableHeader[]
 
   get configurableHeaders (): AppDataTableHeader[] {
@@ -80,7 +80,7 @@ export default class AppColumnPicker extends Vue {
         visible
       }))
 
-    this.$store.dispatch('config/updateHeaders', { name: this.keyName, headers })
+    this.$typedDispatch('config/updateHeaders', { name: this.keyName, headers })
   }
 
   handleToggleHeader (value: AppDataTableHeader) {
@@ -89,7 +89,7 @@ export default class AppColumnPicker extends Vue {
       visible: !(value.visible !== false)
     }
 
-    this.$store.dispatch('config/updateHeader', { name: this.keyName, header })
+    this.$typedDispatch('config/updateHeader', { name: this.keyName, header })
   }
 }
 </script>

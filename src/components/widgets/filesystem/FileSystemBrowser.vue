@@ -30,10 +30,12 @@
     >
       <template #item="{ headers, item, isSelected, select }">
         <app-data-table-row
+          :key="item.name"
           :headers="headers"
           :item="item"
           :is-selected="isSelected && item.name !== '..'"
           :draggable="isItemDraggable(item)"
+          :custom-getter="getItemValue"
           @click.prevent="$emit('row-click', item, $event)"
           @contextmenu.prevent="$emit('row-click', item, $event)"
           @dragstart="handleDragStart(item, $event)"
@@ -61,7 +63,7 @@
               class="no-pointer-events"
             >
               <v-icon
-                v-if="!item.thumbnails || !item.thumbnails.length"
+                v-if="!item.thumbnails?.length"
                 :small="dense"
                 :color="(item.type === 'file') ? 'grey' : 'primary'"
               >
@@ -78,173 +80,32 @@
             </v-layout>
           </template>
 
-          <template #[`item.name`]="{ value }">
-            {{ value }}
+          <template #[`item-value.history.status`]>
+            <job-history-item-status :job="item.history" />
           </template>
 
-          <template #[`item.history.status`]="{ value }">
-            <job-history-item-status
-              v-if="value != null"
-              :job="item.history"
-            />
-            <template v-else>
-              --
-            </template>
+          <template #[`item-value.filament_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
           </template>
 
-          <template #[`item.object_height`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableLengthString(value)
-                : '--'
-            }}
+          <template #[`item-value.extruder_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
           </template>
 
-          <template #[`item.first_layer_height`]="{ value }">
-            {{
-              value != null
-                ? `${value} mm`
-                : '--'
-            }}
+          <template #[`item-value.filament_temps`]="{ value }">
+            <app-data-table-cell-temps :temps="value" />
           </template>
 
-          <template #[`item.layer_height`]="{ value }">
-            {{
-              value != null
-                ? `${value} mm`
-                : '--'
-            }}
+          <template #[`item-value.first_layer_bed_temp`]="{ value }">
+            {{ value }}<small>°C</small>
           </template>
 
-          <template #[`item.filament_name`]="{ value }">
-            {{ value || '--' }}
+          <template #[`item-value.first_layer_extr_temp`]="{ value }">
+            {{ value }}<small>°C</small>
           </template>
 
-          <template #[`item.filament_type`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.filament_total`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableLengthString(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.filament_weight_total`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableWeightString(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.history.filament_used`]="{ value }">
-            {{
-              value != null
-                ? $filters.getReadableLengthString(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.nozzle_diameter`]="{ value }">
-            {{
-              value != null
-                ? `${value} mm`
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.slicer`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.slicer_version`]="{ value }">
-            {{ value || '--' }}
-          </template>
-
-          <template #[`item.estimated_time`]="{ value }">
-            {{
-              value != null
-                ? $filters.formatCounterSeconds(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.history.print_duration`]="{ value }">
-            {{
-              value != null
-                ? $filters.formatCounterSeconds(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.history.total_duration`]="{ value }">
-            {{
-              value != null
-                ? $filters.formatCounterSeconds(value)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.first_layer_bed_temp`]="{ value }">
-            <template v-if="value != null">
-              {{ value }}<small>°C</small>
-            </template>
-            <template v-else>
-              --
-            </template>
-          </template>
-
-          <template #[`item.first_layer_extr_temp`]="{ value }">
-            <template v-if="value != null">
-              {{ value }}<small>°C</small>
-            </template>
-            <template v-else>
-              --
-            </template>
-          </template>
-
-          <template #[`item.chamber_temp`]="{ value }">
-            <template v-if="value != null">
-              {{ value }}<small>°C</small>
-            </template>
-            <template v-else>
-              --
-            </template>
-          </template>
-
-          <template #[`item.file_processors`]="{ value }">
-            {{
-              value != null && value.length > 0
-                ? value.map($filters.prettyCase).join(', ')
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.print_start_time`]="{ value }">
-            {{
-              value != null
-                ? $filters.formatDateTime(value * 1000)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.modified`]="{ value }">
-            {{
-              value != null && item.name !== '..'
-                ? $filters.formatDateTime(value * 1000)
-                : '--'
-            }}
-          </template>
-
-          <template #[`item.size`]="{ value }">
-            {{
-              value != null && item.name !== '..'
-                ? $filters.getReadableFileSizeString(value)
-                : '--'
-            }}
+          <template #[`item-value.chamber_temp`]="{ value }">
+            {{ value }}<small>°C</small>
           </template>
         </app-data-table-row>
       </template>
@@ -263,6 +124,7 @@ import type { TextSortOrder } from '@/store/config/types'
 import type { DataTableHeader } from 'vuetify'
 import versionStringCompare from '@/util/version-string-compare'
 import { get } from 'lodash-es'
+import type { DefaultGetterFunction } from '@/components/ui/AppDataTableRow.vue'
 
 @Component({
   components: {
@@ -270,13 +132,13 @@ import { get } from 'lodash-es'
   }
 })
 export default class FileSystemBrowser extends Mixins(FilesMixin) {
-  @VModel({ type: Array<FileBrowserEntry>, required: true })
+  @VModel({ type: Array, required: true })
   selected!: FileBrowserEntry[]
 
   @Prop({ type: String, required: true })
   readonly root!: string
 
-  @Prop({ type: Array<FileBrowserEntry>, required: true })
+  @Prop({ type: Array, required: true })
   readonly files!: FileBrowserEntry[]
 
   @Prop({ type: Boolean })
@@ -286,7 +148,7 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
   readonly loading?: boolean
 
   // Currently defined list of headers.
-  @Prop({ type: Array<DataTableHeader>, required: true })
+  @Prop({ type: Array, required: true })
   readonly headers!: DataTableHeader[]
 
   @Prop({ type: String })
@@ -304,13 +166,13 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
   // Is the history component enabled
   get showHistory (): boolean {
     return (
-      this.$store.getters['server/componentSupport']('history') &&
+      this.$typedGetters['server/componentSupport']('history') &&
       this.root === 'gcodes'
     )
   }
 
   get rootProperties (): RootProperties {
-    return this.$store.getters['files/getRootProperties'](this.root)
+    return this.$typedGetters['files/getRootProperties'](this.root)
   }
 
   get readonly () {
@@ -318,17 +180,17 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
   }
 
   get thumbnailSize () {
-    const thumbnailSize: number = this.$store.state.config.uiSettings.general.thumbnailSize
+    const thumbnailSize: number = this.$typedState.config.uiSettings.general.thumbnailSize
 
     return this.dense ? thumbnailSize / 2 : thumbnailSize
   }
 
   get textSortOrder (): TextSortOrder {
-    return this.$store.state.config.uiSettings.general.textSortOrder
+    return this.$typedState.config.uiSettings.general.textSortOrder
   }
 
   get filesAndFoldersDragAndDrop (): boolean {
-    return this.$store.state.config.uiSettings.general.filesAndFoldersDragAndDrop
+    return this.$typedState.config.uiSettings.general.filesAndFoldersDragAndDrop
   }
 
   get draggedItems () {
@@ -347,23 +209,23 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
   }
 
   get sortBy (): string {
-    const sortBy: string | null = this.$store.state.config.uiSettings.fileSystem.sortBy[this.root]
+    const sortBy: string | null = this.$typedState.config.uiSettings.fileSystem.sortBy[this.root]
 
     return sortBy ?? 'modified'
   }
 
   set sortBy (value: string | null | undefined) {
-    this.$store.dispatch('config/updateFileSystemSortBy', { root: this.root, value: value ?? null })
+    this.$typedDispatch('config/updateFileSystemSortBy', { root: this.root, value: value ?? null })
   }
 
   get sortDesc (): boolean {
-    const sortDesc: boolean | null = this.$store.state.config.uiSettings.fileSystem.sortDesc[this.root]
+    const sortDesc: boolean | null = this.$typedState.config.uiSettings.fileSystem.sortDesc[this.root]
 
     return sortDesc ?? true
   }
 
   set sortDesc (value: boolean | null | undefined) {
-    this.$store.dispatch('config/updateFileSystemSortDesc', { root: this.root, value: value ?? null })
+    this.$typedDispatch('config/updateFileSystemSortDesc', { root: this.root, value: value ?? null })
   }
 
   customSort (items: FileBrowserEntry[], sortBy: string[], sortDesc: boolean[], locale: string) {
@@ -381,7 +243,7 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
       for (let i = 0; i < sortBy.length; i++) {
         const sortKey = sortBy[i]
 
-        const sortValues = [
+        const sortValues: unknown[] = [
           get(a, sortKey),
           get(b, sortKey)
         ]
@@ -397,12 +259,17 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
         }
 
         // If values are of type number, compare as number
-        if (sortValues.every(x => typeof (x) === 'number' && !isNaN(x))) {
+        if (
+          typeof sortValues[0] === 'number' &&
+          typeof sortValues[1] === 'number' &&
+          !isNaN(sortValues[0]) &&
+          !isNaN(sortValues[1])
+        ) {
           return sortValues[0] - sortValues[1]
         }
 
         const sortValuesAsString = sortValues
-          .map(s => (s || '').toString() as string)
+          .map(s => s?.toString() ?? '')
 
         if (this.textSortOrder === 'numeric-prefix') {
           const [sortA, sortB] = sortValuesAsString
@@ -585,6 +452,59 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
 
     this.dragItem = null
     this.dragStateModel = false
+  }
+
+  getItemValue (item: FileBrowserEntry, header: DataTableHeader, defaultGetter: DefaultGetterFunction) {
+    const value = defaultGetter(item, header)
+
+    if (typeof value === 'number') {
+      switch (header.value) {
+        case 'object_height':
+        case 'filament_total':
+        case 'history.filament_used':
+          return this.$filters.getReadableLengthString(value)
+
+        case 'first_layer_height':
+        case 'layer_height':
+        case 'nozzle_diameter':
+          return `${value} mm`
+
+        case 'filament_weight_total':
+          return this.$filters.getReadableWeightString(value)
+
+        case 'estimated_time':
+        case 'history.print_duration':
+        case 'history.total_duration':
+          return this.$filters.formatCounterSeconds(value)
+
+        case 'print_start_time':
+        case 'modified':
+          return this.$filters.formatDateTime(value * 1000)
+
+        case 'size':
+          return this.$filters.getReadableFileSizeString(value)
+      }
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      switch (header.value) {
+        case 'filament_weights':
+          return value
+            .map(x => typeof x === 'number'
+              ? this.$filters.getReadableWeightString(x)
+              : x
+            )
+
+        case 'file_processors':
+          return value
+            .map(x => typeof x === 'string'
+              ? this.$filters.prettyCase(x)
+              : x
+            )
+      }
+    }
+
+    return value
   }
 }
 </script>

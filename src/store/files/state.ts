@@ -5,13 +5,9 @@ export const defaultState = (): FilesState => {
     uploads: [],
     download: null,
     currentPaths: {},
-    disk_usage: {
-      total: 0,
-      used: 0,
-      free: 0
-    },
+    diskUsage: null,
     rootFiles: {},
-    pathFiles: {}
+    pathContent: {}
   }
 }
 
