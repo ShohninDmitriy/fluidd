@@ -68,7 +68,6 @@ export const defaultState = (): ConfigState => {
         printProgressCalculation: ['file'],
         printEtaCalculation: ['file'],
         enableDiagnostics: false,
-        thumbnailSize: 32,
         colorPickerValueRange: 'absolute'
       },
       theme: {
@@ -83,12 +82,14 @@ export const defaultState = (): ConfigState => {
         confirmDirtyEditorClose: true,
         autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.sh', '.txt'],
         restoreViewState: 'session',
-        codeLens: true
+        codeLens: true,
+        klipperSaveAndRestartAction: 'auto'
       },
       dashboard: {
         tempPresets: []
       },
       tableHeaders: {},
+      thumbnailSizes: {},
       gcodePreview: {
         extrusionLineWidth: 0.3,
         moveLineWidth: 0.1,
@@ -137,6 +138,17 @@ export const defaultState = (): ConfigState => {
         },
         remainingFilamentUnit: 'weight',
         selectedCardFields: ['vendor', 'filament_name', 'remaining_weight', 'location', 'material', 'lot_nr', 'first_used', 'comment']
+      },
+      history: {
+        timeInDays: false,
+        lengthInKilometers: false
+      },
+      mmu: {
+        showClogDetection: true,
+        showTtgMap: true,
+        showDetails: true,
+        largeFilamentStatus: false,
+        showLogos: false
       }
     }
   }

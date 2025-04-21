@@ -116,7 +116,7 @@
                 </v-icon>
               </app-btn>
             </template>
-            <span v-if="'name' in component">{{ $t('app.version.tooltip.release_notes') }}</span>
+            <span v-if="'name' in component && component.name !== 'system'">{{ $t('app.version.tooltip.release_notes') }}</span>
             <span v-else-if="'commits_behind' in component">{{ $t('app.version.tooltip.commit_history') }}</span>
             <span v-else-if="'package_list' in component">{{ $t('app.version.tooltip.packages') }}</span>
           </v-tooltip>
@@ -297,6 +297,15 @@ export default class VersionSettings extends Mixins(StateMixin) {
 
   handleInformationDialog (component: UpdatePackage) {
     if (
+      'configured_type' in component &&
+      component.configured_type === 'python'
+    ) {
+      if (component.channel === 'dev') {
+        window.open(`${this.getBaseUrl(component)}/compare/${component.current_hash}..${component.remote_hash}`)
+      } else {
+        window.open(component.changelog_url)
+      }
+    } else if (
       'commits_behind' in component ||
       'package_list' in component
     ) {

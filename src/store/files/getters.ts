@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import type { GetterTree } from 'vuex'
-import type { AppDirectory, AppFile, AppFileMeta, AppFileWithMeta, FileBrowserEntry, FilesState, MoonrakerFile, MoonrakerFileWithMeta, RootProperties } from './types'
+import type { AppDirectory, AppDiskUsage, AppFile, AppFileMeta, AppFileWithMeta, FileBrowserEntry, FilesState, MoonrakerFile, MoonrakerFileWithMeta, RootProperties } from './types'
 import type { RootState } from '../types'
 import type { HistoryItem } from '../history/types'
 import { SupportedImageFormats, SupportedMarkdownFormats, SupportedVideoFormats } from '@/globals'
@@ -227,11 +227,19 @@ export const getters = {
     return state.currentPaths[root] ?? ''
   },
 
-  /**
-   * Returns a boolean indicating if we're low on disk space.
-   */
-  getLowOnSpace: (state) => {
-    // 1073741824 = 1gb
-    return state.diskUsage != null && state.diskUsage.free < 1073741824
+  getDiskUsage: (state) => (root: string): AppDiskUsage | undefined => {
+    const diskUsage = state.diskUsage[root]
+
+    if (diskUsage != null) {
+      // 1073741824 = 1gb
+      const lowOnSpace = diskUsage.free < Math.min(1073741824, diskUsage.total * 0.2)
+      const usedPercent = Math.floor((diskUsage.used / diskUsage.total) * 100)
+
+      return {
+        ...diskUsage,
+        usedPercent,
+        lowOnSpace
+      }
+    }
   }
 } satisfies GetterTree<FilesState, RootState>

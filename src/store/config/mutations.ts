@@ -6,7 +6,7 @@ import { Globals } from '@/globals'
 import { cloneDeep, mergeWith, set } from 'lodash-es'
 import { v4 as uuidv4 } from 'uuid'
 import type { FileFilterType } from '../files/types'
-import consola from 'consola'
+import { consola } from 'consola'
 
 export const mutations = {
   /**
@@ -205,5 +205,9 @@ export const mutations = {
 
   setUpdateHeaders (state, payload: { name: string; headers: ConfiguredTableHeader[] }) {
     Vue.set(state.uiSettings.tableHeaders, payload.name, payload.headers)
+  },
+
+  setupdateThumbnailSizes (state, payload: { name: string; size: number }) {
+    Vue.set(state.uiSettings.thumbnailSizes, payload.name, payload.size)
   }
 } satisfies MutationTree<ConfigState>

@@ -11,7 +11,7 @@
     <v-spacer />
 
     <v-tooltip
-      v-if="lowOnSpace && !loading"
+      v-if="klippyReady && !loading && lowOnSpace"
       bottom
     >
       <template #activator="{ on, attrs }">
@@ -209,8 +209,7 @@ export default class FileSystemToolbar extends Mixins(StatesMixin) {
   }
 
   get lowOnSpace (): boolean {
-    if (!this.klippyReady) return false
-    return this.$typedGetters['files/getLowOnSpace']
+    return this.$typedGetters['files/getDiskUsage'](this.root)?.lowOnSpace ?? false
   }
 
   // Properties of the current root.
@@ -219,15 +218,11 @@ export default class FileSystemToolbar extends Mixins(StatesMixin) {
   }
 
   get thumbnailSize (): number {
-    return this.$typedState.config.uiSettings.general.thumbnailSize
+    return this.$typedState.config.uiSettings.thumbnailSizes[this.root] ?? 32
   }
 
   set thumbnailSize (value: number) {
-    this.$typedDispatch('config/saveByPath', {
-      path: 'uiSettings.general.thumbnailSize',
-      value,
-      server: true
-    })
+    this.$typedDispatch('config/updateThumbnailSizes', { name: this.root, size: value })
   }
 
   handleUpload (files: FileList | File[], print: boolean) {

@@ -18,10 +18,18 @@ export interface UiSettings {
   editor: EditorConfig;
   dashboard: DashboardConfig;
   tableHeaders: TableHeadersConfig;
+  thumbnailSizes: ThumbnailSizesConfig;
   gcodePreview: GcodePreviewConfig;
   fileSystem: FileSystemConfig;
   toolhead: ToolheadConfig;
   spoolman: SpoolmanConfig;
+  history: HistoryConfig;
+  mmu: MmuConfig;
+}
+
+export interface HistoryConfig {
+  timeInDays: boolean;
+  lengthInKilometers: boolean;
 }
 
 export interface ToolheadConfig {
@@ -45,6 +53,14 @@ export interface SpoolmanConfig {
 }
 
 export type SpoolmanRemainingFilamentUnit = 'weight' | 'length'
+
+export interface MmuConfig {
+  showClogDetection: boolean;
+  showTtgMap: boolean;
+  showDetails: boolean;
+  largeFilamentStatus: boolean;
+  showLogos: boolean;
+}
 
 export interface HostConfig {
   endpoints: string[];
@@ -106,7 +122,6 @@ export interface GeneralConfig {
   printProgressCalculation: PrintProgressCalculation[];
   printEtaCalculation: PrintEtaCalculation[];
   enableDiagnostics: boolean;
-  thumbnailSize: number;
   colorPickerValueRange: ColorPickerValueRange;
 }
 
@@ -148,11 +163,14 @@ export interface ThemeLogo {
 
 export type RestoreViewState = 'never' | 'session' | 'local'
 
+export type KlipperSaveAndRestartAction = 'auto' | 'firmware-restart' | 'host-restart' | 'service-restart'
+
 export interface EditorConfig {
   confirmDirtyEditorClose: boolean;
   autoEditExtensions: string[];
   restoreViewState: RestoreViewState,
   codeLens: boolean;
+  klipperSaveAndRestartAction: KlipperSaveAndRestartAction;
 }
 
 export interface Axis {
@@ -204,7 +222,10 @@ export interface TemperaturePresetValue {
   active: boolean;
 }
 
-export interface TableHeadersConfig extends Record<string, ConfiguredTableHeader[]> {
+export interface TableHeadersConfig extends Record<string, ConfiguredTableHeader[] | undefined> {
+}
+
+export interface ThumbnailSizesConfig extends Record<string, number | undefined> {
 }
 
 export interface ConfiguredTableHeader {
