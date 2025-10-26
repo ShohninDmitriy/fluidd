@@ -270,6 +270,7 @@ app:
       cross: Cross
       circle: Circle
       compact: Compact
+      connected: Connected
       current_password: Current password
       current_user: Current user
       default: Default
@@ -302,6 +303,7 @@ app:
       minimum_cruise_ratio: Minimum Cruise Ratio
       user_managed_source: User managed by %{source} authentication
       m117: M117
+      disconnected: Disconnected
       moonraker: Moonraker
       name: Name
       new_password: New password
@@ -412,6 +414,7 @@ app:
         confirm_remove_printer: Are you sure you want to remove the printer %{name}?
         confirm_remove_thermal_preset: Are you sure you want to remove the thermal preset %{name}?
         confirm_remove_user: Are you sure you want to remove user %{username}?
+        confirm_restore_backup: Are you sure you want to restore this backup? Moonraker will restart immediately after this request is processed.
         confirm_shutdown_host: Are you sure? This will shutdown your host system.
         confirm_service_start: Are you sure you want to start the %{name} service?
         confirm_service_restart: Are you sure you want to restart the %{name} service?
@@ -693,6 +696,8 @@ app:
       toolhead_z_move_distances: Toolhead Z distance values
       type: Type
       unit: Unit
+      warn_on_cpu_throttled: Warn if CPU throttling is detected
+      warn_on_stepper_driver_overheating: Warn if stepper driver is over-heating
       z_adjust_values: Z Adjust values
       date_format: Date format
       time_format: Time format
@@ -722,6 +727,7 @@ app:
       theme: Theme
       thermal_presets: Thermal Presets
       tool: Tool
+      warnings: Warnings
     tooltip:
       average_calculation: If more than one option is select, an average will be calculated
       diagnostics_performance: '[BETA] Logging diagnostics info may impact performance'
@@ -737,6 +743,8 @@ app:
         However, please note that these themes are not officially maintained by the respective brands.<br>
         Any issues or inquiries related to the themes should be directed to the Fluidd team.<br>
         The use of brand names and logos is for decorative and aesthetic purposes only, and no official association with or endorsement by the brands is implied.
+      warn_on_cpu_throttled: CPU throttling can cause prints to fail
+      warn_on_stepper_driver_overheating: Trinamic drivers only
   socket:
     msg:
       connecting: Connecting to moonraker...
@@ -746,11 +754,9 @@ app:
       application: Application
       awake_time: awake time
       capacity: Capacity
-      connected: Connected
       constants: Constants
       cpu_desc: CPU Description
       devices: Devices
-      disconnected: Disconnected
       distribution_codename: Codename
       distribution_like: Distribution Like
       distribution_name: Distribution
@@ -842,6 +848,8 @@ app:
       invalid: INVALID
       os_packages: OS Packages
       package_list: Package List
+      packages: >-
+        {count} package | {count} packages
       up_to_date: UP TO DATE
       updates_available: Updates are available
       old_component_version: >-
@@ -1114,6 +1122,7 @@ app:
       show_clog_detection: Show Clog Detection
       show_details: Show Filament Details
       show_ttg_map: Show TTG Map
+      show_name: Show Unit Name
       show_logos: Show Logos
       show_unavailable_spool_color: Show Unavailable Spools
   sensors:
@@ -1145,3 +1154,12 @@ app:
     tooltip:
       delete: Delete Model
       load: Load Model
+  database:
+    btn:
+      compact_database: Compact Database
+      create_backup: Create Backup
+    label:
+      moonraker_database: Moonraker Database
+    tooltip:
+      restore_backup: Restore Backup
+      delete_backup: Delete Backup

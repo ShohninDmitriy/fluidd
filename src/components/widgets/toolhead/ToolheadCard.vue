@@ -12,7 +12,28 @@
       </v-icon>
       <span class="font-weight-light">{{ $t('app.general.title.tool') }}</span>
 
-      <v-tooltip bottom>
+      <v-tooltip
+        v-if="extruderDisconnected"
+        bottom
+      >
+        <template #activator="{ on, attrs }">
+          <v-icon
+            v-bind="attrs"
+            class="ml-3"
+            color="warning"
+            small
+            v-on="on"
+          >
+            $warning
+          </v-icon>
+        </template>
+        <span v-html="$t('app.general.label.disconnected')" />
+      </v-tooltip>
+
+      <v-tooltip
+        v-else
+        bottom
+      >
         <template #activator="{ on, attrs }">
           <v-icon
             v-show="hasExtruder && !extruderReady"
@@ -202,6 +223,11 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
       this.printerSettings.probe != null ||
       this.printerSettings.bltouch != null ||
       this.printerSettings.smart_effector != null ||
+      (
+        this.printerSettings.scanner != null &&
+        'sensor' in this.printerSettings.scanner &&
+        this.printerSettings.scanner.sensor === 'cartographer'
+      ) ||
       Object.keys(this.printerSettings)
         .some(x => x.startsWith('probe_eddy_current '))
     )
@@ -251,7 +277,7 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
         name: loadFilamentMacro.name.toUpperCase(),
         label: loadFilamentMacro.name.toLowerCase() === 'm701' ? 'M701 (Load Filament)' : undefined,
         icon: '$loadFilament',
-        disabled: !(ignoreMinExtrudeTemp || this.extruderReady)
+        disabled: !(ignoreMinExtrudeTemp || this.extruderReady) || this.extruderDisconnected
       })
     }
 
@@ -264,7 +290,7 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
         name: unloadFilamentMacro.name.toUpperCase(),
         label: unloadFilamentMacro.name.toLowerCase() === 'm702' ? 'M702 (Unload Filament)' : undefined,
         icon: '$unloadFilament',
-        disabled: !(ignoreMinExtrudeTemp || this.extruderReady)
+        disabled: !(ignoreMinExtrudeTemp || this.extruderReady) || this.extruderDisconnected
       })
     }
 
