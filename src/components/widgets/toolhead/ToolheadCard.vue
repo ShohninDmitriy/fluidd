@@ -223,6 +223,7 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
       this.printerSettings.probe != null ||
       this.printerSettings.bltouch != null ||
       this.printerSettings.smart_effector != null ||
+      this.printerSettings.cartographer != null ||
       (
         this.printerSettings.scanner != null &&
         'sensor' in this.printerSettings.scanner &&
@@ -231,6 +232,14 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
       Object.keys(this.printerSettings)
         .some(x => x.startsWith('probe_eddy_current '))
     )
+  }
+
+  get printerSupportsBeaconCalibrate (): boolean {
+    return this.printerSettings.beacon != null
+  }
+
+  get printerSupportsCartographerCalibrate (): boolean {
+    return this.printerSettings.cartographer != null
   }
 
   get printerSupportsZEndstopCalibrate (): boolean {
@@ -265,6 +274,14 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
     )
   }
 
+  get parkToolheadMacro (): Macro | undefined {
+    return this.$typedGetters['macros/getMacroByName'](
+      'PARK_TOOLHEAD',
+      'TOOLHEAD_PARK',
+      'G27'
+    )
+  }
+
   get availableTools () {
     const tools: Tool[] = []
 
@@ -275,7 +292,7 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
 
       tools.push({
         name: loadFilamentMacro.name.toUpperCase(),
-        label: loadFilamentMacro.name.toLowerCase() === 'm701' ? 'M701 (Load Filament)' : undefined,
+        label: loadFilamentMacro.name.toLowerCase() === 'm701' ? `M701 (${loadFilamentMacro.description || this.$t('app.general.label.load_filament')})` : undefined,
         icon: '$loadFilament',
         disabled: !(ignoreMinExtrudeTemp || this.extruderReady) || this.extruderDisconnected
       })
@@ -288,7 +305,7 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
 
       tools.push({
         name: unloadFilamentMacro.name.toUpperCase(),
-        label: unloadFilamentMacro.name.toLowerCase() === 'm702' ? 'M702 (Unload Filament)' : undefined,
+        label: unloadFilamentMacro.name.toLowerCase() === 'm702' ? `M702 (${unloadFilamentMacro.description || this.$t('app.general.label.unload_filament')})` : undefined,
         icon: '$unloadFilament',
         disabled: !(ignoreMinExtrudeTemp || this.extruderReady) || this.extruderDisconnected
       })
@@ -299,14 +316,33 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
     if (cleanNozzleMacro) {
       tools.push({
         name: cleanNozzleMacro.name.toUpperCase(),
-        label: cleanNozzleMacro.name.toLowerCase() === 'g12' ? 'G12 (Clean the Nozzle)' : undefined,
+        label: cleanNozzleMacro.name.toLowerCase() === 'g12' ? `G12 (${cleanNozzleMacro.description || this.$t('app.general.label.clean_nozzle')})` : undefined,
         icon: '$cleanNozzle'
+      })
+    }
+
+    const parkToolheadMacro = this.parkToolheadMacro
+
+    if (parkToolheadMacro) {
+      tools.push({
+        name: parkToolheadMacro.name.toUpperCase(),
+        label: parkToolheadMacro.name.toLowerCase() === 'g27' ? `G27 (${parkToolheadMacro.description || this.$t('app.general.label.park_toolhead')})` : undefined,
+        icon: '$parkToolhead',
+        disabled: !this.allHomed
       })
     }
 
     if (tools.length > 0) {
       tools.push({
         name: '-'
+      })
+    }
+
+    if (this.printerSupportsBeaconCalibrate) {
+      tools.push({
+        name: 'BEACON_AUTO_CALIBRATE',
+        disabled: !this.allHomed || this.isManualProbeActive,
+        wait: this.$waits.onBeaconCalibrate
       })
     }
 
@@ -323,6 +359,20 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
         name: 'BED_TILT_CALIBRATE',
         disabled: !this.allHomed || this.isManualProbeActive,
         wait: this.$waits.onBedTiltCalibrate
+      })
+    }
+
+    if (this.printerSupportsCartographerCalibrate) {
+      tools.push({
+        name: 'CARTOGRAPHER_SCAN_CALIBRATE',
+        disabled: !this.allHomed || this.isManualProbeActive,
+        wait: this.$waits.onCartographerScanCalibrate
+      })
+
+      tools.push({
+        name: 'CARTOGRAPHER_TOUCH_CALIBRATE',
+        disabled: !this.allHomed || this.isManualProbeActive,
+        wait: this.$waits.onCartographerTouchCalibrate
       })
     }
 

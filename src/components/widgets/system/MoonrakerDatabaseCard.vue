@@ -3,64 +3,73 @@
     :title="$t('app.database.label.moonraker_database')"
     icon="$database"
   >
-    <v-simple-table>
-      <thead>
-        <tr>
-          <th>{{ $t('app.general.label.name') }}</th>
-          <th>&nbsp;</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="item in backups"
-          :key="item"
-        >
-          <td>{{ item }}</td>
-          <td
-            class="text-right"
-            nowrap
+    <template v-if="backups.length > 0">
+      <v-simple-table>
+        <thead>
+          <tr>
+            <th>{{ $t('app.general.label.name') }}</th>
+            <th>&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="item in backups"
+            :key="item"
           >
-            <v-tooltip bottom>
-              <template #activator="{ on, attrs }">
-                <app-btn
-                  v-bind="attrs"
-                  icon
-                  :loading="hasWait(`${$waits.onDatabaseRestore}/${item}`)"
-                  @click="handleRestoreBackup(item)"
-                  v-on="on"
-                >
-                  <v-icon dense>
-                    $open
-                  </v-icon>
-                </app-btn>
-              </template>
-              <span>{{ $t('app.database.tooltip.restore_backup') }}</span>
-            </v-tooltip>
+            <td>{{ item }}</td>
+            <td
+              class="text-right"
+              nowrap
+            >
+              <v-tooltip bottom>
+                <template #activator="{ on, attrs }">
+                  <app-btn
+                    v-bind="attrs"
+                    icon
+                    :loading="hasWait(`${$waits.onDatabaseRestore}/${item}`)"
+                    :disabled="printerPrinting"
+                    @click="handleRestoreBackup(item)"
+                    v-on="on"
+                  >
+                    <v-icon dense>
+                      $open
+                    </v-icon>
+                  </app-btn>
+                </template>
+                <span>{{ $t('app.database.tooltip.restore_backup') }}</span>
+              </v-tooltip>
 
-            <v-tooltip bottom>
-              <template #activator="{ on, attrs }">
-                <app-btn
-                  v-bind="attrs"
-                  icon
-                  :loading="hasWait(`${$waits.onDatabaseDeleteBackup}/${item}`)"
-                  @click="handleDeleteBackup(item)"
-                  v-on="on"
-                >
-                  <v-icon dense>
-                    $delete
-                  </v-icon>
-                </app-btn>
-              </template>
-              <span>{{ $t('app.database.tooltip.delete_backup') }}</span>
-            </v-tooltip>
-          </td>
-        </tr>
-      </tbody>
-    </v-simple-table>
+              <v-tooltip bottom>
+                <template #activator="{ on, attrs }">
+                  <app-btn
+                    v-bind="attrs"
+                    icon
+                    :loading="hasWait(`${$waits.onDatabaseDeleteBackup}/${item}`)"
+                    @click="handleDeleteBackup(item)"
+                    v-on="on"
+                  >
+                    <v-icon dense>
+                      $delete
+                    </v-icon>
+                  </app-btn>
+                </template>
+                <span>{{ $t('app.database.tooltip.delete_backup') }}</span>
+              </v-tooltip>
+            </td>
+          </tr>
+        </tbody>
+      </v-simple-table>
 
-    <v-divider />
+      <v-divider />
+    </template>
 
     <v-card-text>
+      <div
+        v-if="backups.length === 0"
+        class="mb-4"
+      >
+        {{ $t('app.database.msg.not_found') }}
+      </div>
       <v-row>
         <v-col cols="6">
           <app-btn
@@ -69,6 +78,7 @@
             class="mb-2"
             color="primary"
             :loading="hasWait($waits.onDatabaseCompact)"
+            :disabled="printerPrinting"
             @click="handleCompactDatabase"
           >
             {{ $t('app.database.btn.compact_database') }}
@@ -81,6 +91,7 @@
             class="mb-2"
             color="primary"
             :loading="hasWaitsBy(`${$waits.onDatabasePostBackup}/`)"
+            :disabled="printerPrinting"
             @click="handleCreateBackup"
           >
             {{ $t('app.database.btn.create_backup') }}

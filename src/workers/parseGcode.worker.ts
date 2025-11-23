@@ -1,5 +1,24 @@
-import type { Layer, Move, ParseGcodeWorkerClientMessage, ParseGcodeWorkerServerMessage, Part } from '@/store/gcodePreview/types'
+import type { Layer, Move, Part } from '@/store/gcodePreview/types'
 import parseGcode from './parseGcode'
+import { consola } from 'consola'
+
+export type ParseGcodeWorkerClientMessage = {
+  action: 'progress',
+  filePosition: number
+} | {
+  action: 'result',
+  moves: Move[],
+  layers: Layer[],
+  parts: Part[]
+} | {
+  action: 'error',
+  error?: unknown
+}
+
+export type ParseGcodeWorkerServerMessage = {
+  action: 'parse',
+  gcode: ArrayBuffer
+}
 
 const sendProgress = (filePosition: number) => {
   const message: ParseGcodeWorkerClientMessage = {
@@ -21,16 +40,33 @@ const sendResult = (moves: Move[], layers: Layer[], parts: Part[]) => {
   self.postMessage(message)
 }
 
-self.onmessage = (event) => {
-  const data: ParseGcodeWorkerServerMessage = event.data
+const sendError = (error?: unknown) => {
+  const message: ParseGcodeWorkerClientMessage = {
+    action: 'error',
+    error
+  }
 
-  switch (data.action) {
-    case 'parse': {
-      const { moves, layers, parts } = parseGcode(data.gcode, sendProgress)
+  self.postMessage(message)
+}
 
-      sendResult(moves, layers, parts)
+self.onmessage = (event: MessageEvent<ParseGcodeWorkerServerMessage>) => {
+  const message = event.data
 
-      break
+  try {
+    switch (message.action) {
+      case 'parse': {
+        const gcode = new TextDecoder().decode(message.gcode)
+
+        const { moves, layers, parts } = parseGcode(gcode, sendProgress)
+
+        sendResult(moves, layers, parts)
+
+        break
+      }
     }
+  } catch (e) {
+    consola.error('[ParseGcode] error in worker', e)
+
+    sendError(e)
   }
 }
