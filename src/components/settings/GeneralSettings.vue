@@ -9,8 +9,7 @@
       class="mb-4"
     >
       <app-setting :title="$t('app.setting.label.printer_name')">
-        <v-text-field
-          ref="instanceName"
+        <app-text-field
           filled
           dense
           single-line
@@ -20,7 +19,8 @@
           ]"
           :value="instanceName"
           :default-value="$globals.APP_NAME"
-          @change="setInstanceName"
+          submit-on-change
+          @submit="setInstanceName"
         />
       </app-setting>
 
@@ -275,12 +275,10 @@
 import { Component, Mixins, Ref } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import BrowserMixin from '@/mixins/browser'
-import type { VInput } from '@/types'
 import { SupportedLocales, DateFormats, TimeFormats } from '@/globals'
 import type { OutputPin } from '@/store/printer/types'
-import type { Device } from '@/store/power/types'
 import type { PrintEtaCalculation, PrintInProgressLayout, PrintProgressCalculation } from '@/store/config/types'
-import { httpClientActions } from '@/api/httpClientActions'
+import { SocketActions } from '@/api/socketActions'
 import { consola } from 'consola'
 import { readFileAsTextAsync } from '@/util/file-system-entry'
 import { EventBus } from '@/eventBus'
@@ -290,9 +288,6 @@ import downloadUrl from '@/util/download-url'
 
 @Component({})
 export default class GeneralSettings extends Mixins(StateMixin, BrowserMixin) {
-  @Ref('instanceName')
-  readonly instanceNameElement!: VInput
-
   @Ref('uploadSettingsFile')
   readonly uploadSettingsFile!: HTMLInputElement
 
@@ -301,7 +296,7 @@ export default class GeneralSettings extends Mixins(StateMixin, BrowserMixin) {
   }
 
   setInstanceName (value: string) {
-    if (this.instanceNameElement.valid) this.$typedDispatch('config/updateInstance', value)
+    this.$typedDispatch('config/updateInstance', value)
   }
 
   get locale (): string {
@@ -400,7 +395,7 @@ export default class GeneralSettings extends Mixins(StateMixin, BrowserMixin) {
   }
 
   get printerPowerDevicesList () {
-    const devices: Device[] = this.$typedGetters['power/getDevices']
+    const devices: Moonraker.Power.Device[] = this.$typedGetters['power/getDevices']
 
     const deviceEntries = devices.map(device => ({
       text: `${this.$filters.prettyCase(device.device)} (${device.type})`,
@@ -433,7 +428,7 @@ export default class GeneralSettings extends Mixins(StateMixin, BrowserMixin) {
   }
 
   get topNavPowerToggleDevicesList () {
-    const devices: Device[] = this.$typedGetters['power/getDevices']
+    const devices: Moonraker.Power.Device[] = this.$typedGetters['power/getDevices']
     const deviceEntries = devices.length
       ? [
           { header: 'Moonraker' },
@@ -622,9 +617,9 @@ export default class GeneralSettings extends Mixins(StateMixin, BrowserMixin) {
 
   async handleBackupSettings () {
     try {
-      const response = await httpClientActions.serverDatabaseItemGet('fluidd')
+      const response = await SocketActions.serverDatabaseGetItem()
 
-      const data = response.data?.result?.value
+      const data = response.value
 
       if (data) {
         const backupData = toFluiddContent('settings-backup', data)
@@ -659,7 +654,7 @@ export default class GeneralSettings extends Mixins(StateMixin, BrowserMixin) {
           }
 
           for (const key in backupData.data) {
-            await httpClientActions.serverDatabaseItemPost('fluidd', key, backupData.data[key])
+            await SocketActions.serverDatabasePostItem(key, backupData.data[key])
           }
 
           window.location.reload()

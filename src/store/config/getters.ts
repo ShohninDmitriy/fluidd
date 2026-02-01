@@ -3,7 +3,6 @@ import type { ConfigState, TemperaturePreset } from './types'
 import type { RootState } from '../types'
 import type { Heater, Fan } from '../printer/types'
 import type { AppDataTableHeader } from '@/types'
-import type { MoonrakerRootFile } from '../files/types'
 import md5 from 'md5'
 
 export const getters = {
@@ -13,14 +12,10 @@ export const getters = {
   },
 
   getInstances: (state) => {
-    const instances = [
-      ...state.instances
-    ].sort((a, b) =>
-      a.active
-        ? -1
-        : (b.active ? 1 : a.name.localeCompare(b.name))
-    )
+    const instances = [...state.instances]
+
     return instances
+      .sort((a, b) => +b.active - +a.active || a.name.localeCompare(b.name))
   },
 
   /**
@@ -67,7 +62,7 @@ export const getters = {
   },
 
   getCustomThemeFile: (state, getters, rootState, rootGetters) => (filename: string, extensions: string[]) => {
-    const files: MoonrakerRootFile[] | undefined = rootGetters['files/getRootFiles']('config')
+    const files: Moonraker.Files.RootFile[] | undefined = rootGetters['files/getRootFiles']('config')
 
     if (files) {
       for (const extension of extensions) {

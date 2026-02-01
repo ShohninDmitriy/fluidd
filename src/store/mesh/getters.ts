@@ -6,7 +6,6 @@ import type {
 } from './types'
 import type { RootState } from '../types'
 import { transformMesh } from '@/util/transform-mesh'
-import type { KlipperPrinterBedMeshProfileState, KlipperPrinterConfig, KlipperPrinterSettings } from '../printer/types'
 
 export const getters = {
 
@@ -14,27 +13,27 @@ export const getters = {
    * Has this printer been configured for bed meshes?
    */
   getSupportsBedMesh: (state, getters, rootState, rootGetters) => {
-    const printerSettings: KlipperPrinterSettings = rootGetters['printer/getPrinterSettings']
+    const printerSettings: Klipper.SettingsState = rootGetters['printer/getPrinterSettings']
 
     return printerSettings.bed_mesh != null
   },
 
   getLegacyBedMeshProfiles: (state, getters, rootState, rootGetters) => {
-    const klipperProfiles: Record<string, KlipperPrinterBedMeshProfileState> = {}
+    const klipperProfiles: Record<string, Klipper.BedMeshProfileState> = {}
 
-    const config: KlipperPrinterConfig = rootGetters['printer/getPrinterConfig']
+    const config: Klipper.ConfigState = rootGetters['printer/getPrinterConfig']
     const meshProfileKeys = Object.keys(config)
       .filter(key => key.startsWith('bed_mesh '))
 
     for (const key of meshProfileKeys) {
-      const name = key.split(' ').splice(1).join(' ')
+      const name = key.substring(9)
       const legacyKlipperProfile = config[key]
 
       if (legacyKlipperProfile == null) {
         continue
       }
 
-      const profile: KlipperPrinterBedMeshProfileState = {
+      const profile: Klipper.BedMeshProfileState = {
         points: (legacyKlipperProfile.points ?? '').split('\n')
           .filter(x => x.length)
           .map(x => x.split(',').map(Number)),
@@ -66,7 +65,7 @@ export const getters = {
       return []
     }
 
-    const klipperProfiles: Record<string, KlipperPrinterBedMeshProfileState> = bedMesh.profiles ?? getters.getLegacyBedMeshProfiles
+    const klipperProfiles: Record<string, Klipper.BedMeshProfileState> = bedMesh.profiles ?? getters.getLegacyBedMeshProfiles
 
     for (const [name, profile] of Object.entries(klipperProfiles)) {
       const points = profile.points.flatMap(x => x)
@@ -94,13 +93,7 @@ export const getters = {
     }
 
     return profiles.sort((a, b) =>
-      a.name === 'default'
-        ? -1
-        : (
-            b.name === 'default'
-              ? 1
-              : a.name.localeCompare(b.name)
-          )
+      +(b.name === 'default') - +(a.name === 'default') || a.name.localeCompare(b.name)
     )
   },
 

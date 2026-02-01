@@ -27,7 +27,7 @@
             $warning
           </v-icon>
         </template>
-        <span v-html="$t('app.general.label.disconnected')" />
+        <span>{{ $t('app.general.label.disconnected') }}</span>
       </v-tooltip>
 
       <v-tooltip
@@ -45,7 +45,7 @@
             $snowflakeAlert
           </v-icon>
         </template>
-        <span v-html="$t('app.tool.tooltip.extruder_disabled', { min: activeExtruder?.min_extrude_temp })" />
+        <span v-safe-html="$t('app.tool.tooltip.extruder_disabled', { min: activeExtruder?.min_extrude_temp })" />
       </v-tooltip>
     </template>
 
@@ -161,7 +161,7 @@ import StateMixin from '@/mixins/state'
 import ToolheadMixin from '@/mixins/toolhead'
 import Toolhead from './Toolhead.vue'
 import type { Macro } from '@/store/macros/types'
-import type { KlipperPrinterSettings, KlippyApp } from '@/store/printer/types'
+import type { KlippyApp } from '@/store/printer/types'
 
 type Tool = {
   name: string,
@@ -184,7 +184,7 @@ export default class ToolheadCard extends Mixins(StateMixin, ToolheadMixin) {
     return this.$typedGetters['printer/getKlippyApp']
   }
 
-  get printerSettings (): KlipperPrinterSettings {
+  get printerSettings (): Klipper.SettingsState {
     return this.$typedGetters['printer/getPrinterSettings']
   }
 

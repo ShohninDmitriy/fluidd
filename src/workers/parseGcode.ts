@@ -1,5 +1,5 @@
 /* eslint-disable no-fallthrough */
-import type { ArcMove, Layer, LinearMove, Move, Part, Point, PositioningMode } from '@/store/gcodePreview/types'
+import type { ArcMove, BBox, Layer, LinearMove, Move, Part, Point, PositioningMode } from '@/store/gcodePreview/types'
 import isKeyOf from '@/util/is-key-of'
 import { pick } from 'lodash-es'
 import { split } from 'shlex'
@@ -33,7 +33,7 @@ const parseLine = (line: string) => {
     .split(';', 2)[0]
 
   const [, gcodeCommand, gcodeCommandArgs = ''] = clearedLine
-    .split(/^([gm]\d+)\s*/i)
+    .split(/^([gmt]\d+)\s*/i)
 
   if (gcodeCommand) {
     return {
@@ -67,6 +67,7 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
   const moves: Move[] = []
   const layers: Layer[] = []
   const parts: Part[] = []
+  const tools = new Set<number>()
   const lines = gcode.split('\n')
 
   let newLayerForNextMove = false
@@ -77,7 +78,18 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
     y: 0,
     z: 0,
     e: 0,
-    filePosition: 0
+  }
+  let tool = 0
+  let filePosition = 0
+  const bounds: BBox = {
+    x: {
+      min: Number.POSITIVE_INFINITY,
+      max: Number.NEGATIVE_INFINITY
+    },
+    y: {
+      min: Number.POSITIVE_INFINITY,
+      max: Number.NEGATIVE_INFINITY
+    }
   }
 
   // todo get from firmware
@@ -113,7 +125,7 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
                 }))
             }
 
-            parts.push(Object.freeze(part))
+            parts.push(part)
           }
           break
         case 'SET_RETRACTION':
@@ -136,7 +148,8 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
           if (params.some(param => param in args)) {
             move = {
               ...pick(args, params),
-              filePosition: toolhead.filePosition
+              tool,
+              filePosition
             } satisfies LinearMove
           }
           break
@@ -151,10 +164,11 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
           if (params.some(param => param in args)) {
             move = {
               ...pick(args, params),
-              direction: command === 'G2'
+              d: command === 'G2'
                 ? 'clockwise'
                 : 'counter-clockwise',
-              filePosition: toolhead.filePosition
+              tool,
+              filePosition
             } satisfies ArcMove
           }
           break
@@ -162,7 +176,8 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
         case 'G10':
           move = {
             e: -fwretraction.length,
-            filePosition: toolhead.filePosition
+            tool,
+            filePosition
           } satisfies LinearMove
 
           if (fwretraction.z !== 0) {
@@ -172,7 +187,8 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
         case 'G11':
           move = {
             e: decimalRound(fwretraction.length + fwretraction.extrudeExtra),
-            filePosition: toolhead.filePosition
+            tool,
+            filePosition
           } satisfies LinearMove
 
           if (fwretraction.z !== 0) {
@@ -186,7 +202,8 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
           const noXYZ = !hasX && !hasY && !hasZ
 
           move = {
-            filePosition: toolhead.filePosition
+            tool,
+            filePosition
           } satisfies LinearMove
 
           if (hasX || noXYZ) {
@@ -226,6 +243,17 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
           fwretraction.length = args.s ?? fwretraction.length
           fwretraction.z = args.z ?? fwretraction.z
           break
+        case 'M600':
+          tools.add(0)
+          tool = (tool + 1) % 10
+          tools.add(tool)
+          break
+        default:
+          if (command.startsWith('T')) {
+            tool = +command.substring(1)
+            tools.add(tool)
+          }
+          break
       }
 
       if (move) {
@@ -256,10 +284,10 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
             const layer: Layer = {
               z: toolhead.z,
               move: moves.length - 1,
-              filePosition: toolhead.filePosition
+              filePosition
             }
 
-            layers.push(Object.freeze(layer))
+            layers.push(layer)
 
             newLayerForNextMove = false
           }
@@ -269,20 +297,36 @@ const parseGcode = (gcode: string, sendProgress: (filePosition: number) => void)
         toolhead.y = move.y ?? toolhead.y
         toolhead.z = move.z ?? toolhead.z
 
-        moves.push(Object.freeze(move))
+        moves.push(move)
+
+        if (layers.length > 0) {
+          bounds.x.min = Math.min(bounds.x.min, toolhead.x)
+          bounds.x.max = Math.max(bounds.x.max, toolhead.x)
+          bounds.y.min = Math.min(bounds.y.min, toolhead.y)
+          bounds.y.max = Math.max(bounds.y.max, toolhead.y)
+        }
       }
     }
 
     if (i % Math.floor(lines.length / 100) === 0) {
-      sendProgress(toolhead.filePosition)
+      sendProgress(filePosition)
     }
 
-    toolhead.filePosition += lines[i].length + 1 // + 1 for newline
+    filePosition += lines[i].length + 1 // + 1 for newline
   }
 
-  sendProgress(toolhead.filePosition)
+  sendProgress(filePosition)
 
-  return { moves, layers, parts }
+  return {
+    moves,
+    layers,
+    parts,
+    bounds: layers.length > 0
+      ? bounds
+      : null,
+    tools: [...tools]
+      .sort((a, b) => a - b)
+  }
 }
 
 export default parseGcode

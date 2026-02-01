@@ -115,11 +115,13 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        api: 'legacy',
+        silenceDeprecations: ['import', 'global-builtin', 'slash-div', 'if-function'],
+        quietDeps: true,
         additionalData: '@import "@/scss/variables";\n'
       },
       sass: {
-        api: 'legacy',
+        silenceDeprecations: ['import', 'global-builtin', 'slash-div', 'if-function'],
+        quietDeps: true,
         additionalData: '@import "@/scss/variables.scss"\n'
       }
     }

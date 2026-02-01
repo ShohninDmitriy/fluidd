@@ -1,11 +1,10 @@
 import Vue from 'vue'
 import type { GetterTree } from 'vuex'
 import type { RootState } from '../types'
-import type { PrinterState, Heater, Fan, Led, OutputPin, Sensor, RunoutSensor, KnownExtruder, MCU, Endstop, ExtruderStepper, Extruder, Stepper, ScrewsTiltAdjustScrew, ScrewsTiltAdjust, BedScrews, BedSize, GcodeCommands, TimeEstimates, KlippyApp, ExcludeObjectPart, KlipperPrinterConfig, BeaconModel, BedScrewsScrew, ExtruderKey, Probe } from './types'
+import type { PrinterState, Heater, Fan, Led, OutputPin, Sensor, RunoutSensor, KnownExtruder, MCU, Endstop, ExtruderStepper, Extruder, Stepper, ScrewsTiltAdjustScrew, ScrewsTiltAdjust, BedScrews, BedSize, GcodeCommands, TimeEstimates, KlippyApp, ExcludeObjectPart, BeaconModel, BedScrewsScrew, Probe } from './types'
 import getKlipperType from '@/util/get-klipper-type'
 import getMcusFromConfig from '@/util/get-klipper-mcus-from-config'
 import i18n from '@/plugins/i18n'
-import type { GcodeHelp } from '../console/types'
 import { Globals } from '@/globals'
 import isKeyOf from '@/util/is-key-of'
 import getFilePaths from '@/util/get-file-paths'
@@ -357,7 +356,9 @@ export const getters = {
     for (const key of mcuKeys) {
       const config = state.printer.configfile.settings[key.toLowerCase()]
 
-      const name = key.split(' ', 2).pop() || ''
+      const name = key.length > 4
+        ? key.substring(4)
+        : 'mcu'
 
       mcus.push({
         name,
@@ -401,7 +402,7 @@ export const getters = {
  */
   getExtruders: (state): KnownExtruder[] => {
     const extruderKeys = Object.keys(state.printer)
-      .filter((key): key is ExtruderKey => /^extruder\d{0,2}$/.test(key))
+      .filter((key): key is Klipper.ExtruderKey => /^extruder\d{0,2}$/.test(key))
       .sort((a, b) => +a.substring(8) - +b.substring(8))
 
     return extruderKeys
@@ -421,7 +422,7 @@ export const getters = {
   },
 
   // Returns an extruder by name.
-  getExtruderByName: (state, getters) => (key: ExtruderKey) => {
+  getExtruderByName: (state, getters) => (key: Klipper.ExtruderKey) => {
     const e = state.printer[key]
     const c = state.printer.configfile.settings[key.toLowerCase()]
 
@@ -472,7 +473,7 @@ export const getters = {
     for (const key of stepperKeys) {
       const name = key.startsWith('stepper_')
         ? key.substring(8)
-        : key.split(' ', 2).pop() || ''
+        : key.trim().split(/\s+/).pop() || ''
 
       const e = state.printer[key]
       const config = state.printer.configfile.settings[key.toLowerCase()]
@@ -519,7 +520,7 @@ export const getters = {
         key.startsWith('filament_motion_sensor ')
       ))
       .map(key => {
-        const name = key.split(' ', 2).pop() || ''
+        const name = key.trim().split(/\s+/).pop() || ''
 
         return {
           ...state.printer[key],
@@ -587,8 +588,9 @@ export const getters = {
       if (heater && Object.keys(heater).length > 0) {
         const config = state.printer.configfile.settings[key.toLowerCase()]
 
-        const [type, nameFromSplit] = key.split(' ', 2)
-        const name = nameFromSplit ?? key
+        const [type, ...restSplit] = key.trim().split(/\s+/)
+        const nameFromSplit = restSplit.pop()
+        const name = nameFromSplit || key
 
         const color = Vue.$colorset.next(getKlipperType(key), key)
         const prettyName = Vue.$filters.prettyCase(name)
@@ -725,7 +727,7 @@ export const getters = {
     const pins: Array<Fan | Led | OutputPin> = []
 
     for (const key in state.printer) {
-      const [type, nameFromSplit] = key.split(' ', 2)
+      const [type, nameFromSplit] = key.trim().split(/\s+/, 2)
       const name = nameFromSplit ?? key
 
       if (
@@ -796,8 +798,9 @@ export const getters = {
         key === 'z_thermal_adjust'
       ))
       .reduce<Record<string, Sensor>>((groups, key) => {
-        const [type, nameFromSplit] = key.split(' ', 2)
-        const name = nameFromSplit ?? key
+        const [type, ...restSplit] = key.trim().split(/\s+/)
+        const nameFromSplit = restSplit.pop()
+        const name = nameFromSplit || key
 
         if (!name.startsWith('_')) {
           const prettyName = type === 'tmc2240'
@@ -839,6 +842,9 @@ export const getters = {
   getExtraSensorData: (state) => (sensorType: string, name: string) => {
     const supportedSensors = {
       aht10: 'aht10',
+      aht1x: 'aht10',
+      aht2x: 'aht10',
+      aht3x: 'aht10',
       bme280: 'bme280',
       htu21d: 'htu21d',
       sht21: 'htu21d',
@@ -1058,7 +1064,7 @@ export const getters = {
     return state.printer.configfile?.save_config_pending || false
   },
 
-  getSaveConfigPendingItems: (state): KlipperPrinterConfig => {
+  getSaveConfigPendingItems: (state): Klipper.ConfigState => {
     return state.printer.configfile?.save_config_pending_items || {}
   },
 
@@ -1094,7 +1100,7 @@ export const getters = {
       return availableCommands
     }
 
-    const knownCommands: GcodeHelp = rootGetters['console/getAllKnownCommands']
+    const knownCommands: Moonraker.KlippyApis.GcodeHelpResponse = rootGetters['console/getAllKnownCommands']
 
     return Object.entries(knownCommands)
       .reduce<GcodeCommands>((availableCommands, [key, help]) => {
@@ -1172,5 +1178,9 @@ export const getters = {
       exclude_object != null &&
       exclude_object.objects.length > 0
     )
+  },
+
+  getSupportsAfc: (state): boolean => {
+    return state.printer.AFC != null
   }
 } satisfies GetterTree<PrinterState, RootState>

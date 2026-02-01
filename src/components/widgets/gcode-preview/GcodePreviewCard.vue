@@ -261,11 +261,11 @@ export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin, Bro
     }
   }
 
-  get file (): AppFile | undefined {
+  get file (): AppFile | AppFileWithMeta | null {
     return this.$typedState.gcodePreview.file
   }
 
-  get moves (): Move[] {
+  get moves (): readonly Move[] {
     return this.$typedState.gcodePreview.moves
   }
 
@@ -278,7 +278,7 @@ export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin, Bro
   }
 
   get showParserProgressDialog (): boolean {
-    return this.file !== undefined && this.parserProgress !== this.file.size
+    return this.file != null && this.parserProgress !== this.file.size
   }
 
   get filePosition (): number {
@@ -319,7 +319,7 @@ export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin, Bro
       }
     }
 
-    const layers: Layer[] = this.$typedGetters['gcodePreview/getLayers']
+    const layers: readonly Layer[] = this.$typedGetters['gcodePreview/getLayers']
 
     return {
       min: layers[this.currentLayer].move,
@@ -355,7 +355,7 @@ export default class GcodePreviewCard extends Mixins(StateMixin, FilesMixin, Bro
     }
   }
 
-  async loadFile (file: AppFile) {
+  async loadFile (file: AppFile | AppFileWithMeta) {
     try {
       const response = await this.getGcode(file)
 

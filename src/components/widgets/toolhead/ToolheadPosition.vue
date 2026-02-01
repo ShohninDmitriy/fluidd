@@ -125,7 +125,6 @@
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import ToolheadMixin from '@/mixins/toolhead'
-import type { KlipperPrinterSettings } from '@/store/printer/types'
 
 type Axis = 'X' | 'Y' | 'Z'
 
@@ -137,16 +136,16 @@ const axisIndexMap: Record<Axis, number> = {
 
 @Component({})
 export default class ToolheadPosition extends Mixins(StateMixin, ToolheadMixin) {
-  get gcodePosition (): [number, number, number, number] {
+  get gcodePosition (): [number, number, number, ...number[]] {
     return this.$typedState.printer.printer.gcode_move.gcode_position
   }
 
-  get toolheadPosition (): [number, number, number, number] {
+  get toolheadPosition (): [number, number, number, ...number[]] {
     return this.$typedState.printer.printer.toolhead.position
   }
 
-  get livePosition (): [number, number, number, number] {
-    return this.$typedState.printer.printer.motion_report?.live_position ?? [0, 0, 0, 0]
+  get livePosition (): [number, number, number, ...number[]] {
+    return this.$typedState.printer.printer.motion_report?.live_position ?? [0, 0, 0]
   }
 
   get useGcodeCoords (): boolean {
@@ -177,7 +176,7 @@ export default class ToolheadPosition extends Mixins(StateMixin, ToolheadMixin) 
     this.sendGcode(`G9${value}`)
   }
 
-  get printerSettings (): KlipperPrinterSettings {
+  get printerSettings (): Klipper.SettingsState {
     return this.$typedGetters['printer/getPrinterSettings']
   }
 
