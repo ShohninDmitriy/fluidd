@@ -8,8 +8,8 @@
     <e-chart
       ref="chart"
       :option="opts"
-      :update-options="{ notMerge: false }"
-      :init-options="{ renderer: 'canvas' }"
+      :update-options="updateOptions"
+      :init-options="initOptions"
       autoresize
     />
 
@@ -21,7 +21,7 @@
 
 <script lang='ts'>
 import { Component, Prop, Watch, Ref, Mixins } from 'vue-property-decorator'
-import type { ECharts, EChartsOption, GraphicComponentOption } from 'echarts'
+import type { ECharts, EChartsInitOpts, EChartsOption, GraphicComponentOption, SetOptionOpts } from 'echarts'
 import { merge, cloneDeepWith } from 'lodash-es'
 import BrowserMixin from '@/mixins/browser'
 import type { BedSize } from '@/store/printer/types'
@@ -43,6 +43,11 @@ export default class BedMeshChart extends Mixins(BrowserMixin) {
 
   @Ref('chart')
   readonly chart!: ECharts
+
+  // Stable references so component re-renders don't make vue-echarts dispose/
+  // re-init the chart, which would reset the 3D camera (rotation/zoom) state.
+  readonly updateOptions: SetOptionOpts = Object.freeze({ notMerge: false })
+  readonly initOptions: EChartsInitOpts = Object.freeze({ renderer: 'canvas' })
 
   get flatSurface (): boolean {
     return this.$typedState.mesh.flatSurface
@@ -260,7 +265,6 @@ export default class BedMeshChart extends Mixins(BrowserMixin) {
 
 <style lang='scss' scoped>
   .chart {
-    margin-top: 16px;
     width: 100%;
     // height: 625px;
   }
