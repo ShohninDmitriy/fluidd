@@ -436,7 +436,6 @@ app:
       ldap: LDAP
       longest_job: Самая долгая печать
       load_filament: Load Filament
-      longest_job: Longest job
       low: Ниже
       manage_accounts: Управление аккаунтами
       minimum_cruise_ratio: Минимальный коэффициент круиза
