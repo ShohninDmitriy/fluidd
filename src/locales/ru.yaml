@@ -599,10 +599,6 @@ app:
         name: Имя
         nozzle_diameter: Диаметр сопла
         print_duration: Продолжительность печати
-        printer_model: Printer model
-        printer_variant: Printer variant
-        printer_vendor: Printer vendor
-        profile_version: Profile version
         referenced_tools: Referenced tools
         time_added: Время добавления
         time_in_queue: Время в очереди
