@@ -13,8 +13,9 @@ tour of the codebase, see the
 - Read the [Development guide](https://docs.fluidd.xyz/development/) — it covers the
   Dev Container, running Fluidd locally, and a quick architecture overview.
 - After cloning, run `pnpm i --frozen-lockfile` to install dependencies. This also sets up
-  the Git hooks that pre-validate your commits. If you don't have pnpm yet, run `corepack enable`
-  first — see the [Development guide](https://docs.fluidd.xyz/development/) for details.
+  the Git hooks that pre-validate your commits. If you don't have pnpm yet, run `npx get-pnpm`
+  from outside the clone first (`npm` refuses to run inside a project that pins pnpm) — see the
+  [Development guide](https://docs.fluidd.xyz/development/) for details.
 
 ## Branching and pull requests
 
@@ -57,7 +58,12 @@ pnpm run test
 ```
 
 CI runs the same checks (plus `pnpm run circular-check` and a production build) on
-every pull request.
+every pull request. They no longer stop at the first failure, so a single run reports
+lint, type, test and circular-dependency problems together.
+
+CI also comments on each pull request with the gzip bundle-size difference against the
+merge-base, so changes that pull a large dependency into an eagerly loaded chunk are
+visible in review.
 
 ## Translations
 

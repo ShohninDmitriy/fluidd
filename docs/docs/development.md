@@ -29,8 +29,10 @@ second source for humans too.
 - **Vuex** for state management — namespaced modules mirror Klipper and Moonraker
   domains
 - **[Vite](https://vitejs.dev/) 8** as the build tool and dev server
-- **[Vitest](https://vitest.dev/) 4** with `jsdom` for unit tests
-- **Node.js 24** — pinned in `.node-version` (engines: `^22.12.0 || ^24`)
+- **[Vitest](https://vitest.dev/) 5** for unit tests — `node` environment by default, with
+  `jsdom` opted into per spec
+- **Node.js 24** — pinned in `package.json` via `devEngines.runtime`
+  (engines: `^22.12.0 || ^24`)
 
 ### How it talks to Klipper
 
@@ -164,22 +166,32 @@ printer.
 
 Follow the instructions from [Node.js](https://nodejs.org) to install Node.js, v24.x.
 
+Fluidd pins its own Node.js version in `package.json` via `devEngines.runtime`, so
+pnpm downloads and uses that version for the project regardless of the one you
+install here — this step only bootstraps the pnpm installer below.
+
 Check that Node.js was installed properly:
 
 ```bash
 node --version
 ```
 
-### Enable pnpm
+### Install pnpm
 
-Fluidd uses [pnpm](https://pnpm.io/) as its package manager. The required version
-is pinned in `package.json` via the `packageManager` field, and
-[Corepack](https://nodejs.org/api/corepack.html) (bundled with Node.js) will
-install and run that exact version automatically — just enable it once:
+Fluidd uses [pnpm](https://pnpm.io/) as its package manager. Install it once with
+pnpm's own installer — Node.js v22.13 or newer is needed to run it, but not to run
+pnpm afterwards:
 
 ```bash
-corepack enable
+npx get-pnpm
 ```
+
+Run it from outside the Fluidd clone: `npm` refuses to run inside a project whose
+`devEngines.packageManager` names another package manager.
+
+The required version is pinned in `package.json` via `devEngines.packageManager`,
+and pnpm downloads and runs that exact version whenever you work in the Fluidd
+repository, whichever version you installed above.
 
 Verify that pnpm resolves correctly:
 
@@ -246,6 +258,23 @@ zensical build --clean
 Fluidd uses [vue-i18n](https://kazupon.github.io/vue-i18n/) for its localization.
 
 Locales can be found in the `src/locales` folder and are in YAML format.
+
+### Vuetify component translations
+
+Vuetify keeps its own string table, separate from `src/locales`, for strings its
+components render without Fluidd passing them — the `v-data-table` footer,
+pagination and sort aria-labels, and the `v-file-input` counter. These
+translations ship with Vuetify and are **not** managed through Weblate, so
+editing `src/locales` will not change them.
+
+`src/plugins/vuetify.ts` maps each Fluidd locale code onto the matching Vuetify
+one and loads it when the language changes. Most codes match one-to-one; the
+exceptions are `zh-CN`, `zh-HK` and `pt_BR`, which map onto Vuetify's `zh-Hans`,
+`zh-Hant` and `pt`. A code left out of that map falls back to English, which is
+what happens for Tamil — Vuetify has no `ta` translation.
+
+Adding a language therefore needs an entry in that map alongside the one in
+`SupportedLocales` (`src/globals.ts`), unless Vuetify has no translation for it.
 
 ### How to contribute
 
