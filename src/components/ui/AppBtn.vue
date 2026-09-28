@@ -1,7 +1,15 @@
 <template>
   <v-btn
-    v-bind="attrs"
-    :class="classes"
+    v-bind="$attrs"
+    :color="colorToApply"
+    :fab="fab"
+    :icon="icon"
+    :outlined="outlined"
+    :text="text"
+    :plain="plain"
+    :class="{
+      'grey--text text--darken-3': primaryColorIsLight
+    }"
     v-on="$listeners"
   >
     <slot />
@@ -9,43 +17,58 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Component, Prop, Vue } from 'vue-property-decorator'
 
-@Component({})
+@Component({
+  inheritAttrs: false
+})
 export default class AppBtn extends Vue {
-  get theme () {
-    return this.$store.getters['config/getTheme']
+  @Prop({ type: String })
+  color?: string
+
+  @Prop({ type: Boolean })
+  fab?: boolean
+
+  @Prop({ type: Boolean })
+  icon?: boolean
+
+  @Prop({ type: Boolean })
+  outlined?: boolean
+
+  @Prop({ type: Boolean })
+  text?: boolean
+
+  @Prop({ type: Boolean })
+  plain?: boolean
+
+  get colorToApply () {
+    if (this.color != null) {
+      return this.color
+    }
+
+    return (
+      this.fab ||
+      this.icon ||
+      this.plain
+    )
+      ? undefined
+      : 'btncolor'
   }
 
-  get classes () {
-    // Only apply the text change if this isn't;
-    // - an icon, fab, outlined or text button and
-    // it's the primary color.
+  get primaryColorIsLight () {
     if (
-      this.$attrs.fab === undefined &&
-      this.$attrs.icon === undefined &&
-      this.$attrs.outlined === undefined &&
-      this.$attrs.text === undefined &&
-      this.$attrs.color === 'primary'
+      this.fab ||
+      this.icon ||
+      this.outlined ||
+      this.text ||
+      this.color !== 'primary'
     ) {
-      // If the color of the btn isn't dark (i.e., light) then darken the text.
-      return { 'grey--text text--darken-3': !this.colorIsDark }
+      return false
     }
-  }
 
-  get colorIsDark () {
-    return this.$filters.isColorDark(this.theme.currentTheme[this.$attrs.color])
-  }
+    const color = this.$vuetify.theme.currentTheme.primary?.toString() ?? ''
 
-  get attrs () {
-    let attrs = this.$attrs
-    if (attrs.color === undefined) {
-      attrs = {
-        ...attrs,
-        color: 'btncolor'
-      }
-    }
-    return attrs
+    return !this.$filters.isColorDark(color)
   }
 }
 </script>

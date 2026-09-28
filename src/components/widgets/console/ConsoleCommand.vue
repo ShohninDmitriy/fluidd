@@ -1,46 +1,45 @@
 <template>
-  <v-container>
-    <v-row align="center">
-      <v-col>
-        <v-textarea
-          ref="input"
-          :rows="1"
-          :value="newValue"
-          :items="history"
-          :disabled="disabled"
-          auto-grow
-          clearable
-          outlined
-          single-line
-          dense
-          hide-details
-          @input="emitChange"
-          @keyup.enter.exact="emitSend(newValue)"
-          @keydown.enter.exact.prevent
-          @keyup.up="historyUp()"
-          @keyup.down="historyDown()"
-          @keydown.prevent.tab="autoComplete()"
-        />
-      </v-col>
-      <v-col cols="auto">
-        <app-btn
-          :disabled="disabled"
-          @click="emitSend(newValue)"
-        >
-          {{ $t('app.general.btn.send') }}
-        </app-btn>
-      </v-col>
-    </v-row>
-  </v-container>
-  <!-- <pre>{{ originalHistory }}</pre>
-    <pre>{{ history }}</pre> -->
+  <v-row class="ma-2">
+    <v-col>
+      <v-textarea
+        ref="input"
+        :rows="1"
+        :value="newValue"
+        :items="history"
+        :disabled="disabled"
+        :autofocus="autofocus"
+        auto-grow
+        clearable
+        outlined
+        single-line
+        dense
+        hide-details
+        spellcheck="false"
+        class="console-command"
+        @input="emitChange"
+        @keyup.enter.exact="emitSend(newValue)"
+        @keydown.enter.exact.prevent
+        @keydown.up.exact="handleKeyUp"
+        @keydown.down.exact="handleKeyDown"
+        @keydown.prevent.tab="autoComplete()"
+      />
+    </v-col>
+    <v-col cols="auto">
+      <app-btn
+        :disabled="disabled"
+        @click="emitSend(newValue)"
+      >
+        {{ $t('app.general.btn.send') }}
+      </app-btn>
+    </v-col>
+  </v-row>
 </template>
 
 <script lang="ts">
-import { GcodeCommands } from '@/store/console/types'
 import { Vue, Component, Prop, Watch, Ref } from 'vue-property-decorator'
 import { Globals } from '@/globals'
-import { VInput } from '@/types'
+import type { VTextarea } from 'vuetify/lib'
+import type { GcodeCommands } from '@/store/printer/types'
 
 @Component({})
 export default class ConsoleCommand extends Vue {
@@ -48,10 +47,13 @@ export default class ConsoleCommand extends Vue {
   readonly value!: string
 
   @Ref('input')
-  readonly input!: VInput
+  readonly input!: VTextarea
 
-  @Prop({ type: Boolean, default: false })
-  readonly disabled!: boolean
+  @Prop({ type: Boolean })
+  readonly disabled?: boolean
+
+  @Prop({ type: Boolean })
+  readonly autofocus?: boolean
 
   @Watch('value')
   onValueChange (val: string) {
@@ -66,14 +68,12 @@ export default class ConsoleCommand extends Vue {
   newValue = ''
   commandHistoryCount = Globals.CONSOLE_COMMAND_HISTORY
   history: string[] = []
-  originalHistory: string[] = []
-  isFirst = true
+  historyIndex = -1
 
   mounted () {
     this.newValue = this.value
-    const savedHistory = this.$store.state.console.commandHistory
+    const savedHistory: string[] = this.$typedState.console.commandHistory
     this.history = [...savedHistory]
-    this.originalHistory = [...savedHistory]
   }
 
   emitChange (val: string) {
@@ -84,51 +84,85 @@ export default class ConsoleCommand extends Vue {
   emitSend (val: string) {
     if (val && val.length > 0) {
       if (this.history.length >= this.commandHistoryCount) {
-        this.originalHistory.pop()
+        this.history.pop()
       }
-      this.originalHistory.unshift(val)
-      this.$store.dispatch('console/onUpdateCommandHistory', [...this.originalHistory])
-      this.history = [...this.originalHistory]
-      this.isFirst = true
+      this.history.unshift(val)
+      this.$typedDispatch('console/onUpdateCommandHistory', [...this.history])
+      this.historyIndex = -1
       this.$emit('send', val)
     }
   }
 
-  historyUp () {
-    if (this.history.length >= 1) {
-      if (!this.isFirst) {
-        const f = this.history.shift() as string
-        this.history.push(f)
+  handleKeyUp (event: KeyboardEvent) {
+    const el = this.input.$refs.input
+
+    if (
+      el.selectionStart === el.selectionEnd &&
+      el.value.slice(0, el.selectionStart ?? 0).indexOf('\n') === -1
+    ) {
+      event.preventDefault()
+
+      const historyLength = this.history.length
+
+      if (
+        historyLength >= 1 &&
+        this.historyIndex !== historyLength
+      ) {
+        const index = ++this.historyIndex
+
+        this.emitChange(this.history[index] ?? '')
       }
-      this.emitChange(this.history[0])
-      this.isFirst = false
     }
   }
 
-  historyDown () {
-    if (this.history.length >= 1) {
-      if (!this.isFirst) {
-        const f = this.history.pop() as string
-        this.history.unshift(f)
+  handleKeyDown (event: KeyboardEvent) {
+    const el = this.input.$refs.input
+
+    if (
+      el.selectionStart === el.selectionEnd &&
+      el.value.slice(el.selectionEnd ?? 0).indexOf('\n') === -1
+    ) {
+      event.preventDefault()
+
+      const historyLength = this.history.length
+
+      if (
+        historyLength >= 1 &&
+        this.historyIndex !== -1
+      ) {
+        const index = --this.historyIndex
+
+        this.emitChange(this.history[index] ?? '')
       }
-      this.emitChange(this.history[0])
-      this.isFirst = false
     }
+  }
+
+  get availableCommands (): GcodeCommands {
+    return this.$typedGetters['printer/getAvailableCommands']
   }
 
   autoComplete () {
-    const gcodeCommands: GcodeCommands = this.$store.getters['console/getAllGcodeCommands']
+    const availableCommands = this.availableCommands
+
     if (this.newValue.length) {
-      const commands = Object.keys(gcodeCommands).filter((c: string) => c.toLowerCase().indexOf(this.newValue.toLowerCase()) === 0)
-      if (commands && commands.length === 1) {
+      const commands = Object.keys(availableCommands)
+        .filter(command => command.startsWith(this.newValue.toUpperCase()))
+
+      if (commands.length === 1) {
         this.emitChange(commands[0])
-      } else {
-        commands.forEach((c) => {
-          const message = `// ${c}: ${gcodeCommands[c]}`
-          this.$store.dispatch('console/onAddConsoleEntry', { message, type: 'response' })
-        })
+      } else if (commands.length > 0) {
+        const message = commands
+          .map(command => `// ${command}: ${availableCommands[command].help ?? ''}`)
+          .join('\n')
+        this.$typedDispatch('console/onAddConsoleEntry', { message, type: 'response' })
       }
     }
   }
 }
 </script>
+
+<style lang="scss" scoped>
+  .console-command {
+    font-family: monospace;
+  }
+</style>

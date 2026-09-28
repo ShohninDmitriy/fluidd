@@ -1,10 +1,10 @@
-import { ActionTree } from 'vuex'
-import { LayoutConfig, LayoutState } from './types'
-import { RootState } from '../types'
+import type { ActionTree } from 'vuex'
+import type { LayoutConfig, LayoutContainer, LayoutState } from './types'
+import type { RootState } from '../types'
 import { SocketActions } from '@/api/socketActions'
 import { Globals } from '@/globals'
 
-export const actions: ActionTree<LayoutState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -12,15 +12,15 @@ export const actions: ActionTree<LayoutState, RootState> = {
     commit('setReset')
   },
 
-  async initLayout ({ commit }, payload) {
+  async initLayout ({ commit }, payload: LayoutState) {
     commit('setInitLayout', payload)
   },
 
-  async onLayoutChange ({ commit, state }, payload: { name: string; value: LayoutConfig }) {
+  async onLayoutChange ({ commit, state }, payload: { name: string; value: LayoutContainer }) {
     const layout = state.layouts[payload.name]
     if (layout || payload.name.startsWith('dashboard')) {
       commit('setLayoutChange', payload)
-      await SocketActions.serverWrite(
+      await SocketActions.serverDatabasePostItem(
         Globals.MOONRAKER_DB.fluidd.ROOTS.layout.name + '.layouts',
         state.layouts
       )
@@ -40,7 +40,7 @@ export const actions: ActionTree<LayoutState, RootState> = {
         const i = containers[container].findIndex(layout => layout.id === payload.value.id)
         if (i >= 0) {
           commit('setUpdateConfig', { name: payload.name, container, i, value: payload.value })
-          await SocketActions.serverWrite(
+          await SocketActions.serverDatabasePostItem(
             Globals.MOONRAKER_DB.fluidd.ROOTS.layout.name + `.layouts.${payload.name}.${container}`,
             state.layouts[payload.name][container]
           )
@@ -48,4 +48,4 @@ export const actions: ActionTree<LayoutState, RootState> = {
       }
     }
   }
-}
+} satisfies ActionTree<LayoutState, RootState>

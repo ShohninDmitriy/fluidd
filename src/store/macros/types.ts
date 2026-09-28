@@ -6,6 +6,7 @@ export interface MacrosState {
 
 export interface Macro {
   name: string;
+  description?: string;
   alias?: string;
   visible: boolean;
   categoryId?: string;
@@ -13,7 +14,9 @@ export interface Macro {
   assignTo?: string;
   disabledWhilePrinting?: boolean;
   color?: string;
-  config?: any;
+  config?: Klipper.GcodeMacroSettings;
+  order?: number;
+  variables?: Record<string, unknown>
 }
 
 export interface MacroCategory {

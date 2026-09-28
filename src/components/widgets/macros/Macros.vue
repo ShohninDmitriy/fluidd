@@ -7,29 +7,29 @@
     >
       <v-expansion-panel
         v-for="category in macros"
-        :key="`category-${category.name}`"
+        :key="`category-${category.id}`"
       >
         <v-expansion-panel-header>
           <template #actions>
             <v-icon
-              small
-              class="mr-2"
+              dense
+              class="mr-1"
             >
               $expand
             </v-icon>
           </template>
           <div>
-            {{ category.name }}
-            <v-chip small>
+            {{ category.name ?? $t('app.general.label.uncategorized') }}
+            <v-chip
+              small
+              class="ml-2"
+            >
               {{ category.macros.length }}
             </v-chip>
             <app-btn
               icon
-              text
-              small
-              color=""
-              class="ml-2"
-              @click.prevent.stop="handleEditCategory"
+              class="ml-1"
+              @click.prevent.stop="handleEditCategory(category?.id ?? '0')"
             >
               <v-icon small>
                 $cog
@@ -43,80 +43,21 @@
             v-for="macro in category.macros"
             :key="`category-${macro.name}`"
             top
+            :disabled="!macro.description"
           >
             <template #activator="{ on, attrs }">
-              <app-macro-btn
+              <macro-btn
                 v-bind="attrs"
                 :macro="macro"
                 :loading="hasWait(`${$waits.onMacro}${macro.name}`)"
-                enable-params
-                class="me-2 mb-2 float-left"
+                class="me-2 mb-2 d-inline-block"
                 v-on="on"
                 @click="sendGcode($event, `${$waits.onMacro}${macro.name}`)"
               >
                 {{ macro.alias || macro.name }}
-              </app-macro-btn>
+              </macro-btn>
             </template>
-            <span>{{ macro.config.description }}</span>
-          </v-tooltip>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-
-      <v-expansion-panel
-        v-if="uncategorizedMacros && uncategorizedMacros.length > 0"
-      >
-        <v-expansion-panel-header>
-          <template #actions>
-            <v-icon
-              small
-              class="mr-2"
-            >
-              $expand
-            </v-icon>
-          </template>
-          <div>
-            {{ $t('app.general.label.uncategorized') }}
-            <v-chip
-              small
-              class="ml-2"
-            >
-              {{ uncategorizedMacros.length }}
-            </v-chip>
-            <app-btn
-              icon
-              text
-              small
-              color=""
-              class="ml-2"
-              @click.prevent.stop="handleEditCategory"
-            >
-              <v-icon small>
-                $cog
-              </v-icon>
-            </app-btn>
-          </div>
-        </v-expansion-panel-header>
-
-        <v-expansion-panel-content>
-          <v-tooltip
-            v-for="macro in uncategorizedMacros"
-            :key="`category-${macro.name}`"
-            top
-          >
-            <template #activator="{ on, attrs }">
-              <app-macro-btn
-                v-bind="attrs"
-                :macro="macro"
-                :loading="hasWait(`${$waits.onMacro}${macro.name}`)"
-                enable-params
-                class="me-2 mb-2 float-left"
-                v-on="on"
-                @click="sendGcode($event, `${$waits.onMacro}${macro.name}`)"
-              >
-                {{ macro.alias || macro.name }}
-              </app-macro-btn>
-            </template>
-            <span>{{ macro.config.description }}</span>
+            <span>{{ macro.description }}</span>
           </v-tooltip>
         </v-expansion-panel-content>
       </v-expansion-panel>
@@ -127,32 +68,36 @@
 <script lang="ts">
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import { Macro } from '@/store/macros/types'
+import MacroBtn from './MacroBtn.vue'
 
-@Component({})
+@Component({
+  components: {
+    MacroBtn
+  }
+})
 export default class Macros extends Mixins(StateMixin) {
   get macros () {
-    return this.$store.getters['macros/getVisibleMacros']
-  }
-
-  get uncategorizedMacros () {
-    const macros = this.$store.getters['macros/getMacrosByCategory']()
-    return macros.filter((macro: Macro) => macro.visible)
+    return this.$typedGetters['macros/getVisibleMacros']
   }
 
   get expanded () {
-    let expanded: number[] = this.$store.state.macros.expanded
+    let expanded: number[] = this.$typedState.macros.expanded
     // Remove any indexes that may no longer exist.
     expanded = expanded.filter(i => i <= this.macros.length)
     return expanded
   }
 
   set expanded (val: number[]) {
-    this.$store.dispatch('macros/saveExpanded', val)
+    this.$typedDispatch('macros/saveExpanded', val)
   }
 
-  handleEditCategory () {
-    this.$router.push('/settings/#macros')
+  handleEditCategory (categoryId: string) {
+    this.$router.push({
+      name: 'macro_category_settings',
+      params: {
+        categoryId
+      }
+    })
   }
 }
 </script>

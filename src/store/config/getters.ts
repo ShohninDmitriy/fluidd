@@ -1,32 +1,21 @@
-import { GetterTree } from 'vuex'
-import vuetify from '@/plugins/vuetify'
-import { ConfigState, SupportedTheme, TemperaturePreset, ThemeConfig } from './types'
-import { RootState } from '../types'
-import { Heater, Fan } from '../printer/types'
-import tinycolor from '@ctrl/tinycolor'
-import { AppTableHeader } from '@/types'
-import { AppTablePartialHeader } from '@/types/tableheaders'
-import { RootFile } from '../files/types'
+import type { GetterTree } from 'vuex'
+import type { ConfigState, TemperaturePreset, TokenKeys } from './types'
+import type { RootState } from '../types'
+import type { Heater, Fan } from '../printer/types'
+import type { AppDataTableHeader } from '@/types'
 import md5 from 'md5'
 
-export const getters: GetterTree<ConfigState, RootState> = {
+export const getters = {
   getCurrentInstance: (state) => {
-    return state.instances.find(instance => instance.active)
+    return state.instances
+      .find(instance => instance.active)
   },
 
   getInstances: (state) => {
-    const instances = [
-      ...state.instances
-    ].sort((a, b) =>
-      a.active
-        ? -1
-        : (b.active ? 1 : a.name.localeCompare(b.name))
-    )
-    return instances
-  },
+    const instances = [...state.instances]
 
-  getHostConfig: (state) => {
-    return state.hostConfig
+    return instances
+      .sort((a, b) => +b.active - +a.active || a.name.localeCompare(b.name))
   },
 
   /**
@@ -37,8 +26,8 @@ export const getters: GetterTree<ConfigState, RootState> = {
   getTempPresets: (state, getters, rootState, rootGetters) => {
     const originalPresets: TemperaturePreset[] = state.uiSettings.dashboard.tempPresets
     const presets: TemperaturePreset[] = []
-    const heaters = rootGetters['printer/getHeaters']
-    const fans = rootGetters['printer/getOutputs'](['temperature_fan'])
+    const heaters: Heater[] = rootGetters['printer/getHeaters']
+    const fans: Fan[] = rootGetters['printer/getOutputs'](['temperature_fan'])
 
     originalPresets.forEach((originalPreset: TemperaturePreset) => {
       const preset: TemperaturePreset = {
@@ -49,14 +38,14 @@ export const getters: GetterTree<ConfigState, RootState> = {
       // a) a given heater and fan exists and;
       // b) unknown heaters and fans are removed.
       // For items added to an existing preset, default them to disabled.
-      heaters.forEach((heater: Heater) => {
+      heaters.forEach(heater => {
         if (originalPreset.values[heater.name]) {
           preset.values[heater.name] = { ...originalPreset.values[heater.name] }
         } else {
           preset.values[heater.name] = { value: 0, type: 'heater', active: false }
         }
       })
-      fans.forEach((fan: Fan) => {
+      fans.forEach(fan => {
         if (originalPreset.values[fan.name]) {
           preset.values[fan.name] = { ...originalPreset.values[fan.name] }
         } else {
@@ -72,34 +61,8 @@ export const getters: GetterTree<ConfigState, RootState> = {
     })
   },
 
-  /**
-   * Returns our current theme data.
-   * Should augment vuetifies default.
-   */
-  getTheme: (state) => {
-    const v = vuetify.framework.theme
-    const o = state.uiSettings.theme
-
-    const r: ThemeConfig = {
-      ...state.uiSettings.theme,
-      currentTheme: {
-        ...v.currentTheme,
-        ...o.currentTheme
-      }
-    }
-
-    for (const key in r.currentTheme) {
-      // Currently used for the offset in the logo.
-      r.currentTheme[key + 'Offset'] = tinycolor(o.currentTheme.primary as string)
-        .desaturate(5)
-        .darken(10)
-        .toHexString()
-    }
-    return r
-  },
-
   getCustomThemeFile: (state, getters, rootState, rootGetters) => (filename: string, extensions: string[]) => {
-    const files = rootGetters['files/getRootFiles']('config') as RootFile[]
+    const files: Moonraker.Files.RootFile[] | undefined = rootGetters['files/getRootFiles']('config')
 
     if (files) {
       for (const extension of extensions) {
@@ -112,62 +75,47 @@ export const getters: GetterTree<ConfigState, RootState> = {
     }
   },
 
-  /**
-   * Returns a default theme preset for first init / when reset
-   */
-  getDefaultThemePreset: (state) => {
-    if (state.hostConfig.themePresets.length > 0) {
-      return state.hostConfig.themePresets[0] // First entry represents default
-    }
-    return {
-      name: 'Fluidd',
-      logo: {
-        src: '/logo_fluidd.svg',
-        changeWithTheme: true
-      },
-      color: '#2196F3'
-    }
-  },
+  getMergedTableHeaders: (state) => (headers: AppDataTableHeader[], key: string): AppDataTableHeader[] => {
+    const configuredHeaders = state.uiSettings.tableHeaders[key]
 
-  getCurrentThemePreset: (state, getters) => {
-    const presets = state.hostConfig.themePresets
-    const theme = getters.getTheme
-    return presets.find((preset: SupportedTheme) => preset.logo.src === theme.logo.src)
-  },
-
-  getMergedTableHeaders: (state, getters) => (headers: AppTableHeader[], key: string) => {
-    const configured: AppTablePartialHeader[] = getters.getConfiguredTableHeaders(key)
-    if (!configured) {
+    if (!configuredHeaders) {
       return headers
     }
-    const merged: AppTableHeader[] = []
-    headers.forEach(header => {
-      const keyBy = (header.key)
-        ? 'key'
-        : 'value'
 
-      const o = {
-        visible: true,
-        configurable: false,
-        ...header,
-        ...configured.find(p => p[keyBy] === header[keyBy])
-      }
+    // if the number of configured headers is the same as the available headers,
+    // then use configured headers to keep order
+    // else go with available headers
+    return headers.length === configuredHeaders.length
+      ? configuredHeaders
+        .map((configuredHeader): AppDataTableHeader | null => {
+          const header = headers.find(p => p.value === configuredHeader.value)
 
-      merged.push(o)
-    })
-    return merged
-  },
+          if (!header) {
+            return null
+          }
 
-  getConfiguredTableHeaders: (state) => (key: string) => {
-    return state.uiSettings.tableHeaders[key]
+          return {
+            ...header,
+            ...configuredHeader,
+          }
+        })
+        .filter(header => header != null)
+      : headers
+        .map((header): AppDataTableHeader => ({
+          ...header,
+          ...configuredHeaders.find(p => p.value === header.value)
+        }))
   },
 
   getTokenKeys: (state) => {
     const url = state.apiUrl
     const hash = (url) ? md5(url) : ''
-    return {
-      'user-token': `user-token-${hash}`,
-      'refresh-token': `refresh-token-${hash}`
+
+    const tokenKeys: TokenKeys = {
+      userToken: `user-token-${hash}`,
+      refreshToken: `refresh-token-${hash}`
     }
+
+    return tokenKeys
   }
-}
+} satisfies GetterTree<ConfigState, RootState>

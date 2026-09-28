@@ -3,33 +3,58 @@
     :title="$t('app.general.title.bedmesh')"
     :lazy="false"
     icon="$bedMesh"
-    :draggable="!fullScreen"
-    :collapsable="!fullScreen"
+    :draggable="!fullscreen"
+    :collapsable="!fullscreen"
     layout-path="dashboard.bed-mesh-card"
   >
-    <template
-      v-if="!fullScreen"
-      #menu
-    >
+    <template #menu>
       <app-btn
-        color=""
-        fab
-        x-small
-        text
-        @click="$filters.routeTo($router, '/tune')"
+        v-if="!fullscreen"
+        small
+        class="me-1 my-1"
+        :loading="hasWait($waits.onMeshCalibrate)"
+        :disabled="printerBusy || !allHomed"
+        @click="calibrate()"
       >
-        <v-icon>$fullScreen</v-icon>
+        {{ $t('app.general.btn.calibrate') }}
+      </app-btn>
+
+      <v-tooltip bottom>
+        <template #activator="{ on, attrs }">
+          <app-btn
+            v-bind="attrs"
+            icon
+            :disabled="!hasMeshLoaded"
+            v-on="on"
+            @click="downloadImage()"
+          >
+            <v-icon dense>
+              $screenshot
+            </v-icon>
+          </app-btn>
+        </template>
+        <span>{{ $t('app.bedmesh.tooltip.download_image') }}</span>
+      </v-tooltip>
+
+      <app-btn
+        v-if="!fullscreen"
+        icon
+        @click="$filters.routeTo({ name: 'tune' })"
+      >
+        <v-icon dense>
+          $fullScreen
+        </v-icon>
       </app-btn>
     </template>
 
     <v-card-text>
-      <e-charts-bed-mesh
-        v-if="mesh && mesh[matrix] && mesh[matrix].coordinates && mesh[matrix].coordinates.length > 0"
+      <bed-mesh-chart
+        v-if="hasMeshLoaded"
         ref="chart"
         :options="options"
         :data="series"
         :graphics="graphics"
-        :height="(isMobile) ? '225px' : '525px'"
+        :height="(isMobileViewport) ? 225 : 525"
       />
 
       <span v-else>{{ $t('app.bedmesh.msg.not_loaded') }}</span>
@@ -38,19 +63,31 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Prop } from 'vue-property-decorator'
-import EChartsBedMesh from './BedMeshChart.vue'
+import { Component, Mixins, Prop, Ref } from 'vue-property-decorator'
+import BedMeshChart from './BedMeshChart.vue'
 import StateMixin from '@/mixins/state'
 import ToolheadMixin from '@/mixins/toolhead'
+import BrowserMixin from '@/mixins/browser'
+import type { AppMeshes, MatrixType } from '@/store/mesh/types'
 
 @Component({
   components: {
-    EChartsBedMesh
+    BedMeshChart
   }
 })
-export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
-  @Prop({ type: Boolean, default: false })
-  readonly fullScreen!: boolean
+export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin, BrowserMixin) {
+  @Prop({ type: Boolean })
+  readonly fullscreen?: boolean
+
+  @Ref('chart')
+  readonly bedMeshChart!: BedMeshChart
+
+  get hasMeshLoaded () {
+    const mesh = this.mesh
+    const matrix = this.matrix
+
+    return mesh && mesh[matrix] && mesh[matrix].coordinates && mesh[matrix].coordinates.length > 0
+  }
 
   get options () {
     const map_scale = this.scale / 2
@@ -69,7 +106,7 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
     const zBoxMin = -Math.abs(this.mesh[this.matrix].mid - box_scale)
     const zBoxMax = this.mesh[this.matrix].mid + box_scale
 
-    const legends = this.series.reduce((obj, series: any) => {
+    const legends = this.series.reduce((obj, series) => {
       return Object.assign(
         obj,
         {
@@ -106,7 +143,7 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
   get series () {
     const matrix = this.matrix
     const wireframe = this.wireframe
-    const series: any[] = [
+    const series = [
       {
         type: 'surface',
         name: matrix,
@@ -114,7 +151,8 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
         wireframe: {
           show: wireframe
         },
-        data: this.mesh[matrix].coordinates
+        data: this.mesh[matrix].coordinates,
+        dataShape: this.mesh[matrix].dimensions
       },
       this.createFlatSeries('probed_matrix_flat'),
       this.createFlatSeries('mesh_matrix_flat')
@@ -123,7 +161,7 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
   }
 
   get graphics () {
-    const variance = this.mesh[this.matrix].variance
+    const { range } = this.mesh[this.matrix]
 
     return [{
       type: 'text',
@@ -132,7 +170,7 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
       z: 100,
       silent: true,
       style: {
-        text: `Variance: ${variance.toFixed(4)}`
+        text: `${this.$t('app.general.label.range')}: ${range.toFixed(4)}`
       }
     }]
   }
@@ -153,37 +191,42 @@ export default class BedMeshCard extends Mixins(StateMixin, ToolheadMixin) {
           color: '#ffffff'
         }
       },
-      data: this.mesh[matrix].coordinates
+      data: this.mesh[matrix].coordinates,
+      dataShape: this.mesh[matrix].dimensions
     }
   }
 
-  get matrix () {
-    return this.$store.state.mesh.matrix
+  calibrate () {
+    this.sendGcode('BED_MESH_CALIBRATE', this.$waits.onMeshCalibrate)
   }
 
-  get scale () {
-    return this.$store.state.mesh.scale
+  get matrix (): MatrixType {
+    return this.$typedState.mesh.matrix
   }
 
-  get boxScale () {
-    return this.$store.state.mesh.boxScale
+  get scale (): number {
+    return this.$typedState.mesh.scale
   }
 
-  get wireframe () {
-    return this.$store.state.mesh.wireframe
+  get boxScale (): number {
+    return this.$typedState.mesh.boxScale
   }
 
-  get flatSurface () {
-    return this.$store.state.mesh.flatSurface
+  get wireframe (): boolean {
+    return this.$typedState.mesh.wireframe
+  }
+
+  get flatSurface (): boolean {
+    return this.$typedState.mesh.flatSurface
   }
 
   // The current processed mesh data, if any.
-  get mesh () {
-    return this.$store.getters['mesh/getCurrentMeshData']
+  get mesh (): AppMeshes {
+    return this.$typedGetters['mesh/getCurrentMeshData']
   }
 
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
+  downloadImage () {
+    this.bedMeshChart.downloadImage()
   }
 }
 </script>

@@ -7,16 +7,15 @@
     <template #activator="{ on: menu, attrs }">
       <v-tooltip bottom>
         <template #activator="{ on: tooltip }">
-          <v-btn
+          <app-btn
             v-bind="attrs"
-            fab
+            icon
             text
-            small
             v-on="{ ...tooltip, ...menu }"
             @click="$emit('drawer')"
           >
             <v-icon>$account</v-icon>
-          </v-btn>
+          </app-btn>
         </template>
         <span>{{ currentUser }}</span>
       </v-tooltip>
@@ -55,26 +54,30 @@
 
       <v-divider />
 
-      <v-list class="py-0">
-        <v-list-item
-          dense
-          @click="$filters.routeTo($router, '/settings#auth')"
-        >
+      <v-list
+        dense
+        class="py-0"
+      >
+        <v-list-item @click="$filters.routeTo({ name: 'settings', hash: '#auth' })">
           <v-list-item-icon>
             <v-icon>$addAccount</v-icon>
           </v-list-item-icon>
-          <v-list-item-title>{{ $t('app.general.label.manage_accounts') }}</v-list-item-title>
-        </v-list-item>
-
-        <v-divider v-if="!isTrustedOnly" />
-
-        <v-list-item v-if="!isTrustedOnly">
-          <v-list-item-content class="justify-center">
-            <app-btn @click="handleLogout">
-              {{ $t('app.general.btn.logout') }}
-            </app-btn>
+          <v-list-item-content>
+            <v-list-item-title>{{ $t('app.general.label.manage_accounts') }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+
+        <template v-if="!isTrustedOnly">
+          <v-divider />
+
+          <v-list-item>
+            <v-list-item-content class="justify-center">
+              <app-btn @click="handleLogout">
+                {{ $t('app.general.btn.logout') }}
+              </app-btn>
+            </v-list-item-content>
+          </v-list-item>
+        </template>
       </v-list>
     </v-card>
   </v-menu>
@@ -83,11 +86,12 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import { startCase, capitalize } from 'lodash-es'
+import type { AppUser } from '@/store/auth/types'
 
 @Component({})
 export default class AppNotificationMenu extends Vue {
-  get user () {
-    return this.$store.getters['auth/getCurrentUser']
+  get user (): AppUser | null {
+    return this.$typedState.auth.currentUser
   }
 
   get currentUser () {
@@ -111,7 +115,7 @@ export default class AppNotificationMenu extends Vue {
   }
 
   async handleLogout () {
-    await this.$store.dispatch('auth/checkTrust')
+    await this.$typedDispatch('auth/checkTrust')
   }
 }
 </script>

@@ -1,11 +1,11 @@
-import { ActionTree } from 'vuex'
-import consola from 'consola'
-import { VersionState } from './types'
-import { RootState } from '../types'
+import type { ActionTree } from 'vuex'
+import { consola } from 'consola'
+import type { VersionState } from './types'
+import type { RootState } from '../types'
 import { SocketActions } from '@/api/socketActions'
 import i18n from '@/plugins/i18n'
 
-export const actions: ActionTree<VersionState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -23,10 +23,13 @@ export const actions: ActionTree<VersionState, RootState> = {
   /**
    * Inits any file config we may have.
    */
-  async onUpdateStatus ({ commit, dispatch, getters }, payload) {
+  async onUpdateStatus ({ commit, dispatch, getters, rootState }, payload: Partial<Moonraker.UpdateManager.StatusResponse>) {
     commit('setUpdateStatus', payload)
 
-    if (getters.hasUpdates) {
+    if (
+      rootState.config.uiSettings.general.enableVersionNotifications &&
+      getters.hasUpdates
+    ) {
       dispatch('notifications/pushNotification', {
         id: 'updates-available',
         title: i18n.t('app.version.label.updates_available'),
@@ -43,42 +46,42 @@ export const actions: ActionTree<VersionState, RootState> = {
   /**
    * As updates happen, we get responses here.
    */
-  async onUpdateResponse ({ commit }, payload) {
+  async onUpdateResponse ({ commit }, payload: Moonraker.UpdateManager.UpdateResponse) {
     commit('setUpdateResponse', payload)
   },
 
   /**
    * Notifications of specific updates
    */
-  async onUpdatedMoonraker ({ commit }, payload) {
+  async onUpdatedMoonraker (_, payload: { result?: string }) {
     consola.debug('Finished updating moonraker', payload)
     SocketActions.machineUpdateStatus()
-    // We do this because moonraker is expected to restart.
-    commit('socket/setSocketDisconnecting', true, { root: true })
+    // Moonraker is expected to restart; the socket will drop and naturally
+    // cycle through connecting → identifying → ready via the state machine.
   },
 
-  async onUpdatedKlipper (_, payload) {
+  async onUpdatedKlipper (_, payload: { result?: string }) {
     consola.debug('Finished updating klipper', payload)
     SocketActions.machineUpdateStatus()
   },
 
-  async onUpdatedClient (_, payload) {
+  async onUpdatedClient (_, payload: { result?: string }) {
     consola.debug('Finished updating a client', payload)
     SocketActions.machineUpdateStatus()
   },
 
-  async onUpdatedFluidd (_, payload) {
+  async onUpdatedFluidd (_, payload: { result?: string }) {
     consola.debug('Finished updating fluidd, reloading', payload)
     window.location.reload()
   },
 
-  async onUpdatedSystem (_, payload) {
+  async onUpdatedSystem (_, payload: { result?: string }) {
     consola.debug('Finished updating system', payload)
     SocketActions.machineUpdateStatus()
   },
 
-  async onUpdatedAll (_, payload) {
+  async onUpdatedAll (_, payload: { result?: string }) {
     consola.debug('Finished updating all services', payload)
     window.location.reload()
   }
-}
+} satisfies ActionTree<VersionState, RootState>

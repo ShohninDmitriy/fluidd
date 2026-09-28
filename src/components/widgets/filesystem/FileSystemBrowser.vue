@@ -6,14 +6,13 @@
     </div> -->
 
     <v-data-table
-      v-model="selectedItems"
+      :value="selected"
       :headers="headers"
       :items="files"
       :dense="dense"
-      :disable-pagination="true"
+      disable-pagination
       :loading="loading"
-      :sort-desc="true"
-      :custom-sort="$filters.fileSystemSort"
+      :custom-sort="customSort"
       :search="search"
       :show-select="bulkActions"
       :no-data-text="$t('app.file_system.msg.not_found')"
@@ -21,371 +20,318 @@
       item-key="name"
       height="100%"
       mobile-breakpoint="0"
-      sort-by="modified"
+      must-sort
+      :sort-by.sync="sortBy"
+      :sort-desc.sync="sortDesc"
       hide-default-footer
       class="rounded-0"
+      fixed-header
       @input="handleSelected"
-      @item-selected="handleItemSelected"
     >
-      <template #item="{ item, isSelected, select }">
-        <tr
-          :class="{
-            'is-directory': (item.type === 'directory'),
-            'is-file': (item.type === 'file'),
-            'is-disabled': disabled,
-            'v-data-table__selected': (isSelected && item.name !== '..')
-          }"
-          class="row-select px-1"
-          :draggable="draggable(item)"
+      <template #item="{ headers, item, isSelected, select }">
+        <app-data-table-row
+          :key="item.name"
+          :headers="headers"
+          :item="item"
+          :is-selected="isSelected && item.name !== '..'"
+          :draggable="isItemDraggable(item)"
+          :custom-getter="getItemValue"
           @click.prevent="$emit('row-click', item, $event)"
           @contextmenu.prevent="$emit('row-click', item, $event)"
-          @drag="handleDrag(item)"
-          @dragstart="handleDragStart"
+          @dragstart="handleDragStart(item, $event)"
           @dragend="handleDragEnd"
-          @drop.prevent.stop="handleDrop(item, $event)"
-          @dragover.prevent="handleDragOver($event)"
-          @dragleave.prevent="handleDragLeave($event)"
+          @dragover="handleDragOver(item, $event)"
+          @dragenter.prevent
+          @dragleave.prevent="handleDragLeave"
+          @drop.prevent="handleDrop(item, $event)"
         >
-          <td v-if="bulkActions">
+          <template #[`item.data-table-select`]>
             <v-simple-checkbox
               v-if="item.name !== '..'"
-              v-ripple
               :value="isSelected"
-              color=""
               class="mt-1"
               @click.stop="select(!isSelected)"
             />
-          </td>
-          <td>
-            <!-- icons are 16px small, or 24px for standard size. -->
-            <v-layout justify-center>
+            <template v-else>
+              {{ '' }}
+            </template>
+          </template>
+
+          <template #[`item.data-table-icons`]>
+            <v-layout
+              justify-center
+              class="no-pointer-events"
+            >
               <v-icon
-                v-if="!item.thumbnails || !item.thumbnails.length"
+                v-if="!item.thumbnails?.length"
                 :small="dense"
                 :color="(item.type === 'file') ? 'grey' : 'primary'"
               >
-                {{ (item.type === 'file' ? '$file' : item.name === '..' ? '$folderUp' : '$folder') }}
+                {{ getItemIcon(item) }}
               </v-icon>
               <img
                 v-else
-                :style="{'max-width': `${thumbnailSize}px`, 'max-height': `${thumbnailSize}px`}"
-                :src="getThumbUrl(item.thumbnails, item.path, thumbnailSize > 16, item.modified)"
+                :style="{
+                  'max-width': `${thumbnailSize}px`,
+                  'max-height': `${thumbnailSize}px`
+                }"
+                :src="getThumbUrl(item, root, item.path, thumbnailSize > 16, item.modified)"
               >
             </v-layout>
-          </td>
+          </template>
 
-          <file-row-item :nowrap="false">
-            {{ item.name }}
-          </file-row-item>
+          <template #[`item-value.history.status`]>
+            <job-history-item-status :job="item.history" />
+          </template>
 
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="object_height"
-          >
-            <span v-if="item.object_height !== undefined">
-              {{ $filters.getReadableLengthString(item.object_height) }}
-            </span>
-          </file-row-item>
+          <template #[`item-value.filament_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
+          </template>
 
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="first_layer_height"
-          >
-            <span v-if="item.first_layer_height !== undefined">
-              {{ item.first_layer_height }} mm
-            </span>
-          </file-row-item>
+          <template #[`item-value.extruder_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
+          </template>
 
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="layer_height"
-          >
-            <span v-if="item.layer_height !== undefined">
-              {{ item.layer_height }} mm
-            </span>
-          </file-row-item>
+          <template #[`item-value.filament_temps`]="{ value }">
+            <app-data-table-cell-temps :temps="value" />
+          </template>
 
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="filament_name"
-          >
-            <span v-if="item.filament_name !== undefined">
-              {{ item.filament_name }}
-            </span>
-          </file-row-item>
+          <template #[`item-value.first_layer_bed_temp`]="{ value }">
+            {{ value }}<small>°C</small>
+          </template>
 
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="filament_type"
-          >
-            <span v-if="item.filament_type !== undefined">
-              {{ item.filament_type }}
-            </span>
-          </file-row-item>
+          <template #[`item-value.first_layer_extr_temp`]="{ value }">
+            {{ value }}<small>°C</small>
+          </template>
 
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="filament_total"
-          >
-            <span v-if="item.filament_total !== undefined">
-              {{ $filters.getReadableLengthString(item.filament_total) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="filament_weight_total"
-          >
-            <span v-if="item.filament_weight_total !== undefined">
-              {{ $filters.getReadableWeightString(item.filament_weight_total) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="history.filament_used"
-          >
-            <span v-if="item.history && item.history.filament_used !== undefined">
-              {{ $filters.getReadableLengthString(item.history.filament_used) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="nozzle_diameter"
-          >
-            <span v-if="item.nozzle_diameter !== undefined">
-              {{ item.nozzle_diameter }} mm
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="slicer"
-          >
-            <span v-if="item.slicer !== undefined">
-              {{ item.slicer }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="slicer_version"
-          >
-            <span v-if="item.slicer_version !== undefined">
-              {{ item.slicer_version }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="estimated_time"
-          >
-            <span v-if="item.estimated_time !== undefined">
-              {{ $filters.formatCounterTime(item.estimated_time) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="history.print_duration"
-          >
-            <span v-if="item.history && item.history.print_duration !== undefined">
-              {{ $filters.formatCounterTime(item.history.print_duration) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="history.total_duration"
-          >
-            <span v-if="item.history && item.history.total_duration !== undefined">
-              {{ $filters.formatCounterTime(item.history.total_duration) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="first_layer_bed_temp"
-          >
-            <span v-if="item.first_layer_bed_temp !== undefined">
-              {{ item.first_layer_bed_temp }}<small>°C</small>
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="first_layer_extr_temp"
-          >
-            <span v-if="item.first_layer_extr_temp !== undefined">
-              {{ item.first_layer_extr_temp }}<small>°C</small>
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="chamber_temp"
-          >
-            <span v-if="item.chamber_temp !== undefined">
-              {{ item.chamber_temp }}<small>°C</small>
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            v-if="root === 'gcodes'"
-            :headers="headers"
-            item-value="print_start_time"
-          >
-            <span v-if="item.print_start_time !== undefined && item.print_start_time !== null">
-              {{ $filters.formatDateTime(item.print_start_time * 1000) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            :headers="headers"
-            item-value="modified"
-          >
-            <span v-if="item.modified !== undefined && item.modified !== null">
-              {{ $filters.formatDateTime(item.modified * 1000) }}
-            </span>
-          </file-row-item>
-
-          <file-row-item
-            :headers="headers"
-            item-value="size"
-          >
-            <span v-if="item.size !== undefined && item.size !== 0">
-              {{ $filters.getReadableFileSizeString(item.size) }}
-            </span>
-          </file-row-item>
-        </tr>
+          <template #[`item-value.chamber_temp`]="{ value }">
+            {{ value }}<small>°C</small>
+          </template>
+        </app-data-table-row>
       </template>
     </v-data-table>
   </div>
 </template>
 
 <script lang="ts">
-import { Component, Prop, Mixins, Watch } from 'vue-property-decorator'
-import {
-  AppFileWithMeta,
-  FileBrowserEntry
-} from '@/store/files/types'
-import { AppTableHeader } from '@/types'
+import { Component, Prop, Mixins, VModel, PropSync } from 'vue-property-decorator'
+import type { FileBrowserEntry, RootProperties } from '@/store/files/types'
 import FilesMixin from '@/mixins/files'
 
-import FileRowItem from './FileRowItem.vue'
+import JobHistoryItemStatus from '@/components/widgets/history/JobHistoryItemStatus.vue'
+import { SupportedImageFormats, SupportedMarkdownFormats, SupportedVideoFormats } from '@/globals'
+import type { TextSortOrder } from '@/store/config/types'
+import type { DataTableHeader } from 'vuetify'
+import versionStringCompare from '@/util/version-string-compare'
+import { get } from 'lodash-es'
+import type { DefaultGetterFunction } from '@/components/ui/AppDataTableRow.vue'
 
 @Component({
   components: {
-    FileRowItem
+    JobHistoryItemStatus
   }
 })
 export default class FileSystemBrowser extends Mixins(FilesMixin) {
+  @VModel({ type: Array, required: true })
+  selected!: FileBrowserEntry[]
+
   @Prop({ type: String, required: true })
   readonly root!: string
 
   @Prop({ type: Array, required: true })
   readonly files!: FileBrowserEntry[]
 
-  @Prop({ type: Boolean, default: false })
-  readonly dense!: boolean
+  @Prop({ type: Boolean })
+  readonly dense?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly loading!: boolean
+  @Prop({ type: Boolean })
+  readonly loading?: boolean
 
   // Currently defined list of headers.
   @Prop({ type: Array, required: true })
-  readonly headers!: AppTableHeader[]
+  readonly headers!: DataTableHeader[]
 
-  @Prop({ type: String, required: false })
-  readonly search!: string
+  @Prop({ type: String })
+  readonly search?: string
 
-  @Prop({ type: Boolean, required: true })
-  readonly dragState!: boolean
+  @PropSync('dragState', { type: Boolean, required: true })
+  dragStateModel!: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly disabled!: boolean
+  @Prop({ type: Boolean })
+  readonly bulkActions?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly bulkActions!: boolean
-
-  @Prop({ type: Array, required: true })
-  readonly selected!: (FileBrowserEntry | AppFileWithMeta)[]
-
-  dragItem: FileBrowserEntry | AppFileWithMeta | null = null
-  ghost: HTMLDivElement | undefined = undefined
-  selectedItems: (FileBrowserEntry | AppFileWithMeta)[] = []
+  dragItem: FileBrowserEntry | null = null
+  ghost?: HTMLDivElement = undefined
 
   // Is the history component enabled
-  get showHistory () {
+  get showHistory (): boolean {
     return (
-      this.$store.getters['server/componentSupport']('history') &&
+      this.$typedGetters['server/componentSupport']('history') &&
       this.root === 'gcodes'
     )
   }
 
-  get thumbnailSize () {
-    const thumbnailSize = this.$store.state.config.uiSettings.general.thumbnailSize
+  get rootProperties (): RootProperties {
+    return this.$typedGetters['files/getRootProperties'](this.root)
+  }
+
+  get readonly () {
+    return this.rootProperties.readonly
+  }
+
+  get thumbnailSize (): number {
+    const thumbnailSize: number = this.$typedState.config.uiSettings.thumbnailSizes[this.root] ?? 32
 
     return this.dense ? thumbnailSize / 2 : thumbnailSize
   }
 
-  mounted () {
-    this.selectedItems = this.selected
+  get textSortOrder (): TextSortOrder {
+    return this.$typedState.config.uiSettings.general.textSortOrder
   }
 
-  // Make sure we update the selected items if it's changed.
-  @Watch('selected')
-  onSelected (selected: (FileBrowserEntry | AppFileWithMeta)[]) {
-    this.selectedItems = selected
+  get filesAndFoldersDragAndDrop (): boolean {
+    return this.$typedState.config.uiSettings.general.filesAndFoldersDragAndDrop
   }
 
-  // When the selected items change, update the parent.
-  handleSelected (selected: (FileBrowserEntry | AppFileWithMeta)[]) {
-    this.$emit('update:selected', selected)
-  }
+  get draggedItems () {
+    if (this.dragItem) {
+      const filteredSelectedItems = this.selected
+        .filter(item => item.name !== '..')
 
-  // We ignore our [..] dir, so handle faking our checkbox states.
-  handleItemSelected (item: { item: FileBrowserEntry | AppFileWithMeta; value: boolean }) {
-    // If last two, and filtered results in 0 - set to 0.
-    if (
-      !item.value &&
-      this.selectedItems.length <= 2 &&
-      this.selectedItems.filter(fileOrFolder => (fileOrFolder.name !== '..' && item.item !== fileOrFolder)).length === 0
-    ) {
-      this.selectedItems = []
+      const draggedItems = filteredSelectedItems.length > 0
+        ? filteredSelectedItems
+        : [this.dragItem]
+
+      return draggedItems
     }
 
-    // If top two, and filtered results in count -1, set to all.
-    if (
-      item.value &&
-      this.selectedItems.length + 1 >= this.files.length &&
-      this.selectedItems.filter(fileOrFolder => (fileOrFolder.name !== '..')).length + 1 === this.files.length
-    ) {
-      this.selectedItems = this.files
+    return []
+  }
+
+  get sortBy (): string {
+    const sortBy: string | null = this.$typedState.config.uiSettings.fileSystem.sortBy[this.root]
+
+    return sortBy ?? 'modified'
+  }
+
+  set sortBy (value: string | null | undefined) {
+    this.$typedDispatch('config/updateFileSystemSortBy', { root: this.root, value: value ?? null })
+  }
+
+  get sortDesc (): boolean {
+    const sortDesc: boolean | null = this.$typedState.config.uiSettings.fileSystem.sortDesc[this.root]
+
+    return sortDesc ?? true
+  }
+
+  set sortDesc (value: boolean | null | undefined) {
+    this.$typedDispatch('config/updateFileSystemSortDesc', { root: this.root, value: value ?? null })
+  }
+
+  customSort (items: FileBrowserEntry[], sortBy: string[], sortDesc: boolean[], locale: string) {
+    if (sortBy === null || !sortBy.length) return items
+
+    const stringCollator = new Intl.Collator(locale, {
+      sensitivity: 'accent',
+      usage: 'sort'
+    })
+
+    return items.sort((a, b) => {
+      if (a.type === 'directory' && (a.dirname === '..' || b.type !== 'directory')) return -1
+      if (b.type === 'directory' && (b.dirname === '..' || a.type !== 'directory')) return 1
+
+      for (let i = 0; i < sortBy.length; i++) {
+        const sortKey = sortBy[i]
+
+        const sortValues: unknown[] = [
+          get(a, sortKey),
+          get(b, sortKey)
+        ]
+
+        // If values are equal, continue
+        if (sortValues[0] === sortValues[1]) {
+          continue
+        }
+
+        // If sorting descending, reverse values
+        if (sortDesc[i]) {
+          sortValues.reverse()
+        }
+
+        // If values are of type number, compare as number
+        if (
+          typeof sortValues[0] === 'number' &&
+          typeof sortValues[1] === 'number' &&
+          !Number.isNaN(sortValues[0]) &&
+          !Number.isNaN(sortValues[1])
+        ) {
+          return sortValues[0] - sortValues[1]
+        }
+
+        const sortValuesAsString = sortValues
+          .map(s => s?.toString() ?? '')
+
+        if (this.textSortOrder === 'numeric-prefix') {
+          const [sortA, sortB] = sortValuesAsString
+            .map(s => s.match(/^\d+/))
+
+          // If are number prefixed, compare prefixes as number
+          if (sortA && sortB && sortA[0] !== sortB[0]) {
+            return +sortA[0] - +sortB[0]
+          }
+        } else if (this.textSortOrder === 'version') {
+          return versionStringCompare(sortValuesAsString[0], sortValuesAsString[1])
+        }
+
+        return stringCollator.compare(sortValuesAsString[0], sortValuesAsString[1])
+      }
+
+      return 0
+    })
+  }
+
+  handleSelected (selected: FileBrowserEntry[]) {
+    if (selected.length === 1) {
+      if (selected[0].name === '..') {
+        selected = []
+      } else {
+        selected = this.files
+          .filter(item => item.name === selected[0].name || item.name === '..')
+      }
+    }
+
+    this.$emit('input', selected)
+  }
+
+  getItemIcon (item: FileBrowserEntry) {
+    const readonly = !this.isItemWriteable(item)
+
+    if (item.type === 'file') {
+      if (item.extension === '.zip') {
+        return readonly ? '$fileZipLock' : '$fileZip'
+      } else if (
+        SupportedImageFormats.includes(item.extension) ||
+        SupportedVideoFormats.includes(item.extension)
+      ) {
+        return readonly ? '$fileImageLock' : '$fileImage'
+      } else if (
+        SupportedMarkdownFormats.includes(item.extension)
+      ) {
+        return readonly ? '$fileDocumentLock' : '$fileDocument'
+      } else {
+        return readonly ? '$fileLock' : '$file'
+      }
+    } else if (item.name === '..') {
+      return '$folderUp'
+    } else {
+      return readonly ? '$folderLock' : '$folder'
     }
   }
 
   // Determines if a row is currently in a draggable state or not.
-  draggable (item: FileBrowserEntry | AppFileWithMeta) {
+  isItemDraggable (item: FileBrowserEntry) {
     return (
+      this.filesAndFoldersDragAndDrop &&
       item.name !== '..' &&
       this.files.length > 0 &&
       (
@@ -395,74 +341,170 @@ export default class FileSystemBrowser extends Mixins(FilesMixin) {
     )
   }
 
+  isItemWriteable (item: FileBrowserEntry) {
+    return (
+      !this.readonly &&
+      (
+        item.permissions === undefined ||
+        item.permissions.includes('w')
+      )
+    )
+  }
+
   // Fake a drag image when the user drags a file or folder.
-  handleDragStart (e: DragEvent) {
-    if (e.dataTransfer) {
+  handleDragStart (item: FileBrowserEntry, event: DragEvent) {
+    if (this.dragStateModel !== true) {
+      this.dragItem = item
+      this.dragStateModel = true
+    }
+
+    if (event.dataTransfer) {
+      const draggedItems = this.draggedItems
+
       this.ghost = document.createElement('div')
       this.ghost.classList.add('bulk-drag')
       this.ghost.classList.add((this.$vuetify.theme.dark) ? 'theme--dark' : 'theme--light')
-      this.ghost.innerHTML = (this.selected.length > 0)
-        ? `Move ${this.selected.length} items`
-        : 'Move item'
+      this.ghost.innerHTML = draggedItems.length > 1
+        ? this.$tc('app.file_system.tooltip.items_count', draggedItems.length)
+        : item.name
       document.body.appendChild(this.ghost)
-      e.dataTransfer.dropEffect = 'move'
-      e.dataTransfer.setDragImage(this.ghost, 0, 0)
-    }
-  }
+      event.dataTransfer.effectAllowed = 'all'
+      event.dataTransfer.setDragImage(this.ghost, 0, 0)
 
-  // Table row is being dragged
-  handleDrag (item: FileBrowserEntry | AppFileWithMeta) {
-    if (this.dragState !== true) {
-      this.dragItem = item
-      this.$emit('update:dragState', true)
+      this.$emit('drag-start', item, draggedItems, event.dataTransfer)
     }
   }
 
   // File was dropped on another table row.
-  handleDrop (destination: FileBrowserEntry | AppFileWithMeta, e: DragEvent) {
-    this.handleDragLeave(e)
+  handleDrop (item: FileBrowserEntry, event: DragEvent) {
+    this.handleDragLeave(event)
+
     if (
-      destination.type === 'directory' &&
+      item.type === 'directory' &&
+      this.isItemWriteable(item) &&
+      event.dataTransfer &&
       this.dragItem &&
-      this.dragItem !== destination &&
-      !this.selected.includes(destination)
+      this.dragItem !== item
     ) {
-      const source = (this.selected.length === 0)
-        ? [this.dragItem]
-        : this.selected.filter(item => (item.name !== '..'))
-      this.$emit('move', source, destination)
+      const draggedItems = this.draggedItems
+
+      if (!draggedItems.includes(item)) {
+        this.$emit('move', draggedItems, item)
+      }
     }
   }
 
   // Handles highlighting rows as drag over them
-  handleDragOver (e: DragEvent) {
-    const element = e.target as HTMLElement
-    if (element) {
-      if (
-        element.tagName === 'TD' &&
-        element.parentElement?.classList.contains('is-directory')
-      ) {
-        const row = element.parentElement
-        if (row) row.classList.add('active')
+  handleDragOver (item: FileBrowserEntry, event: DragEvent) {
+    if (
+      item.type === 'directory' &&
+      this.isItemWriteable(item) &&
+      event.dataTransfer &&
+      this.dragItem &&
+      this.dragItem !== item &&
+      !this.draggedItems.includes(item)
+    ) {
+      event.preventDefault()
+
+      event.dataTransfer.dropEffect = 'move'
+
+      if (event.target instanceof HTMLElement) {
+        let element: HTMLElement | null = event.target
+
+        while (element) {
+          if (element.tagName === 'TR') {
+            element.classList.add('active')
+
+            return
+          }
+
+          element = element.parentElement
+        }
       }
     }
   }
 
   // Handles un highlighting rows as we drag out of them.
-  handleDragLeave (e: DragEvent) {
-    const element = e.target as HTMLElement
-    if (element?.tagName === 'TD') {
-      const row = element.parentElement
-      if (row) row.classList.remove('active')
+  handleDragLeave (event: DragEvent) {
+    if (event.target instanceof HTMLElement) {
+      let element: HTMLElement | null = event.target
+
+      while (element) {
+        if (element.tagName === 'TR') {
+          element.classList.remove('active')
+
+          return
+        }
+
+        element = element.parentElement
+      }
     }
   }
 
   // Drag ended
   handleDragEnd () {
-    const e = this.ghost as HTMLDivElement
-    document.body.removeChild(e)
+    const ghost = this.ghost
+
+    if (ghost) {
+      document.body.removeChild(ghost)
+      this.ghost = undefined
+    }
+
     this.dragItem = null
-    this.$emit('update:dragState', false)
+    this.dragStateModel = false
+  }
+
+  getItemValue (item: FileBrowserEntry, header: DataTableHeader, defaultGetter: DefaultGetterFunction) {
+    const value = defaultGetter(item, header)
+
+    if (typeof value === 'number') {
+      switch (header.value) {
+        case 'object_height':
+        case 'filament_total':
+        case 'history.filament_used':
+          return this.$filters.getReadableLengthString(value)
+
+        case 'first_layer_height':
+        case 'layer_height':
+        case 'nozzle_diameter':
+          return `${value} mm`
+
+        case 'filament_weight_total':
+          return this.$filters.getReadableWeightString(value)
+
+        case 'estimated_time':
+        case 'history.print_duration':
+        case 'history.total_duration':
+          return this.$filters.formatCounterSeconds(value)
+
+        case 'print_start_time':
+        case 'modified':
+          return this.$filters.formatDateTime(value * 1000)
+
+        case 'size':
+          return this.$filters.getReadableFileSizeString(value)
+      }
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      switch (header.value) {
+        case 'filament_weights':
+          return value
+            .map(x => typeof x === 'number'
+              ? this.$filters.getReadableWeightString(x)
+              : x
+            )
+
+        case 'file_processors':
+          return value
+            .map(x => typeof x === 'string'
+              ? this.$filters.prettyCase(x)
+              : x
+            )
+      }
+    }
+
+    return value
   }
 }
 </script>

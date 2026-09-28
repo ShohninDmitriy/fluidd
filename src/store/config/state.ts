@@ -1,7 +1,7 @@
-import { ConfigState } from './types'
+import type { ConfigState } from './types'
 import { Globals } from '@/globals'
 
-export const defaultState = (): ConfigState => {
+export const createState = (): ConfigState => {
   return {
     apiUrl: '',
     socketUrl: '',
@@ -19,6 +19,7 @@ export const defaultState = (): ConfigState => {
         instanceName: Globals.APP_NAME,
         locale: 'en',
         chartVisible: true,
+        chartSmoothingWindow: 0,
         hideTempWaits: true,
         axis: {
           x: { inverted: false },
@@ -30,108 +31,141 @@ export const defaultState = (): ConfigState => {
         defaultToolheadMoveLength: 1.0,
         defaultToolheadXYSpeed: 130,
         defaultToolheadZSpeed: 10,
+        toolheadControlStyle: 'cross',
         toolheadMoveDistances: [0.1, 1, 10, 25, 50, 100],
+        toolheadXYMoveDistances: [1, 10, 50],
+        toolheadZMoveDistances: [0.1, 1, 10],
+        toolheadCircleXYMoveDistances: [1, 10, 25, 50],
+        toolheadCircleZMoveDistances: [0.1, 1, 10, 50],
+        toolheadCircleXYHomingEnabled: false,
         useGcodeCoords: false,
         zAdjustDistances: [0.005, 0.01, 0.025, 0.050],
         enableVersionNotifications: true,
         confirmOnEstop: false,
         confirmOnPowerDeviceChange: false,
         confirmOnSaveConfigAndRestart: true,
+        sectionsToIgnorePendingConfigurationChanges: [],
         dateFormat: 'iso',
         timeFormat: 'iso',
+        enableKeyboardShortcuts: true,
+        textSortOrder: 'default',
+        filesAndFoldersDragAndDrop: true,
         showRateOfChange: false,
         showRelativeHumidity: true,
         showBarometricPressure: true,
+        showGasResistance: true,
         showSaveConfigAndRestart: true,
+        showUploadAndPrint: true,
         flipConsoleLayout: false,
         cameraFullscreenAction: 'embed',
+        printerPowerDevice: null,
         topNavPowerToggle: null,
         showManualProbeDialogAutomatically: true,
         showBedScrewsAdjustDialogAutomatically: true,
+        showScrewsTiltAdjustDialogAutomatically: true,
         forceMoveToggleWarning: true,
+        printInProgressLayout: 'default',
+        printProgressCalculation: ['file'],
+        printEtaCalculation: ['file'],
         enableDiagnostics: false,
-        thumbnailSize: 32
+        colorPickerValueRange: 'absolute'
       },
       theme: {
         isDark: true,
         logo: {
-          src: '/logo_fluidd.svg',
-          dynamic: true
+          src: 'logo_fluidd.svg'
         },
-        currentTheme: {
-          primary: '#2196F3'
-        }
+        color: '#2196F3',
+        backgroundLogo: true
+      },
+      warnings: {
+        warnOnCpuThrottled: true,
+        warnOnStepperDriverOverheating: true,
       },
       editor: {
         confirmDirtyEditorClose: true,
-        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.md', '.sh', '.txt'],
-        codeLens: true
+        autoEditExtensions: ['.cfg', '.conf', '.ini', '.log', '.sh', '.txt'],
+        restoreViewState: 'session',
+        codeLens: true,
+        klipperSaveAndRestartAction: 'auto'
       },
       dashboard: {
-        tempPresets: []
+        tempPresets: [],
+        sensorColors: {}
       },
-      tableHeaders: {
-        gcodes_dashboard: [
-          { value: 'first_layer_extr_temp', visible: false },
-          { value: 'first_layer_bed_temp', visible: false },
-          { value: 'chamber_temp', visible: false },
-          { value: 'history.total_duration', visible: false },
-          { value: 'history.print_duration', visible: false },
-          { value: 'estimated_time', visible: false },
-          { value: 'nozzle_diameter', visible: false },
-          { value: 'slicer_version', visible: false },
-          { value: 'slicer', visible: false },
-          { value: 'history.filament_used', visible: false },
-          { value: 'filament_name', visible: false },
-          { value: 'filament_type', visible: false },
-          { value: 'filament_total', visible: false },
-          { value: 'filament_weight_total', visible: false },
-          { value: 'object_height', visible: false },
-          { value: 'first_layer_height', visible: false },
-          { value: 'layer_height', visible: false }
-        ],
-        gcodes_jobs: [
-          { value: 'first_layer_height', visible: false },
-          { value: 'history.filament_used', visible: false },
-          { value: 'slicer_version', visible: false },
-          { value: 'history.print_duration', visible: false },
-          { value: 'chamber_temp', visible: false },
-          { value: 'first_layer_extr_temp', visible: false },
-          { value: 'first_layer_bed_temp', visible: false }
-        ],
-        history: [
-          { value: 'print_duration', visible: false },
-          { value: 'filament_used', visible: false }
-        ]
-      },
+      tableHeaders: {},
+      thumbnailSizes: {},
       gcodePreview: {
         extrusionLineWidth: 0.3,
         moveLineWidth: 0.1,
         retractionIconSize: 0.6,
+        drawOrigin: true,
         drawBackground: true,
         showAnimations: true,
-        groupLowerLayers: false,
+        minLayerHeight: 0.1,
         autoLoadOnPrintStart: false,
+        autoLoadMobileOnPrintStart: false,
         autoFollowOnFileLoad: true,
+        hideSinglePartBoundingBox: false,
         autoZoom: false,
         flip: {
           horizontal: false,
           vertical: true
-        }
+        },
+        showCurrentLayer: true,
+        showNextLayer: false,
+        showPreviousLayer: false,
+        showMoves: true,
+        showExtrusions: true,
+        showRetractions: true,
+        showParts: true,
+        followProgress: false
       },
       fileSystem: {
-        activeFilters: {
-          gcodes: [],
-          config: []
-        }
+        activeFilters: {},
+        sortBy: {},
+        sortDesc: {}
       },
       toolhead: {
-        forceMove: false,
         extrudeSpeed: -1,
         extrudeLength: -1
+      },
+      spoolman: {
+        autoSpoolSelectionDialog: true,
+        autoOpenQRDetectionCamera: null,
+        autoSelectSpoolOnMatch: false,
+        preferDeviceCamera: false,
+        warnOnNotEnoughFilament: true,
+        warnOnFilamentTypeMismatch: true,
+        selectionDialogSortOrder: {
+          key: 'last_used',
+          desc: false
+        },
+        remainingFilamentUnit: 'weight',
+        selectedCardFields: ['vendor', 'filament_name', 'remaining_weight', 'location', 'material', 'lot_nr', 'first_used', 'comment']
+      },
+      history: {
+        timeInDays: false,
+        lengthInKilometers: false
+      },
+      mmu: {
+        showClogDetection: true,
+        showTtgMap: true,
+        showDetails: true,
+        largeFilamentStatus: false,
+        showName: true,
+        showLogos: false,
+        showClimate: true,
+        showUnavailableSpoolColor: false
+      },
+      afc: {
+        hiddenExtruders: [],
+        hiddenUnits: [],
+        showFilamentName: false,
+        showLaneInfinite: true,
+        showUnitIcons: true,
+        showTd1Color: true,
       }
     }
   }
 }
-
-export const state = defaultState()

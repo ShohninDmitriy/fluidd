@@ -4,8 +4,9 @@
     dense
     icon="$warning"
     type="warning"
+    class="ma-0"
   >
-    <div v-if="printerWarnings.length > 0">
+    <template v-if="printerWarnings.length > 0">
       <div class="mb-2">
         {{ $t('app.general.error.app_warnings_found', { appName }) }}
       </div>
@@ -13,12 +14,12 @@
         <li
           v-for="(warning, index) in printerWarnings"
           :key="index"
-          v-html="linkExternalUrls(warning.message)"
+          v-safe-html="linkExternalUrls(warning)"
         />
       </ul>
-    </div>
+    </template>
 
-    <div v-if="klipperWarnings.length > 0">
+    <template v-if="klipperWarnings.length > 0">
       <div class="mb-2">
         {{ $t('app.general.error.app_warnings_found', { appName: 'Klipper' }) }}
       </div>
@@ -26,12 +27,12 @@
         <li
           v-for="(warning, index) in klipperWarnings"
           :key="index"
-          v-html="linkExternalUrls(warning.message)"
+          v-safe-html="linkExternalUrls(warning.message)"
         />
       </ul>
-    </div>
+    </template>
 
-    <div v-if="moonrakerFailedComponents.length > 0">
+    <template v-if="moonrakerFailedComponents.length > 0">
       <div class="mb-2">
         {{ $t('app.general.error.failed_components') }}
       </div>
@@ -39,12 +40,12 @@
         <li
           v-for="(failedComponent, index) in moonrakerFailedComponents"
           :key="index"
-          v-html="linkExternalUrls(failedComponent)"
+          v-safe-html="linkExternalUrls(failedComponent)"
         />
       </ul>
-    </div>
+    </template>
 
-    <div v-if="moonrakerWarnings.length > 0">
+    <template v-if="moonrakerWarnings.length > 0">
       <div class="mb-2">
         {{ $t('app.general.error.app_warnings_found', { appName: 'Moonraker' }) }}
       </div>
@@ -52,16 +53,16 @@
         <li
           v-for="(warning, index) in moonrakerWarnings"
           :key="index"
-          v-html="linkExternalUrls(warning)"
+          v-safe-html="linkExternalUrls(warning)"
         />
       </ul>
-    </div>
+    </template>
 
     <div v-if="printerWarnings.length > 0">
-      <span v-html="printerWarningsTxt" />
+      <span v-safe-html="printerWarningsTxt" />
     </div>
     <div v-if="moonrakerFailedComponents.length > 0">
-      <span v-html="moonrakerFailedComponentsTxt" />
+      <span v-safe-html="moonrakerFailedComponentsTxt" />
     </div>
   </v-alert>
 </template>
@@ -100,20 +101,20 @@ export default class AppWarnings extends Mixins(StateMixin) {
     return Globals.APP_NAME
   }
 
-  get printerWarnings () {
-    return this.$store.getters['printer/getPrinterWarnings']
+  get printerWarnings (): string[] {
+    return this.$typedGetters['printer/getPrinterWarnings']
   }
 
-  get klipperWarnings () {
-    return this.$store.getters['printer/getKlipperWarnings']
+  get klipperWarnings (): Klipper.ConfigFileWarningState[] {
+    return this.$typedGetters['printer/getKlipperWarnings']
   }
 
-  get moonrakerFailedComponents () {
-    return this.$store.getters['printer/getMoonrakerFailedComponents']
+  get moonrakerFailedComponents (): string[] {
+    return this.$typedGetters['printer/getMoonrakerFailedComponents']
   }
 
-  get moonrakerWarnings () {
-    return this.$store.getters['printer/getMoonrakerWarnings']
+  get moonrakerWarnings (): string[] {
+    return this.$typedGetters['printer/getMoonrakerWarnings']
   }
 
   linkExternalUrls = linkExternalUrls

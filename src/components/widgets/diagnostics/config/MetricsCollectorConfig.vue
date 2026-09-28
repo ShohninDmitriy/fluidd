@@ -49,36 +49,28 @@
       />
     </app-setting>
 
-    <v-dialog
+    <app-dialog
       v-if="browserOpen"
       v-model="browserOpen"
-      :max-width="1200"
-      scrollable
+      :title="$t('app.general.title.metrics_explorer')"
+      max-width="1200"
+      no-actions
     >
-      <v-form>
-        <v-card>
-          <v-card-title class="card-heading py-2">
-            <span class="focus--text">{{ $t('app.general.title.metrics_explorer') }}</span>
-          </v-card-title>
-
-          <v-divider />
-
-          <v-card-text>
-            <state-explorer
-              @input="handleExplorerClick"
-            />
-          </v-card-text>
-        </v-card>
-      </v-form>
-    </v-dialog>
+      <v-card-text>
+        <state-explorer
+          @input="handleExplorerClick"
+        />
+      </v-card-text>
+    </app-dialog>
   </v-card>
 </template>
 
 <script lang="ts">
 import { Component, Vue, Prop, Ref } from 'vue-property-decorator'
-import { Metric } from '@/store/diagnostics/types'
+import type { Metric } from '@/store/diagnostics/types'
 import sandboxedEval from '@/plugins/sandboxedEval'
 import StateExplorer from '@/components/widgets/diagnostics/StateExplorer.vue'
+import type { VTextarea } from 'vuetify/lib'
 
 @Component({
   components: {
@@ -93,39 +85,46 @@ export default class MetricsCollectorConfig extends Vue {
   readonly unit!: string
 
   @Ref('textarea')
-  readonly textArea!: any
+  readonly textArea!: VTextarea
 
   result = '-'
   browserOpen = false
 
-  runCollector () {
-    let data
+  async runCollector () {
     try {
-      data = sandboxedEval(`
-        const printer = ${JSON.stringify(this.$store.state.printer.printer)}
-        return JSON.stringify(eval(${JSON.stringify(this.metric.collector)}))
-      `)
+      const data = await sandboxedEval(`
+        const { printer, collector } = context
+        return eval(collector)
+      `, {
+        context: {
+          printer: this.$typedState.printer.printer,
+          collector: this.metric.collector
+        }
+      })
 
-      if (typeof data !== 'string') throw new Error('Metrics collector returned invalid data')
-      data = JSON.parse(data)
-    } catch (err: any) {
-      data = err?.message ?? 'Unknown Error'
+      this.result = String(
+        typeof data === 'number'
+          ? Math.round(data * 1000) / 1000
+          : data
+      )
+    } catch (e) {
+      this.result = String(e || 'Unknown Error')
     }
-
-    if (typeof data === 'number') data = Math.round(data * 1000) / 1000
-    this.result = data
   }
 
   handleExplorerClick (path: string) {
     this.browserOpen = false
-    const element = this.textArea.$el.querySelector('textarea')
-    const selectionStart = element.selectionStart
-    const selectionEnd = element.selectionEnd
+    const element = this.textArea.$refs.input
+    if (element) {
+      const selectionStart = element.selectionStart
+      const selectionEnd = element.selectionEnd
 
-    this.metric.collector =
-      this.metric.collector.substring(0, selectionStart) +
-      path +
-      this.metric.collector.substring(selectionEnd)
+      this.metric.collector = (
+        this.metric.collector.substring(0, selectionStart) +
+        path +
+        this.metric.collector.substring(selectionEnd)
+      )
+    }
   }
 }
 </script>

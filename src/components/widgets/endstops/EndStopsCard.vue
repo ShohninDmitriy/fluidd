@@ -7,14 +7,12 @@
     <template #collapse-button>
       <app-btn
         :loading="hasWait($waits.onQueryEndstops) || hasWait($waits.onQueryProbe)"
-        color=""
-        fab
-        x-small
-        text
-        class="ml-1"
+        icon
         @click="queryEndstops"
       >
-        <v-icon>$refresh</v-icon>
+        <v-icon dense>
+          $refresh
+        </v-icon>
       </app-btn>
     </template>
     <v-simple-table v-if="hasEndstops">
@@ -24,11 +22,11 @@
           :key="item.name"
         >
           <td>
-            <span class="focus--text">{{ item.name }}</span>
+            {{ item.prettyName }}
           </td>
           <td>
             <v-chip
-              :color="(item.state === 'open') ? 'secondary' : 'warning'"
+              :color="item.state ? 'warning' : 'secondary'"
               small
               label
             >
@@ -36,9 +34,14 @@
                 small
                 left
               >
-                {{ (item.state === 'open') ? '$blankCircle' : '$markedCircle' }}
+                {{ item.state ? '$markedCircle' : '$blankCircle' }}
               </v-icon>
-              {{ $t('app.endstop.label.' + item.state.toLowerCase()) }}
+              <template v-if="item.state">
+                {{ $t('app.endstop.states.label.triggered') }}
+              </template>
+              <template v-else>
+                {{ $t('app.endstop.states.label.open') }}
+              </template>
             </v-chip>
           </td>
         </tr>
@@ -51,52 +54,56 @@
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import { SocketActions } from '@/api/socketActions'
-import { Endstop, Probe } from '@/store/printer/types'
+import type { Endstop, Probe } from '@/store/printer/types'
 
 @Component({
   components: {}
 })
 export default class EndStopsCard extends Mixins(StateMixin) {
   get endstops (): Endstop[] {
-    return this.$store.getters['printer/getEndstops']
+    return this.$typedGetters['printer/getEndstops']
   }
 
-  get probe (): Probe {
-    return this.$store.getters['printer/getProbe']
+  get hasSteppers (): boolean {
+    return this.$typedGetters['printer/getSteppers'].length > 0
+  }
+
+  get probe (): Probe | undefined {
+    return this.$typedGetters['printer/getProbe']
   }
 
   get endstopsAndProbes () {
     const endstopsAndProbes = [...this.endstops]
 
-    if (this.hasProbe) {
+    const probe = this.probe
+
+    if (probe != null) {
       endstopsAndProbes.push({
-        name: 'Probe',
-        state: this.probe.last_query ? 'triggered' : 'open'
+        name: probe.name,
+        prettyName: probe.prettyName,
+        state: probe.last_query
       })
     }
 
     return endstopsAndProbes
   }
 
-  // Default state is an empty object.
   get hasEndstops () {
     return this.endstops.length > 0
   }
 
-  get hasProbe () {
-    return this.probe !== undefined
-  }
-
   queryEndstops () {
-    SocketActions.printerQueryEndstops()
+    if (this.hasSteppers) {
+      SocketActions.printerQueryEndstops()
+    }
 
-    if (this.hasProbe) {
+    if (this.probe !== undefined) {
       this.sendGcode('QUERY_PROBE', this.$waits.onQueryProbe)
     }
   }
 
   destroyed () {
-    this.$store.commit('printer/setClearEndStops')
+    this.$typedCommit('printer/setClearEndStops')
   }
 }
 </script>

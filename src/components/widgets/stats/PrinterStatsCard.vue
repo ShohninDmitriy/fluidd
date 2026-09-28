@@ -4,10 +4,10 @@
     icon="$chart"
   >
     <template #menu>
-      <app-btn-collapse-group :collapsed="menuCollapsed">
+      <app-btn-collapse-group :collapsed="narrow">
         <app-btn
           small
-          class="ma-1"
+          class="me-1 my-1"
           @click="handleResetStats"
         >
           <v-icon
@@ -19,36 +19,53 @@
           <span>{{ $t('app.general.btn.reset_stats') }}</span>
         </app-btn>
       </app-btn-collapse-group>
+
+      <v-menu
+        bottom
+        left
+        offset-y
+        transition="slide-y-transition"
+        :close-on-content-click="false"
+      >
+        <template #activator="{ on, attrs }">
+          <app-btn
+            icon
+            v-bind="attrs"
+            v-on="on"
+          >
+            <v-icon dense>
+              $cog
+            </v-icon>
+          </app-btn>
+        </template>
+
+        <v-list dense>
+          <v-list-item @click="timeInDays = !timeInDays">
+            <v-list-item-action class="my-0">
+              <v-checkbox :input-value="timeInDays" />
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>
+                {{ $t('app.general.label.time_in_days') }}
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item @click="lengthInKilometers = !lengthInKilometers">
+            <v-list-item-action class="my-0">
+              <v-checkbox :input-value="lengthInKilometers" />
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>
+                {{ $t('app.general.label.length_in_kilometers') }}
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </template>
 
     <v-card-text>
-      <!-- <div class="mb-4">
-        <v-layout justify-space-between>
-          <div class="grey--text text--darken-2">{{ $t('app.file_system.label.disk_usage') }}</div>
-        </v-layout>
-        <v-progress-linear
-          :size="90"
-          :height="10"
-          :value="fileSystemUsedPercent"
-          color="primary"
-          class="my-1"
-        >
-        </v-progress-linear>
-
-        <v-layout justify-space-between>
-          <div class="grey--text">
-            <span class="focus--text">
-              {{ $filters.getReadableFileSizeString(fileSystemUsage.used) }}
-            </span> {{ $t('app.general.label.used') }}
-          </div>
-          <div class="grey--text">
-            <span class="focus--text">
-              {{ $filters.getReadableFileSizeString(fileSystemUsage.free) }}
-            </span> {{ $t('app.general.label.free') }}
-          </div>
-        </v-layout>
-      </div> -->
-
       <v-row v-if="supportsHistoryComponent">
         <v-col cols="3">
           <v-card
@@ -65,7 +82,7 @@
               {{ $t('app.general.label.longest_job') }}
             </div>
             <div class="focus--text">
-              {{ $filters.formatCounterTime(rollup.longest_job) }}
+              {{ $filters.formatCounterSeconds(rollup.longest_job, { includeDays: timeInDays }) }}
             </div>
           </v-card>
         </v-col>
@@ -78,13 +95,13 @@
               {{ $t('app.general.label.total_time') }}
             </div>
             <div class="focus--text">
-              {{ $filters.formatCounterTime(rollup.total_time) }}
+              {{ $filters.formatCounterSeconds(rollup.total_time, { includeDays: timeInDays }) }}
             </div>
             <div class="secondary--text">
               {{ $t('app.general.label.total_time_avg') }}
             </div>
             <div class="focus--text">
-              {{ $filters.formatCounterTime(rollup.total_avg) }}
+              {{ $filters.formatCounterSeconds(rollup.total_avg, { includeDays: timeInDays }) }}
             </div>
           </v-card>
         </v-col>
@@ -97,13 +114,13 @@
               {{ $t('app.general.label.total_print_time') }}
             </div>
             <div class="focus--text">
-              {{ $filters.formatCounterTime(rollup.total_print_time) }}
+              {{ $filters.formatCounterSeconds(rollup.total_print_time , { includeDays: timeInDays }) }}
             </div>
             <div class="secondary--text">
               {{ $t('app.general.label.total_print_time_avg') }}
             </div>
             <div class="focus--text">
-              {{ $filters.formatCounterTime(rollup.print_avg) }}
+              {{ $filters.formatCounterSeconds(rollup.print_avg, { includeDays: timeInDays }) }}
             </div>
           </v-card>
         </v-col>
@@ -116,13 +133,13 @@
               {{ $t('app.general.label.total_filament') }}
             </div>
             <div class="focus--text">
-              {{ $filters.getReadableLengthString(rollup.total_filament_used) }}
+              {{ $filters.getReadableLengthString(rollup.total_filament_used, { showKilometers: lengthInKilometers }) }}
             </div>
             <div class="secondary--text">
               {{ $t('app.general.label.total_filament_avg') }}
             </div>
             <div class="focus--text">
-              {{ $filters.getReadableLengthString(rollup.filament_avg) }}
+              {{ $filters.getReadableLengthString(rollup.filament_avg, { showKilometers: lengthInKilometers }) }}
             </div>
           </v-card>
         </v-col>
@@ -133,55 +150,54 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import JobHistory from '@/components/widgets/history/JobHistory.vue'
 import { SocketActions } from '@/api/socketActions'
 
-@Component({
-  components: {
-    JobHistory
-  }
-})
+@Component({})
 export default class PrinterStatsCard extends Vue {
-  @Prop({ type: Boolean, default: false })
-  readonly menuCollapsed!: boolean
+  @Prop({ type: Boolean })
+  readonly narrow?: boolean
+
+  get lengthInKilometers (): boolean {
+    return this.$typedState.config.uiSettings.history.lengthInKilometers
+  }
+
+  set lengthInKilometers (value: boolean) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.history.lengthInKilometers',
+      value,
+      server: true
+    })
+  }
+
+  get timeInDays (): boolean {
+    return this.$typedState.config.uiSettings.history.timeInDays
+  }
+
+  set timeInDays (value: boolean) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.history.timeInDays',
+      value,
+      server: true
+    })
+  }
 
   get rollup () {
-    return this.$store.getters['history/getRollUp']
+    return this.$typedGetters['history/getRollUp']
   }
 
-  get fileSystemUsedPercent () {
-    // (250 / 500) * 100
-    const total = this.fileSystemUsage.total
-    const used = this.fileSystemUsage.used
-    return Math.floor((used / total) * 100).toFixed()
+  get supportsHistoryComponent (): boolean {
+    return this.$typedGetters['server/componentSupport']('history')
   }
 
-  get fileSystemUsage () {
-    return this.$store.getters['files/getUsage']
-  }
-
-  get appInfo () {
-    return {
-      fluidd: this.$store.state.version.fluidd,
-      moonraker: this.$store.state.version.components.moonraker || {},
-      klipper: this.$store.state.version.components.klipper || {}
-    }
-  }
-
-  get supportsHistoryComponent () {
-    return this.$store.getters['server/componentSupport']('history')
-  }
-
-  handleResetStats () {
-    this.$confirm(
+  async handleResetStats () {
+    const result = await this.$confirm(
       this.$tc('app.history.msg.confirm_stats'),
       { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
     )
-      .then(res => {
-        if (res) {
-          SocketActions.serverHistoryResetTotals()
-        }
-      })
+
+    if (result) {
+      SocketActions.serverHistoryResetTotals()
+    }
   }
 }
 </script>

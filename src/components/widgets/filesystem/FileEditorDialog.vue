@@ -22,16 +22,46 @@
           v-if="!$vuetify.breakpoint.smAndDown"
           icon
           :disabled="!ready"
-          color=""
           @click="emitClose()"
         >
           <v-icon>$close</v-icon>
         </app-btn>
-        <v-toolbar-title>{{ filename }}</v-toolbar-title>
+        <v-toolbar-title>
+          {{ filename }}
+          <v-icon
+            v-if="readonly"
+            small
+            class="ml-1"
+          >
+            $lock
+          </v-icon>
+          <v-icon
+            v-else-if="updatedContent !== lastSavedContent"
+            small
+            class="ml-1"
+          >
+            $circle
+          </v-icon>
+        </v-toolbar-title>
+
         <v-spacer />
+
         <v-toolbar-items>
           <app-btn
+            v-if="canShowPeripheralsDialog && !$vuetify.breakpoint.smAndDown"
+            @click="peripheralsDialogOpen = true"
+          >
+            <v-icon
+              small
+              left
+            >
+              $devices
+            </v-icon>
+            <span>{{ $t('app.file_system.title.devices') }}</span>
+          </app-btn>
+          <app-btn
             v-if="!useTextOnlyEditor"
+            :disabled="!ready"
             @click="handleCommandPalette"
           >
             <v-icon
@@ -43,9 +73,10 @@
             <span v-if="!$vuetify.breakpoint.smAndDown">{{ $t('app.file_system.title.command_palette') }}</span>
           </app-btn>
           <app-btn
-            v-if="!printerPrinting && configMap.link"
+            v-if="!printerPrinting && configMap?.link"
             :href="configMap.link"
             target="_blank"
+            rel="noopener noreferrer"
           >
             <v-icon
               small
@@ -56,7 +87,7 @@
             <span v-if="!$vuetify.breakpoint.smAndDown">{{ $t('app.general.btn.config_reference') }}</span>
           </app-btn>
           <app-btn
-            v-if="!readonly && !printerPrinting && configMap.serviceSupported"
+            v-if="canSaveAndRestart"
             :disabled="!ready"
             @click="emitSave(true)"
           >
@@ -68,60 +99,90 @@
             </v-icon>
             <span v-if="!$vuetify.breakpoint.smAndDown">{{ $t('app.general.btn.save_restart') }}</span>
           </app-btn>
-          <app-btn
+          <v-tooltip
             v-if="!readonly"
-            :disabled="!ready"
-            @click="emitSave(false)"
+            bottom
           >
-            <v-icon
-              small
-              :left="!$vuetify.breakpoint.smAndDown"
-            >
-              $save
-            </v-icon>
-            <span v-if="!$vuetify.breakpoint.smAndDown">{{ $t('app.general.btn.save') }}</span>
-          </app-btn>
+            <template #activator="{ on, attrs }">
+              <app-btn
+                v-bind="attrs"
+                :disabled="!ready"
+                v-on="on"
+                @click="emitSave({ saveAs: true })"
+              >
+                <v-icon>
+                  $saveAs
+                </v-icon>
+              </app-btn>
+            </template>
+            <span>{{ $t('app.general.btn.save_as') }}</span>
+          </v-tooltip>
+          <v-tooltip
+            v-if="!readonly"
+            bottom
+          >
+            <template #activator="{ on, attrs }">
+              <app-btn
+                v-bind="attrs"
+                :disabled="!ready"
+                v-on="on"
+                @click="emitSave(false)"
+              >
+                <v-icon>
+                  $save
+                </v-icon>
+              </app-btn>
+            </template>
+            <span>{{ $t('app.general.btn.save') }}</span>
+          </v-tooltip>
           <app-btn
             @click="emitClose()"
           >
-            <v-icon
-              small
-              :left="!$vuetify.breakpoint.smAndDown"
-            >
+            <v-icon>
               $close
             </v-icon>
-            <span v-if="!$vuetify.breakpoint.smAndDown">{{ $t('app.general.btn.close') }}</span>
           </app-btn>
         </v-toolbar-items>
       </v-toolbar>
 
       <file-editor
-        v-if="contents !== undefined && !useTextOnlyEditor"
+        v-if="open && !useTextOnlyEditor"
         ref="editor"
         v-model="updatedContent"
+        :path="path"
         :filename="filename"
         :readonly="readonly"
+        :can-save-and-restart="canSaveAndRestart"
         :code-lens="codeLens"
         @ready="editorReady = true"
+        @save="emitSave()"
+        @save-as="emitSave({ saveAs: true })"
+        @save-and-restart="emitSave({ restart: true })"
+        @emergency-stop="emergencyStop"
       />
 
       <file-editor-text-only
-        v-if="contents !== undefined && useTextOnlyEditor"
+        v-if="open && useTextOnlyEditor"
         v-model="updatedContent"
         :filename="filename"
         :readonly="readonly"
         @ready="editorReady = true"
+      />
+
+      <peripherals-dialog
+        v-if="peripheralsDialogOpen"
+        v-model="peripheralsDialogOpen"
       />
     </v-card>
   </v-dialog>
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Prop, Ref, VModel } from 'vue-property-decorator'
+import { Component, Mixins, Prop, Ref, VModel, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
+import BrowserMixin from '@/mixins/browser'
 import FileEditor from './FileEditor.vue'
 import FileEditorTextOnly from './FileEditorTextOnly.vue'
-import isMobile from '@/util/is-mobile'
 import isWebAssemblySupported from '@/util/is-web-assembly-supported'
 
 @Component({
@@ -130,12 +191,15 @@ import isWebAssemblySupported from '@/util/is-web-assembly-supported'
     FileEditorTextOnly
   }
 })
-export default class FileEditorDialog extends Mixins(StateMixin) {
-  @VModel({ type: Boolean, required: true })
-    open!: boolean
+export default class FileEditorDialog extends Mixins(StateMixin, BrowserMixin) {
+  @VModel({ type: Boolean })
+  open?: boolean
 
   @Prop({ type: String, required: true })
   readonly root!: string
+
+  @Prop({ type: String, required: true })
+  readonly path!: string
 
   @Prop({ type: String, required: true })
   readonly filename!: string
@@ -143,11 +207,11 @@ export default class FileEditorDialog extends Mixins(StateMixin) {
   @Prop({ type: String, required: true })
   readonly contents!: string
 
-  @Prop({ type: Boolean, default: false })
-  readonly loading!: boolean
+  @Prop({ type: Boolean })
+  readonly loading?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly readonly!: boolean
+  @Prop({ type: Boolean })
+  readonly readonly?: boolean
 
   @Ref('editor')
   readonly editor?: FileEditor
@@ -155,6 +219,7 @@ export default class FileEditorDialog extends Mixins(StateMixin) {
   updatedContent: string | null = null
   lastSavedContent: string | null = null
   editorReady = false
+  peripheralsDialogOpen = false
 
   get ready () {
     return (
@@ -164,8 +229,11 @@ export default class FileEditorDialog extends Mixins(StateMixin) {
     )
   }
 
-  get isMobile () {
-    return isMobile()
+  @Watch('ready')
+  onReady (value: boolean) {
+    if (value) {
+      this.editor?.focus()
+    }
   }
 
   get isWebAssemblySupported () {
@@ -173,32 +241,52 @@ export default class FileEditorDialog extends Mixins(StateMixin) {
   }
 
   get useTextOnlyEditor () {
-    return this.isMobile || !this.isWebAssemblySupported
+    return this.isMobileUserAgent || !this.isWebAssemblySupported
   }
 
   get isUploading (): boolean {
-    return this.$store.state.files.uploads.length > 0
-  }
-
-  get rootProperties () {
-    return this.$store.getters['files/getRootProperties'](this.root)
+    return this.$typedState.files.uploads.length > 0
   }
 
   get configMap () {
-    return this.$store.getters['server/getConfigMapByFilename'](this.filename)
+    return this.$typedGetters['server/getConfigMapByFilename'](this.filename)
   }
 
-  get codeLens () {
-    return this.$store.state.config.uiSettings.editor.codeLens
+  get canSaveAndRestart (): boolean {
+    return (
+      !this.readonly &&
+      !this.printerPrinting &&
+      this.configMap?.serviceSupported === true
+    )
   }
 
-  created () {
-    this.updatedContent = this.contents
-    this.lastSavedContent = this.contents
+  get canShowPeripheralsDialog (): boolean {
+    return (
+      !this.readonly &&
+      this.configMap?.serviceSupported === true
+    )
   }
 
-  mounted () {
-    window.addEventListener('beforeunload', this.handleBeforeUnload)
+  get codeLens (): boolean {
+    return this.$typedState.config.uiSettings.editor.codeLens
+  }
+
+  @Watch('open')
+  onOpenChanged (value: boolean) {
+    if (value) {
+      this.updatedContent = this.contents
+      this.lastSavedContent = this.contents
+
+      window.addEventListener('beforeunload', this.handleBeforeUnload)
+    } else {
+      this.updatedContent = null
+      this.lastSavedContent = null
+      this.peripheralsDialogOpen = false
+
+      window.removeEventListener('beforeunload', this.handleBeforeUnload)
+    }
+
+    this.editorReady = false
   }
 
   beforeDestroy () {
@@ -206,38 +294,46 @@ export default class FileEditorDialog extends Mixins(StateMixin) {
   }
 
   get showDirtyEditorWarning () {
-    return this.$store.state.config.uiSettings.editor.confirmDirtyEditorClose && this.updatedContent !== this.lastSavedContent
+    const confirmDirtyEditorClose: boolean = this.$typedState.config.uiSettings.editor.confirmDirtyEditorClose
+
+    return (
+      confirmDirtyEditorClose &&
+      this.updatedContent !== this.lastSavedContent
+    )
   }
 
   async emitClose () {
-    if (this.showDirtyEditorWarning) {
-      const result = await this.$confirm(
+    const result = (
+      !this.showDirtyEditorWarning ||
+      await this.$confirm(
         this.$tc('app.general.simple_form.msg.unsaved_changes'),
         { title: this.$tc('app.general.label.unsaved_changes'), color: 'card-heading', icon: '$error' }
       )
+    )
 
-      if (!result) {
-        return
-      }
+    if (result) {
+      this.open = false
     }
-
-    this.open = false
   }
 
-  handleBeforeUnload (e: Event) {
+  handleBeforeUnload (event: Event) {
     if (this.showDirtyEditorWarning) {
-      e.preventDefault() // show browser-native "Leave site?" modal
-      return ((e || window.event).returnValue = true) // fallback
+      event.preventDefault() // show browser-native "Leave site?" modal
+      return ((event || window.event).returnValue = true) // fallback
     }
   }
 
-  emitSave (restart: boolean) {
+  emitSave (options: boolean | { restart?: boolean, saveAs?: boolean } = {}) {
     if (this.editorReady) {
-      if (this.configMap.serviceSupported && restart) {
+      const { restart = false, saveAs = false } = typeof options === 'boolean'
+        ? { restart: options }
+        : options
+
+      if (this.configMap?.serviceSupported && restart) {
         this.$emit('save', this.updatedContent, this.configMap.service)
         this.open = false
       } else {
-        this.$emit('save', this.updatedContent)
+        this.$emit(saveAs ? 'save-as' : 'save', this.updatedContent)
       }
 
       this.lastSavedContent = this.updatedContent

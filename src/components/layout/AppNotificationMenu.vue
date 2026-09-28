@@ -3,7 +3,7 @@
     v-model="menu"
     offset-y
     left
-    :max-width="(isMobile) ? 220 : 420"
+    :max-width="(isMobileViewport) ? 220 : 420"
     :close-on-content-click="false"
     :close-delay="300"
   >
@@ -19,18 +19,17 @@
             overlap
             :color="badgeColor"
           >
-            <v-btn
+            <app-btn
               v-bind="attrs"
-              fab
-              small
+              icon
+              text
               :color="color"
-              :elevation="0"
               v-on="{ ...tooltip, ...menu }"
             >
               <v-icon :class="{ 'wiggle': color === 'error'}">
                 $bell
               </v-icon>
-            </v-btn>
+            </app-btn>
           </v-badge>
         </template>
         <span>{{ $t('app.general.tooltip.notifications') }}</span>
@@ -42,65 +41,72 @@
         class="py-0 overflow-y-auto app-notifications"
         style="max-height: 90vh"
       >
-        <v-list-item
-          v-if="notifications.length === 0"
-        >
+        <v-list-item v-if="notifications.length === 0">
           <v-list-item-content>
             <v-list-item-title>{{ $t('app.general.label.no_notifications') }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
         <v-list-item
-          v-if="notifications.length > 0"
+          v-else
           :disabled="clearableNotifications.length <= 0"
           @click="handleClearAll"
         >
           <v-list-item-content>
             <v-list-item-title>{{ $t('app.general.label.clear_all') }}</v-list-item-title>
           </v-list-item-content>
-          <v-list-item-action class="notification-clear-all">
-            <v-icon small>
+          <v-list-item-icon class="notification-clear-all">
+            <v-icon dense>
               $close
             </v-icon>
-          </v-list-item-action>
+          </v-list-item-icon>
         </v-list-item>
-        <v-divider v-if="notifications.length > 0" />
 
-        <template
-          v-for="(n, i) in notifications"
-        >
+        <template v-for="n in notifications">
+          <v-divider :key="`notification:divider:${n.id}`" />
+
           <v-list-item
-            :key="`notification-${n.id}`"
-            :three-line="true"
+            :key="`notification::${n.id}`"
+            three-line
             :class="classes(n)"
           >
             <v-list-item-content>
-              <v-list-item-title v-html="n.title" />
+              <v-list-item-title v-safe-html="n.title" />
               <v-list-item-subtitle
                 v-if="n.description"
+                v-safe-html="n.description"
                 class="notification-description"
-                v-html="n.description"
               />
-              <v-list-item-subtitle class="notification-timestamp">
-                {{ $filters.formatRelativeTimeToNow(n.timestamp * 1000) }}
-              </v-list-item-subtitle>
+              <v-tooltip bottom>
+                <template #activator="{ on, attrs }">
+                  <v-list-item-subtitle
+                    v-bind="attrs"
+                    class="notification-timestamp"
+                    v-on="on"
+                  >
+                    {{ $filters.formatRelativeTimeToNow(n.timestamp * 1000) }}
+                  </v-list-item-subtitle>
+                </template>
+                <span>{{ $filters.formatDateTime(n.timestamp * 1000) }}</span>
+              </v-tooltip>
               <v-list-item-subtitle v-if="n.to">
                 <app-btn
                   v-if="!n.to.startsWith('http')"
+                  v-safe-html="n.btnText || $t('app.general.btn.more_information')"
                   x-small
                   :to="n.to"
                   class="mr-1"
                   @click="menu = false"
-                  v-html="(n.btnText) ? n.btnText : $t('app.general.btn.more_information')"
                 />
                 <app-btn
                   v-else
+                  v-safe-html="n.btnText || $t('app.general.btn.more_information')"
                   x-small
                   :href="n.to"
                   target="_blank"
+                  rel="noopener noreferrer"
                   class="mr-1"
                   @click="menu = false"
-                  v-html="(n.btnText) ? n.btnText : $t('app.general.btn.more_information')"
                 />
 
                 <app-announcement-dismiss-menu
@@ -116,11 +122,12 @@
               <v-icon
                 v-if="n.suffixIcon"
                 :color="color"
-                v-html="n.suffixIcon"
-              />
+              >
+                {{ n.suffixIcon }}
+              </v-icon>
               <div
+                v-safe-html="n.suffix"
                 class="notification-temp"
-                v-html="n.suffix"
               />
             </v-list-item-action>
             <v-list-item-action
@@ -128,21 +135,16 @@
               class="notification-clear"
               @click="handleClear(n)"
             >
-              <v-btn
+              <app-btn
                 icon
-                small
+                dense
               >
-                <v-icon small>
+                <v-icon dense>
                   $close
                 </v-icon>
-              </v-btn>
+              </app-btn>
             </v-list-item-action>
           </v-list-item>
-
-          <v-divider
-            v-if="i < notifications.length - 1"
-            :key="`divider-${n.id}`"
-          />
         </template>
       </v-list>
     </v-card>
@@ -150,8 +152,10 @@
 </template>
 
 <script lang="ts">
-import { AppNotification } from '@/store/notifications/types'
-import { Component, Vue } from 'vue-property-decorator'
+import type { AppNotification } from '@/store/notifications/types'
+import isSetAppBadgeSupported from '@/util/is-set-app-badge-supported'
+import { Component, Watch, Mixins } from 'vue-property-decorator'
+import BrowserMixin from '@/mixins/browser'
 import AppAnnouncementDismissMenu from './AppAnnouncementDismissMenu.vue'
 
 @Component({
@@ -159,11 +163,11 @@ import AppAnnouncementDismissMenu from './AppAnnouncementDismissMenu.vue'
     AppAnnouncementDismissMenu
   }
 })
-export default class AppNotificationMenu extends Vue {
+export default class AppNotificationMenu extends Mixins(BrowserMixin) {
   menu = false
 
   get notifications (): AppNotification[] {
-    return this.$store.getters['notifications/getNotifications']
+    return this.$typedGetters['notifications/getNotifications']
   }
 
   get notificationsCounter (): number {
@@ -171,8 +175,15 @@ export default class AppNotificationMenu extends Vue {
     return notifications.length
   }
 
+  @Watch('notificationsCounter')
+  onNotificationsCounter (value: number) {
+    if (isSetAppBadgeSupported(navigator)) {
+      navigator.setAppBadge(value)
+    }
+  }
+
   get clearableNotifications (): AppNotification[] {
-    const notifications: AppNotification[] = this.$store.getters['notifications/getNotifications']
+    const notifications: AppNotification[] = this.$typedGetters['notifications/getNotifications']
     return notifications.filter(n => n.clear)
   }
 
@@ -180,8 +191,8 @@ export default class AppNotificationMenu extends Vue {
    * Color is determined by type. Pull the highest weighted type.
    */
   get color () {
-    if (this.notifications.length <= 0) return 'transparent'
-    let c = 'transparent'
+    if (this.notifications.length <= 0) return undefined
+    let c: string | undefined
     for (const n of this.notifications) {
       if (n.type === 'warning' && c !== 'error') c = 'warning'
       if (n.type === 'error' && c !== 'error') {
@@ -195,10 +206,6 @@ export default class AppNotificationMenu extends Vue {
   get badgeColor () {
     if (this.color === 'transparent') return 'info'
     return this.color
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
   }
 
   /**
@@ -222,16 +229,16 @@ export default class AppNotificationMenu extends Vue {
   }
 
   handleClear (n: AppNotification) {
-    this.$store.dispatch('notifications/clearNotification', n)
+    this.$typedDispatch('notifications/clearNotification', n)
   }
 
   handleClearAll () {
-    this.$store.dispatch('notifications/clearAll')
+    this.$typedDispatch('notifications/clearAll')
   }
 
   handleAnnouncementDismiss (n: AppNotification, wake_time: number) {
     if (n && wake_time) {
-      this.$store.dispatch('announcements/dismiss', {
+      this.$typedDispatch('announcements/dismiss', {
         entry_id: n.id,
         wake_time
       })
@@ -283,6 +290,10 @@ export default class AppNotificationMenu extends Vue {
 
   .theme--light :deep(.app-notifications .v-list-item .v-list-item__subtitle.notification-description) {
     color: rgba(0, 0, 0, 0.60);
+  }
+
+  :deep(.notification-description) {
+    -webkit-line-clamp: 5;
   }
 
   :deep(.notification-success),

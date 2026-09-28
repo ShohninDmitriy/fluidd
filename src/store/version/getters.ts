@@ -1,67 +1,79 @@
-import { GetterTree } from 'vuex'
-import { isOfType } from '@/store/helpers'
-import { ArtifactVersion, CommitItem, HashVersion, OSPackage, VersionState } from './types'
-import { RootState } from '../types'
+import type { GetterTree } from 'vuex'
+import type { VersionInfo, VersionState } from './types'
+import type { RootState } from '../types'
 import { valid, gt } from 'semver'
 
-export const getters: GetterTree<VersionState, RootState> = {
+export const getters = {
   /**
    * Returns an array list of available components
    */
-  getVisibleComponents: (state) => {
-    const o = Object.keys(state.version_info)
-      .map(k => {
-        const r = state.version_info[k]
-        r.key = k
-        return r
-      })
-      .sort((a, b) => a.key.localeCompare(b.key))
+  getVisibleComponents: (state): VersionInfo[] => {
+    const versionInfo = state.status?.version_info
 
-    return o
+    if (versionInfo != null) {
+      return Object.entries(versionInfo)
+        .map(([name, entry]): VersionInfo => {
+          switch (entry.configured_type) {
+            case null:
+            case undefined:
+            case 'system':
+              return {
+                ...entry,
+                configured_type: 'system',
+                name: entry.name || name
+              }
+
+            default:
+              return {
+                ...entry,
+                name: entry.name || name
+              }
+          }
+        })
+        .sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    return []
   },
 
   /**
    * Returns an object indicating if any component (but system) has an update.
    */
-  hasUpdates: (state, getters, rootState) => {
-    const enableNotifications = rootState.config.uiSettings.general.enableVersionNotifications
-    let r = false
-    for (const key in state.version_info) {
-      if (!r) {
-        if (
-          key !== 'system' && // don't check system updates..
-          enableNotifications
-        ) {
-          r = getters.hasUpdate(key)
-        }
-      } else {
-        break
-      }
-    }
-    return r
+  hasUpdates: (state, getters) => {
+    return (
+      state.status?.version_info != null &&
+      Object.keys(state.status.version_info)
+        .filter(name => name !== 'system')
+        .some(getters.hasUpdate)
+    )
   },
 
   /**
    * Returns a boolean indicating if a given component has an update.
    */
-  hasUpdate: (state) => (component: string): boolean => {
-    if (state.version_info[component] && isOfType<ArtifactVersion>(state.version_info[component], 'name')) {
-      const o = state.version_info[component] as ArtifactVersion
-      const version = valid(o.version)
-      const remoteVersion = valid(o.remote_version)
-      if (version && remoteVersion) {
-        return (gt(remoteVersion, version))
+  hasUpdate: (state) => (name: string): boolean => {
+    const versionInfo = state.status?.version_info?.[name]
+
+    if (versionInfo != null) {
+      if ('package_count' in versionInfo) {
+        return versionInfo.package_count > 0
       }
-      return false
+
+      if ('version' in versionInfo && 'remote_version' in versionInfo) {
+        const version = valid(versionInfo.version, { loose: true })
+        const remoteVersion = valid(versionInfo.remote_version, { loose: true })
+
+        if (version && remoteVersion) {
+          return gt(remoteVersion, version, { loose: true })
+        }
+      }
+
+      if ('current_hash' in versionInfo && 'remote_hash' in versionInfo) {
+        return versionInfo.current_hash !== versionInfo.remote_hash
+      }
     }
 
-    if (state.version_info[component] && isOfType<OSPackage>(state.version_info[component], 'package_count')) {
-      const o = state.version_info[component] as OSPackage
-      return (o.package_count > 0)
-    }
-
-    const o = state.version_info[component] as HashVersion
-    return (o.current_hash !== o.remote_hash)
+    return false
   },
 
   getResponses: (state) => {
@@ -73,12 +85,13 @@ export const getters: GetterTree<VersionState, RootState> = {
    */
   getCommitHistory: (state) => (component: string) => {
     // This is only relevant for certain types.
-    if (state.version_info[component] && isOfType<HashVersion>(state.version_info[component], 'git_messages')) {
-      const c = state.version_info[component] as HashVersion
-      const result = [...c.commits_behind]
-        .reduce((groups, commitItem) => {
-          const dateAndTime = new Date(+commitItem.date * 1000)
-          const dateOnly = +(new Date(dateAndTime.getFullYear(), dateAndTime.getMonth(), dateAndTime.getDate()))
+    const versionInfo = state.status?.version_info?.[component]
+
+    if (versionInfo && 'commits_behind' in versionInfo) {
+      const result = versionInfo.commits_behind
+        .reduce<Record<number, Moonraker.UpdateManager.GitRepoCommit[]>>((groups, commitItem) => {
+          const dayInSeconds = 24 * 60 * 60
+          const dateOnly = Math.floor(+commitItem.date / dayInSeconds) * dayInSeconds * 1000
 
           if (dateOnly in groups) {
             groups[dateOnly].push(commitItem)
@@ -87,15 +100,14 @@ export const getters: GetterTree<VersionState, RootState> = {
           }
 
           return groups
-        }, {} as Record<number, CommitItem[]>)
+        }, {})
       return {
         keys: Object
           .keys(result)
-          .map(key => parseInt(key))
-          .sort()
-          .reverse(),
+          .map(key => +key)
+          .sort((a, b) => b - a),
         result
       }
     }
   }
-}
+} satisfies GetterTree<VersionState, RootState>

@@ -3,30 +3,32 @@
     dense
   >
     <v-toolbar-title class="d-none d-sm-block">
-      <div class="file-path">
-        &lrm;/{{ path }}
-      </div>
+      <file-system-breadcrumbs
+        :root="root"
+        :path="path"
+        :dense="dense"
+        @navigate-to="$emit('navigate-to', $event)"
+      />
     </v-toolbar-title>
 
     <v-spacer />
 
     <v-tooltip
-      v-if="lowOnSpace && !loading"
+      v-if="klippyReady && !loading && lowOnSpace"
       bottom
     >
       <template #activator="{ on, attrs }">
-        <v-btn
+        <app-btn
           v-bind="attrs"
-          fab
+          icon
           text
-          small
           color="warning"
           v-on="on"
         >
           <v-icon color="warning">
             $error
           </v-icon>
-        </v-btn>
+        </app-btn>
       </template>
       <slot>
         <span>{{ $t('app.file_system.tooltip.low_on_space') }}</span>
@@ -38,57 +40,61 @@
       bottom
     >
       <template #activator="{ on, attrs }">
-        <v-btn
+        <app-btn
           v-bind="attrs"
-          fab
+          icon
           text
-          small
           color="error"
           v-on="on"
         >
           <v-icon color="error">
             $warning
           </v-icon>
-        </v-btn>
+        </app-btn>
       </template>
       <slot>
         <span>{{ $t('app.file_system.tooltip.root_disabled', { root }) }}</span>
       </slot>
     </v-tooltip>
 
-    <app-btn-collapse-group
+    <app-thumbnail-size
       v-if="['gcodes', 'timelapse'].includes(root)"
-      :collapsed="true"
-      menu-icon="$imageSizeSelectLarge"
-      size="small"
-    >
-      <app-slider
-        v-model="thumbnailSize"
-        class="ma-1"
-        :label="$t('app.general.label.thumbnail_size')"
-        :min="32"
-        :max="192"
-        :step="16"
-        :reset-value="32"
-        suffix="px"
-      />
-    </app-btn-collapse-group>
+      v-model="thumbnailSize"
+    />
 
     <app-column-picker
-      v-if="headers && rootProperties.canConfigure"
+      v-if="headers && canConfigure"
       :key-name="`${root}_${name}`"
       :headers="headers"
     />
 
+    <div>
+      <v-tooltip bottom>
+        <template #activator="{ on, attrs }">
+          <v-btn
+            v-bind="attrs"
+            :disabled="disabled"
+            icon
+            text
+            @click="$emit('go-to-file')"
+            v-on="on"
+          >
+            <v-icon>$magnify</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t('app.general.btn.go_to_file') }}</span>
+      </v-tooltip>
+    </div>
+
     <file-system-filter-menu
-      v-if="hasFilterMenu"
+      v-if="hasFilterTypes"
       :root="root"
       :disabled="disabled"
       @change="$emit('filter', $event)"
     />
 
-    <file-system-menu
-      v-if="!readonly || canCreateDirectory"
+    <file-system-add-menu
+      v-if="!readonly"
       :root="root"
       :disabled="disabled"
       @add-file="$emit('add-file')"
@@ -96,39 +102,49 @@
       @upload="handleUpload"
     />
 
-    <v-btn
-      :disabled="disabled"
-      fab
-      small
-      text
-      @click="$emit('refresh')"
-    >
-      <v-icon>$refresh</v-icon>
-    </v-btn>
+    <div>
+      <v-tooltip bottom>
+        <template #activator="{ on, attrs }">
+          <v-btn
+            v-bind="attrs"
+            :disabled="disabled"
+            icon
+            text
+            @click="$emit('refresh')"
+            v-on="on"
+          >
+            <v-icon>$refresh</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ $t('app.general.btn.refresh') }}</span>
+      </v-tooltip>
+    </div>
 
     <div
       style="max-width: 160px;"
       class="ml-1"
     >
       <v-text-field
-        v-model="textSearch"
+        v-model="searchModel"
         :disabled="disabled"
         outlined
         dense
         single-line
         hide-details
-        append-icon="$magnify"
-        @keyup="$emit('update:search', textSearch);"
+        clearable
+        spellcheck="false"
+        :append-icon="searchModel ? undefined : '$magnify'"
+        @focus="$event.target.select()"
       />
     </div>
 
     <template
-      v-if="roots.length > 1"
+      v-if="roots && roots.length > 1"
       #extension
     >
-      <v-tabs>
+      <v-tabs show-arrows>
         <v-tab
-          v-for="(root, index) in registeredRoots"
+          v-for="(root, index) in roots"
           :key="index"
           @change="$emit('root-change', root)"
         >
@@ -140,15 +156,18 @@
 </template>
 
 <script lang="ts">
-import { Component, Prop, Mixins } from 'vue-property-decorator'
+import { Component, Prop, Mixins, PropSync } from 'vue-property-decorator'
 import StatesMixin from '@/mixins/state'
-import FileSystemMenu from './FileSystemMenu.vue'
+import FileSystemAddMenu from './FileSystemAddMenu.vue'
+import FileSystemBreadcrumbs from './FileSystemBreadcrumbs.vue'
 import FileSystemFilterMenu from './FileSystemFilterMenu.vue'
-import { AppTableHeader } from '@/types'
+import type { AppDataTableHeader } from '@/types'
+import type { RootProperties } from '@/store/files/types'
 
 @Component({
   components: {
-    FileSystemMenu,
+    FileSystemAddMenu,
+    FileSystemBreadcrumbs,
     FileSystemFilterMenu
   }
 })
@@ -157,87 +176,62 @@ export default class FileSystemToolbar extends Mixins(StatesMixin) {
   @Prop({ type: String, required: true })
   readonly root!: string
 
-  @Prop({ type: String, required: false })
+  @Prop({ type: String, required: true })
   readonly name!: string
 
   // Can be a list of roots, or a single root.
-  @Prop({ type: Array, required: false })
-  readonly roots!: string[]
+  @Prop({ type: Array })
+  readonly roots?: string[]
 
   // Currently defined list of headers.
-  @Prop({ type: Array, required: false })
-  readonly headers!: AppTableHeader[]
+  @Prop({ type: Array })
+  readonly headers?: AppDataTableHeader[]
 
   // The current path
-  @Prop({ type: String, required: false })
+  @Prop({ type: String, required: true })
   readonly path!: string
 
+  @Prop({ type: Boolean })
+  readonly dense?: boolean
+
   // If the controls are disabled or not.
-  @Prop({ type: Boolean, default: false })
-  readonly disabled!: boolean
+  @Prop({ type: Boolean })
+  readonly disabled?: boolean
 
   // If the fs is loading or not.
-  @Prop({ type: Boolean, default: false })
-  readonly loading!: boolean
+  @Prop({ type: Boolean })
+  readonly loading?: boolean
 
-  @Prop({ type: String, default: '' })
-  readonly search!: string
-
-  textSearch = ''
+  @PropSync('search', { type: String, default: '' })
+  searchModel!: string
 
   get readonly () {
-    return this.$store.getters['files/getRootProperties'](this.root).readonly
+    return this.rootProperties.readonly
   }
 
-  get canCreateDirectory () {
-    return this.$store.getters['files/getRootProperties'](this.root).canCreateDirectory
+  get canConfigure () {
+    return this.rootProperties.canConfigure
   }
 
-  get lowOnSpace () {
-    if (!this.klippyReady) return false
-    return this.$store.getters['files/getLowOnSpace']
+  get hasFilterTypes () {
+    return this.rootProperties.filterTypes.length > 0
   }
 
-  get supportsHistoryComponent () {
-    return this.$store.getters['server/componentSupport']('history')
+  get lowOnSpace (): boolean {
+    return this.$typedGetters['files/getDiskUsage'](this.root)?.lowOnSpace ?? false
   }
 
   // Properties of the current root.
-  get rootProperties () {
-    return this.$store.getters['files/getRootProperties'](this.root)
+  get rootProperties (): RootProperties {
+    return this.$typedGetters['files/getRootProperties'](this.root)
   }
 
-  // Only show roots that have been registered.
-  get registeredRoots () {
-    return this.roots.filter(r => this.$store.state.server.info.registered_directories.includes(r))
-  }
-
-  get hasFilterMenu () {
-    if (!this.readonly) {
-      switch (this.root) {
-        case 'gcodes':
-          return this.supportsHistoryComponent
-        case 'config':
-          return true
-      }
-    }
-    return false
-  }
-
-  get thumbnailSize () {
-    return this.$store.state.config.uiSettings.general.thumbnailSize
+  get thumbnailSize (): number {
+    return this.$typedState.config.uiSettings.thumbnailSizes[this.root] ?? 32
   }
 
   set thumbnailSize (value: number) {
-    this.$store.dispatch('config/saveByPath', {
-      path: 'uiSettings.general.thumbnailSize',
-      value,
-      server: true
-    })
-  }
-
-  mounted () {
-    this.textSearch = this.search
+    this.$typedDispatch('config/updateThumbnailSizes', { name: this.root, size: value })
   }
 
   handleUpload (files: FileList | File[], print: boolean) {

@@ -1,19 +1,23 @@
-import Vue from 'vue'
-import { MutationTree } from 'vuex'
-import { defaultState } from './state'
-import { AnnouncementsState } from './types'
+import type { MutationTree } from 'vuex'
+import { createState } from './state'
+import type { AnnouncementsState } from './types'
 
-export const mutations: MutationTree<AnnouncementsState> = {
+export const mutations = {
   /**
    * Reset state
    */
   setReset (state) {
-    Object.assign(state, defaultState())
+    Object.assign(state, createState())
   },
 
-  setAnnouncementsList (state, payload: AnnouncementsState) {
-    if (payload.entries) Vue.set(state, 'entries', payload.entries)
-    if (payload.feeds) Vue.set(state, 'feeds', payload.feeds)
+  setAnnouncementsList (state, payload: Moonraker.Announcements.ListResponse) {
+    if (payload.entries) {
+      state.entries = payload.entries
+    }
+
+    if (payload.feeds) {
+      state.feeds = payload.feeds
+    }
   },
 
   setAnnouncementDismissed (state, payload: { entry_id: string, dismissed: boolean }) {
@@ -27,10 +31,10 @@ export const mutations: MutationTree<AnnouncementsState> = {
         entry.date_dismissed = null
         entry.dismiss_wake = null
       } else {
-        entry.date_dismissed = new Date().getTime()
+        entry.date_dismissed = Date.now()
       }
     }
 
-    Vue.set(state, 'entries', entries)
+    state.entries = entries
   }
-}
+} satisfies MutationTree<AnnouncementsState>

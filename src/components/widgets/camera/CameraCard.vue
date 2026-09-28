@@ -3,7 +3,7 @@
     :title="$tc('app.general.title.camera', 2)"
     icon="$camera"
     :lazy="false"
-    :draggable="true"
+    draggable
     layout-path="dashboard.camera-card"
     @collapsed="collapsed = $event"
   >
@@ -21,7 +21,7 @@
       <template v-for="camera in cameras">
         <v-col
           v-if="!collapsed"
-          :key="camera.id"
+          :key="camera.uid"
           cols="12"
           :sm="cols"
         >
@@ -40,11 +40,10 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Prop } from 'vue-property-decorator'
+import { Component, Mixins } from 'vue-property-decorator'
 import CameraItem from '@/components/widgets/camera/CameraItem.vue'
 import CameraMenu from './CameraMenu.vue'
 import StateMixin from '@/mixins/state'
-// import { CameraConfig } from '@/store/cameras/types'
 
 @Component({
   components: {
@@ -53,14 +52,6 @@ import StateMixin from '@/mixins/state'
   }
 })
 export default class CameraCard extends Mixins(StateMixin) {
-  @Prop({ type: Boolean, default: true })
-  readonly enabled!: boolean
-
-  dialogState: any = {
-    open: false,
-    camera: null
-  }
-
   collapsed = false
 
   get cols () {
@@ -69,16 +60,12 @@ export default class CameraCard extends Mixins(StateMixin) {
     if (this.cameras.length > 2) return 4
   }
 
-  get inLayout (): boolean {
-    return (this.$store.state.config.layoutMode)
+  get cameras (): Moonraker.Webcam.Entry[] {
+    return this.$typedGetters['webcams/getVisibleWebcams']
   }
 
-  get cameras () {
-    return this.$store.getters['cameras/getVisibleCameras']
-  }
-
-  handleCameraSelect (cam: string) {
-    this.$store.dispatch('cameras/updateActiveCamera', cam)
+  handleCameraSelect (id: string) {
+    this.$typedDispatch('webcams/updateActiveWebcam', id)
   }
 }
 </script>

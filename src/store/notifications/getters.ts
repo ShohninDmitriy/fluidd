@@ -1,9 +1,8 @@
-import { GetterTree } from 'vuex'
-import { AppNotification, NotificationsState } from './types'
-import { Announcement } from '../announcements/types'
-import { RootState } from '../types'
+import type { GetterTree } from 'vuex'
+import type { AppNotification, NotificationsState } from './types'
+import type { RootState } from '../types'
 
-export const getters: GetterTree<NotificationsState, RootState> = {
+export const getters = {
   getNotifications: (state, getters) => {
     // Sort by datestamp, most recent first.
     let notifications = [...state.notifications].sort((a, b) => {
@@ -20,9 +19,9 @@ export const getters: GetterTree<NotificationsState, RootState> = {
   },
 
   getAnnouncementsAsNotifications: (state, getters, rootState, rootGetters) => {
-    const announcements = rootGetters['announcements/getAnnouncements']
+    const announcements: Moonraker.Announcements.Entry[] = rootGetters['announcements/getAnnouncements']
 
-    return announcements.map((a: Announcement) => ({
+    return announcements.map((a): AppNotification => ({
       id: a.entry_id,
       type: 'announcement',
       to: a.url,
@@ -31,6 +30,6 @@ export const getters: GetterTree<NotificationsState, RootState> = {
       timestamp: a.date,
       clear: true,
       merge: true
-    } as AppNotification))
+    }))
   }
-}
+} satisfies GetterTree<NotificationsState, RootState>

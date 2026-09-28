@@ -1,11 +1,16 @@
 <template>
-  <v-app v-if="loading" />
   <v-app
-    v-else
     class="fluidd"
+    :class="{ 'no-pointer-events': dragState }"
   >
     <app-tools-drawer v-model="toolsdrawer" />
     <app-nav-drawer v-model="navdrawer" />
+
+    <inline-svg
+      v-if="showBackgroundLogo && !isMobileViewport"
+      :src="logoSrc"
+      class="background-logo"
+    />
 
     <app-bar
       @toolsdrawer="handleToolsDrawerChange"
@@ -21,88 +26,110 @@
     />
 
     <v-btn
-      v-if="isMobile && authenticated && socketConnected"
-      x-small
+      v-if="isMobileViewport && socketReady"
       fab
       fixed
       bottom
       left
+      width="36"
+      height="36"
       class="ml-2 mb-2"
       color="error"
+      style="z-index: 2000"
+      :aria-label="$t('app.general.tooltip.estop')"
       @click="emergencyStop()"
     >
       <v-icon>$estop</v-icon>
     </v-btn>
 
     <v-main :style="customBackgroundImageStyle">
-      <!-- <pre>authenticated {{ authenticated }}, socketConnected {{ socketConnected }}, apiConnected {{ apiConnected }}</pre> -->
       <v-container
+        v-if="socketReady"
         fluid
-        :class="{
-          'fill-height': $route.meta && $route.meta.fillHeight,
-          [['single', 'double', 'triple', 'quad'][columnCount - 1]]: true
-        }"
+        :class="[['single', 'double', 'triple', 'quad'][columnCount - 1]]"
         class="constrained-width pa-2 pa-sm-4"
       >
-        <v-row
-          v-if="
-            (socketConnected && apiConnected) &&
-              (!klippyReady || hasWarnings) &&
-              !inLayout &&
-              $route.path !== '/login'
-          "
-        >
+        <v-row v-if="(!klippyReady || hasWarnings) && !inLayout">
           <v-col>
             <klippy-status-card />
           </v-col>
         </v-row>
 
-        <router-view
-          v-if="
-            (socketConnected && apiConnected) ||
-              (!authenticated && apiConnected)
-          "
-        />
+        <router-view />
       </v-container>
 
-      <socket-disconnected
-        v-if="
-          (!socketConnected && !apiConnected) ||
-            (!socketConnected && authenticated)"
-      />
+      <login v-else-if="socketAuthenticating" />
 
-      <updating-dialog />
+      <socket-disconnected v-else />
+
+      <register-service-worker />
+
+      <template v-if="socketConnected">
+        <file-system-download-dialog />
+        <file-system-upload-dialog />
+        <updating-dialog />
+        <spool-selection-dialog />
+        <action-command-prompt-dialog />
+        <keyboard-shortcuts-dialog />
+        <manual-probe-dialog />
+        <bed-screws-adjust-dialog />
+        <screws-tilt-adjust-dialog />
+        <mmu-edit-ttg-map-dialog />
+        <afc-print-start-dialog />
+      </template>
     </v-main>
 
     <app-footer />
+
+    <app-drag-overlay
+      v-model="dragState"
+      :message="$t('app.file_system.overlay.drag_files_folders_upload')"
+      icon="$fileUpload"
+    />
   </v-app>
 </template>
 
 <script lang="ts">
 import { Component, Mixins, Watch } from 'vue-property-decorator'
-import { EventBus, FlashMessage } from '@/eventBus'
+import { EventBus } from '@/eventBus'
 import StateMixin from '@/mixins/state'
 import FilesMixin from '@/mixins/files'
-import { LinkPropertyHref } from 'vue-meta'
+import BrowserMixin from '@/mixins/browser'
+import type { LinkPropertyHref, MetaPropertyName } from 'vue-meta'
+import FileSystemDownloadDialog from '@/components/widgets/filesystem/FileSystemDownloadDialog.vue'
+import FileSystemUploadDialog from '@/components/widgets/filesystem/FileSystemUploadDialog.vue'
+import SpoolSelectionDialog from '@/components/widgets/spoolman/SpoolSelectionDialog.vue'
+import type { FlashMessage } from '@/types'
+import { getFilesFromDataTransfer, hasFilesInDataTransfer } from '@/util/file-system-entry'
+import type { ThemeConfig } from '@/store/config/types'
+import ActionCommandPromptDialog from '@/components/common/ActionCommandPromptDialog.vue'
+import KeyboardShortcutsDialog from '@/components/common/KeyboardShortcutsDialog.vue'
+import { eventTargetIsContentEditable, keyboardEventToKeyboardShortcut } from '@/util/event-helpers'
+import MmuEditTtgMapDialog from './components/widgets/mmu/MmuEditTtgMapDialog.vue'
+import AfcPrintStartDialog from './components/widgets/afc/dialogs/AfcPrintStartDialog.vue'
 
 @Component<App>({
   metaInfo () {
-    const pageTitle = this.pageTitle
-    const pageIcon = this.pageIcon
-
     return {
-      title: pageTitle,
-      link: pageIcon,
-      meta: [
-        { name: 'theme-color', content: this.primaryColor }
-      ]
+      title: this.pageTitle,
+      link: this.pageIcon,
+      meta: this.pageMeta
     }
+  },
+  components: {
+    SpoolSelectionDialog,
+    FileSystemDownloadDialog,
+    FileSystemUploadDialog,
+    ActionCommandPromptDialog,
+    KeyboardShortcutsDialog,
+    MmuEditTtgMapDialog,
+    AfcPrintStartDialog
   }
 })
-export default class App extends Mixins(StateMixin, FilesMixin) {
+export default class App extends Mixins(StateMixin, FilesMixin, BrowserMixin) {
   toolsdrawer: boolean | null = null
   navdrawer: boolean | null = null
-  showUpdateUI = false
+  dragState = false
   customBackgroundImageStyle: Record<string, string> = {}
 
   flashMessageState: FlashMessage = {
@@ -111,120 +138,163 @@ export default class App extends Mixins(StateMixin, FilesMixin) {
     type: undefined
   }
 
+  get theme (): ThemeConfig {
+    return this.$typedState.config.uiSettings.theme
+  }
+
+  get showBackgroundLogo () {
+    return this.theme.backgroundLogo
+  }
+
+  get logoSrc () {
+    return `${import.meta.env.BASE_URL}${this.theme.logo.src}`
+  }
+
+  get primaryColor (): string {
+    return this.$vuetify.theme.currentTheme.primary?.toString() ?? ''
+  }
+
+  get primaryOffsetColor (): string {
+    return this.$vuetify.theme.currentTheme['primary-offset']?.toString() ?? ''
+  }
+
   // Our app is in a loading state when the socket isn't quite ready, or
   // our translations are loading.
-  get updating () {
-    return this.$store.state.version.busy
+  get updating (): boolean {
+    return this.$typedState.version.status?.busy ?? false
   }
 
   get inLayout (): boolean {
-    return (this.$store.state.config.layoutMode)
+    return (this.$typedState.config.layoutMode)
   }
 
-  get columnCount () {
-    return this.$store.state.config.containerColumnCount
+  get columnCount (): number {
+    return this.$typedState.config.containerColumnCount
   }
 
-  get loading () {
-    return this.hasWait(this.$waits.onLoadLanguage)
+  get fileDropRoot () {
+    return this.$route.meta?.fileDropRoot
   }
 
-  get progress () {
-    let progress = this.$store.getters['printer/getPrintProgress']
-    progress = (progress * 100).toFixed()
-    return progress
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
+  get progress (): number {
+    const progress: number = this.$typedGetters['printer/getPrintProgress']
+    return Math.floor(progress * 100)
   }
 
   get pageTitle () {
-    const instanceName = this.$store.state.config.uiSettings.general.instanceName || ''
-    const pageName = this.$route.name
+    const instanceName: string = this.$typedState.config.uiSettings.general.instanceName
 
-    if (this.printerPrinting) {
-      return `[${this.progress}%] | ${instanceName} | ${pageName}`
-    } else {
-      return `${instanceName} | ${pageName}`
+    if (!this.socketReady) {
+      return instanceName
     }
+
+    const progress = this.printerPrinting
+      ? `[${this.progress}%]`
+      : ''
+    const pageName = this.$route.name
+      ? this.$t(`app.general.title.${this.$route.name}`)
+      : ''
+
+    const parts = [
+      progress,
+      instanceName,
+      pageName
+    ]
+
+    return parts
+      .filter(part => part)
+      .join(' | ')
   }
 
   get pageIcon (): LinkPropertyHref[] {
-    let icon
-    const theme = this.$store.getters['config/getTheme']
-    if (this.printerPrinting) {
-      // Render the progress indicator.
-      const favIconSize = 64
-      const primaryColor = theme.currentTheme.primary
-      const secondaryColor = 'rgba(255, 255, 255, 0.10)'
-      const canvas = document.createElement('canvas') as HTMLCanvasElement
-      const context = canvas.getContext('2d') as CanvasRenderingContext2D
-      canvas.width = favIconSize
-      canvas.height = favIconSize
-      const percent = this.progress
-      const centerX = canvas.width / 2
-      const centerY = canvas.height / 2
-      const lineWidth = 8
-      const radius = favIconSize / 2 - lineWidth / 2
-      const startAngle = 1.5 * Math.PI
-      const endAngle = startAngle + (percent * 2 * Math.PI / 100)
-
-      /* Draw the initial gray circle */
-      context.moveTo(centerX, centerY)
-      context.beginPath()
-      context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false)
-      context.strokeStyle = secondaryColor
-      context.lineWidth = lineWidth
-      context.stroke()
-      context.closePath()
-
-      /* Now draw the progress circle */
-      context.moveTo(centerX, centerY)
-      context.beginPath()
-      context.arc(centerX, centerY, radius, startAngle, endAngle, false)
-      context.strokeStyle = primaryColor
-      context.lineWidth = lineWidth
-      context.stroke()
-
-      icon = canvas.toDataURL('image/png')
-    }
-
-    // Build a base64 encoded version of our svg with the correct theme color.
-    const svg_xml = 'data:image/svg+xml;base64,' + btoa(`<svg width="56" height="64" viewBox="0 0 314 361" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g transform="translate(-162.000000, -110.000000)"><path d="M234.444,327.531 L309.066,389.594 C309.906,390.313 310.81,390.928 311.759,391.436 L311.759,391.436 L311.771,391.442 L312.055,391.589 L312.163,391.643 L312.356,391.737 L312.534,391.821 L312.668,391.883 L312.902,391.987 L312.974,392.017 C314.656,392.733 316.433,393.128 318.217,393.206 L318.217,393.206 L318.278,393.209 L318.562,393.218 L318.674,393.22 L318.904,393.221 L319.104,393.22 L319.231,393.218 L319.529,393.208 L319.571,393.207 C321.359,393.128 323.142,392.733 324.829,392.013 L324.829,392.013 L324.877,391.993 L325.143,391.875 L325.244,391.829 L325.438,391.737 L325.643,391.638 L325.731,391.593 L326.012,391.447 L326.042,391.432 C326.989,390.925 327.891,390.311 328.729,389.593 L328.729,389.593 L398.493,331.574 L434.768,355.517 L318.896,470.422 L198.4,350.923 L234.444,327.531 Z M237.067,234.697 L310.465,281.908 C313.075,283.623 315.986,284.481 318.897,284.482 C321.805,284.482 324.713,283.626 327.325,281.912 L327.325,281.912 L400.727,234.702 L456.849,263.367 L318.897,378.093 L180.945,263.359 L237.067,234.697 Z M318.897,110.68 L475.771,168.448 L318.897,269.344 L162.024,168.44 L318.897,110.68 Z" id="Combined-Shape" fill="${theme.currentTheme.primaryOffset}"></path><path d="M318.897,110.68 L475.771,168.448 L319,269.278 L319,111 L318.028,111 L318.897,110.68 Z" id="Combined-Shape" fill="${theme.currentTheme.primary}"></path><path d="M400.727,234.702 L456.849,263.367 L319,378.007 L319.000106,284.481641 C321.735222,284.46261 324.467243,283.686291 326.949875,282.151021 L327.325,281.912 L400.727,234.702 Z" id="Combined-Shape" fill="${theme.currentTheme.primary}"></path><path d="M398.493,331.574 L434.768,355.517 L319,470.319 L319,393.22 L319.104,393.22 L319.231,393.218 L319.529,393.208 L319.571,393.207 C321.359,393.128 323.142,392.733 324.829,392.013 L324.829,392.013 L324.877,391.993 L325.143,391.875 L325.244,391.829 L325.438,391.737 L325.643,391.638 L325.731,391.593 L326.012,391.447 L326.042,391.432 C326.989,390.925 327.891,390.311 328.729,389.593 L328.729,389.593 L398.493,331.574 Z" id="Combined-Shape" fill="${theme.currentTheme.primary}"></path></g></svg>`)
+    const iconDataUrl = this.printInProgressIconDataUrl || this.defaultIconDataUrl
 
     return [
       {
         rel: 'icon',
         type: 'image/svg+xml',
         sizes: '32x32',
-        href: icon || svg_xml
+        href: iconDataUrl
       },
       {
         rel: 'icon',
         type: 'image/svg+xml',
         sizes: '16x16',
-        href: icon || svg_xml
+        href: iconDataUrl
       }
     ]
   }
 
-  get primaryColor () {
-    const theme = this.$store.getters['config/getTheme']
-    return theme.currentTheme.primary
+  get pageMeta (): MetaPropertyName[] {
+    return [
+      {
+        name: 'theme-color',
+        content: this.primaryColor
+      }
+    ]
   }
 
-  get customStyleSheet () {
-    return this.$store.getters['config/getCustomThemeFile']('custom', ['.css'])
+  get printInProgressIconDataUrl () {
+    if (
+      this.socketReady &&
+      this.printerPrinting
+    ) {
+      const favIconSize = 64
+      const primaryColor = this.primaryColor
+      const secondaryColor = 'rgba(128, 128, 128, 0.3)'
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+
+      if (context) {
+        canvas.width = favIconSize
+        canvas.height = favIconSize
+        const percent = this.progress
+        const centerX = canvas.width / 2
+        const centerY = canvas.height / 2
+        const lineWidth = 10
+        const radius = favIconSize / 2 - lineWidth / 2
+        const startAngle = 1.5 * Math.PI
+        const endAngle = startAngle + (percent * 2 * Math.PI / 100)
+
+        /* Draw the initial gray circle */
+        context.moveTo(centerX, centerY)
+        context.beginPath()
+        context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false)
+        context.strokeStyle = secondaryColor
+        context.lineWidth = lineWidth
+        context.stroke()
+        context.closePath()
+
+        /* Now draw the progress circle */
+        context.moveTo(centerX, centerY)
+        context.beginPath()
+        context.arc(centerX, centerY, radius, startAngle, endAngle, false)
+        context.strokeStyle = primaryColor
+        context.lineWidth = lineWidth
+        context.stroke()
+
+        return canvas.toDataURL('image/png')
+      }
+    }
+  }
+
+  get defaultIconDataUrl () {
+    const logoWithColor = `<svg width="56" height="56" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><g><path fill="${this.primaryOffsetColor}" d="m14.853 33.757 11.617 9.66q.196.169.419.287l.002.001.044.023.017.009.03.014.027.013.021.01.037.016.01.005c.263.111.54.173.817.185h.01l.044.002h.104l.046-.002h.007a2.3 2.3 0 0 0 .818-.186l.008-.003.041-.018.016-.007.03-.015.032-.015.014-.007.044-.023.004-.002a2.3 2.3 0 0 0 .419-.287l10.86-9.031 5.646 3.727L28 56 9.243 37.398Zm.409-14.452 11.425 7.35c.407.267.86.4 1.313.4s.905-.133 1.312-.4l11.426-7.349 8.737 4.462L28 41.628 6.525 23.767zM28 0l24.42 8.993L28 24.699 3.58 8.99Z" /><path fill="${this.primaryColor}" d="m28 0-.135.05h.15v24.64L52.42 8.991Zm12.738 19.307-11.425 7.347-.06.04a2.4 2.4 0 0 1-1.237.36v14.56l21.459-17.846zm-.347 15.08-10.86 9.031q-.196.167-.418.285l-.006.002-.043.024-.013.007-.033.016-.03.014-.015.007-.041.018-.008.004c-.263.112-.54.173-.819.185h-.007l-.045.002h-.037v12.002l18.021-17.87Z" /></g></svg>`
+
+    return `data:image/svg+xml;base64,${btoa(logoWithColor)}`
+  }
+
+  get customStyleSheet (): string | undefined {
+    return this.$typedGetters['config/getCustomThemeFile']('custom', ['.css'])
   }
 
   @Watch('customStyleSheet')
-  async onCustomStyleSheet (value: string) {
+  async onCustomStyleSheet (value: string | undefined) {
     if (!value) {
       return
     }
 
-    const url = await this.createFileUrl(value, 'config')
+    const url = await this.createFileUrlWithToken(value, 'config')
 
     const oldCustomStylesheet = document.getElementById('customStylesheet')
 
@@ -243,17 +313,17 @@ export default class App extends Mixins(StateMixin, FilesMixin) {
     document.head.appendChild(linkElement)
   }
 
-  get customBackgroundImage () {
-    return this.$store.getters['config/getCustomThemeFile']('background', ['.png', '.jpg', '.jpeg', '.gif'])
+  get customBackgroundImage (): string | undefined {
+    return this.$typedGetters['config/getCustomThemeFile']('background', ['.png', '.jpg', '.jpeg', '.gif'])
   }
 
   @Watch('customBackgroundImage')
-  async onCustomBackgroundImage (value: string) {
+  async onCustomBackgroundImage (value: string | undefined) {
     if (!value) {
       return
     }
 
-    const url = await this.createFileUrl(value, 'config')
+    const url = await this.createFileUrlWithToken(value, 'config')
 
     this.customBackgroundImageStyle = {
       backgroundImage: `url(${url})`,
@@ -263,7 +333,17 @@ export default class App extends Mixins(StateMixin, FilesMixin) {
     }
   }
 
+  get enableKeyboardShortcuts (): boolean {
+    return this.$typedState.config.uiSettings.general.enableKeyboardShortcuts
+  }
+
   mounted () {
+    window.addEventListener('dragover', this.handleDragOver)
+    window.addEventListener('dragenter', this.handleDragOver)
+    window.addEventListener('dragleave', this.handleDragLeave)
+    window.addEventListener('drop', this.handleDrop)
+    window.addEventListener('keydown', this.handleKeyDown, false)
+
     // this.onLoadLocale(this.$i18n.locale)
     EventBus.bus.$on('flashMessage', (payload: FlashMessage) => {
       this.flashMessageState.text = (payload && payload.text) || undefined
@@ -290,6 +370,14 @@ export default class App extends Mixins(StateMixin, FilesMixin) {
     }
   }
 
+  beforeDestroy () {
+    window.removeEventListener('dragover', this.handleDragOver)
+    window.removeEventListener('dragenter', this.handleDragOver)
+    window.removeEventListener('dragleave', this.handleDragLeave)
+    window.removeEventListener('drop', this.handleDrop)
+    window.removeEventListener('keydown', this.handleKeyDown)
+  }
+
   handleToolsDrawerChange () {
     this.toolsdrawer = !this.toolsdrawer
   }
@@ -297,5 +385,130 @@ export default class App extends Mixins(StateMixin, FilesMixin) {
   handleNavDrawerChange () {
     this.navdrawer = !this.navdrawer
   }
+
+  handleDragOver (event: DragEvent) {
+    if (
+      this.socketReady &&
+      this.fileDropRoot &&
+      event.dataTransfer &&
+      hasFilesInDataTransfer(event.dataTransfer)
+    ) {
+      event.preventDefault()
+
+      this.dragState = true
+
+      event.dataTransfer.dropEffect = 'copy'
+    }
+  }
+
+  handleDragLeave (event: DragEvent) {
+    if (this.fileDropRoot) {
+      event.preventDefault()
+
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.className.includes('fluidd')
+      ) {
+        this.dragState = false
+      }
+    }
+  }
+
+  async handleDrop (event: DragEvent) {
+    const root = this.fileDropRoot
+
+    if (root) {
+      event.preventDefault()
+
+      this.dragState = false
+
+      if (event.dataTransfer) {
+        const files = await getFilesFromDataTransfer(event.dataTransfer)
+
+        if (files) {
+          const pathWithRoot: string = this.$typedGetters['files/getCurrentPathByRoot'](root)
+          const path = pathWithRoot === root
+            ? ''
+            : pathWithRoot.substring(root.length + 1)
+
+          const wait = `${this.$waits.onFileSystem}/${pathWithRoot}/`
+
+          this.$typedDispatch('wait/addWait', wait)
+
+          await this.uploadFiles(files, path, root, false)
+
+          this.$typedDispatch('wait/removeWait', wait)
+        }
+      }
+    }
+  }
+
+  handleKeyDown (event: KeyboardEvent) {
+    if (!this.enableKeyboardShortcuts) {
+      return
+    }
+
+    const shortcut = keyboardEventToKeyboardShortcut(event)
+
+    if (
+      this.isAppleDevice
+        ? shortcut === 'Meta+Shift+e'
+        : shortcut === 'Ctrl+Shift+E'
+    ) {
+      event.preventDefault()
+
+      this.emergencyStop()
+
+      return
+    }
+
+    if (
+      !this.klippyReady ||
+      eventTargetIsContentEditable(event)
+    ) {
+      return
+    }
+
+    switch (shortcut) {
+      case 'Shift+C':
+        if (
+          this.printerPrinting ||
+          this.printerPaused
+        ) {
+          event.preventDefault()
+
+          this.cancelPrint()
+        }
+        break
+
+      case 'Shift+P':
+        if (this.printerPrinting) {
+          event.preventDefault()
+
+          this.pausePrint()
+        }
+        break
+
+      case 'Shift+H':
+        if (!this.printerPrinting) {
+          event.preventDefault()
+
+          this.homeAll()
+        }
+        break
+    }
+  }
 }
 </script>
+
+<style lang="scss" scoped>
+  .background-logo {
+    pointer-events: none;
+    position: fixed;
+    width: 50%;
+    height: auto;
+    right: -10%;
+    bottom: -20%;
+    opacity: 8%;
+  }
+</style>

@@ -1,46 +1,36 @@
-import { MutationTree } from 'vuex'
-import { defaultState } from './state'
-import { AuthState } from './types'
-import jwtDecode from 'jwt-decode'
+import type { MutationTree } from 'vuex'
+import { createState } from './state'
+import type { AppUser, AuthState } from './types'
 
-export const mutations: MutationTree<AuthState> = {
+export const mutations = {
   /**
    * Reset state
    */
   setReset (state) {
-    Object.assign(state, defaultState())
+    Object.assign(state, createState())
   },
 
-  setCurrentUser (state, user) {
+  setCurrentUser (state, user: AppUser | null) {
     state.currentUser = user
   },
 
-  setToken (state, token) {
-    state.token = (token) ? jwtDecode(token) : null
-  },
-
-  setRefreshToken (state, token) {
-    state.refresh_token = (token) ? jwtDecode(token) : null
-  },
-
-  setAuthenticated (state, authenticated) {
-    state.authenticated = authenticated
-  },
-
-  setUsers (state, users) {
+  setUsers (state, users: AppUser[]) {
     state.users = users
   },
 
-  setAddUser (state, user) {
-    state.users.push({ source: 'moonraker', ...user })
+  setAddUser (state, user: { username: string }) {
+    state.users.push({
+      ...user,
+      source: 'moonraker',
+    })
   },
 
-  setRemoveUser (state, user) {
+  setRemoveUser (state, user: { username: string }) {
     const i = state.users.findIndex(u => u.username === user.username)
     if (i >= 0) state.users.splice(i, 1)
   },
 
-  setApiKey (state, key) {
+  setApiKey (state, key: string) {
     state.apiKey = key
   }
-}
+} satisfies MutationTree<AuthState>

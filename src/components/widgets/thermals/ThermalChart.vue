@@ -1,108 +1,284 @@
 <template>
   <div
     class="chart"
-    :style="{ 'height': height }"
+    :style="{
+      height: $filters.getPixelsString(isMobileViewport ? 180 : 260)
+    }"
   >
     <e-chart
       ref="chart"
       style="overflow: initial;"
-      :option="options"
-      :update-options="{ notMerge: true }"
-      :init-options="{ renderer: 'svg' }"
+      manual-update
+      :init-options="initOptions"
       autoresize
-      @legendselectchanged="handleLegendSelectChange"
+      @hook:mounted="onChartReady"
+      @legendselectchanged="handleLegendSelectChanged"
+      @legendselected="handleLegendSelectChanged"
+      @legendunselected="handleLegendSelectChanged"
     />
+
+    <div class="chart-options">
+      <v-tooltip bottom>
+        <template #activator="{ on, attrs }">
+          <v-btn
+            v-bind="attrs"
+            icon
+            small
+            tabindex="-1"
+            v-on="on"
+            @click="togglePause"
+          >
+            <v-icon>{{ paused ? '$resume' : '$pause' }}</v-icon>
+          </v-btn>
+        </template>
+        <span>{{ paused ? $t('app.general.btn.resume') : $t('app.general.btn.pause') }}</span>
+      </v-tooltip>
+    </div>
   </div>
 </template>
 
 <script lang='ts'>
-import { Vue, Component, Watch, Prop, Ref } from 'vue-property-decorator'
-import type { ECharts, EChartsOption } from 'echarts'
+import { markRaw } from 'vue'
+import { Component, Watch, Prop, Ref, Mixins } from 'vue-property-decorator'
+import type { ECharts, EChartsInitOpts, EChartsOption, LineSeriesOption } from 'echarts'
 import getKlipperType from '@/util/get-klipper-type'
+import { chartBufferSource } from '@/util/chart-buffer'
+import { smoothChartSource } from '@/util/chart-smoothing'
+import type { ChartBuffer, ChartDataSource } from '@/store/charts/types'
+import { tooltipValueByDimension } from '@/util/chart-tooltip'
+import { isDutyCycleSubKey, isThermalLegendSelected, parseThermalColumn, thermalColumn, thermalSubKeys } from '@/store/charts/thermal-columns'
+import type { ThermalSubKey } from '@/store/charts/thermal-columns'
+import BrowserMixin from '@/mixins/browser'
+import type { ChartSelectedLegends } from '@/store/charts/types'
 
 @Component({})
-export default class ThermalChart extends Vue {
-  @Prop({ type: String, default: '100%' })
-  readonly height!: string
+export default class ThermalChart extends Mixins(BrowserMixin) {
+  @Prop({ type: Boolean })
+  readonly narrow?: boolean
 
   @Ref('chart')
-  readonly chart!: ECharts
+  readonly chart?: ECharts
 
-  loading = false
-  series: any[] = []
-  initialSelected: any = {}
+  // Stable reference so re-renders don't make vue-echarts re-init the chart.
+  readonly initOptions: EChartsInitOpts = Object.freeze({ renderer: 'canvas' })
 
-  handleLegendSelectChange (e: { name: string; type: string; selected: {[index: string]: boolean } }) {
-    this.$store.dispatch('charts/saveSelectedLegends', e.selected)
+  paused = false
+  series: LineSeriesOption[] = []
+  initialSelected: Record<string, boolean> = {}
 
-    let right = (this.isMobile) ? 15 : 20
-    if (this.showPowerAxis(e.selected)) {
-      right = (this.isMobile) ? 25 : 45
+  discoveredColumns?: ReadonlyMap<string, Float64Array>
+  discoveredColumnCount = -1
+  discoveredSensors: readonly string[] = []
+
+  togglePause () {
+    this.paused = !this.paused
+
+    if (!this.paused) {
+      this.onDataChange()
     }
+  }
 
-    if (
-      this.chart &&
-      !this.loading
-    ) {
+  handleLegendSelectChanged (event: { selected: Record<string, boolean> }) {
+    this.initialSelected = event.selected
+    this.$typedDispatch('charts/saveSelectedLegends', event.selected)
+
+    if (this.chart) {
+      const show = this.showPowerAxis(event.selected)
+
       this.chart.setOption({
-        grid: { right },
         yAxis: [
           {},
-          { show: this.showPowerAxis(e.selected) }
+          {
+            show,
+            axisLabel: { show }
+          }
         ]
       })
     }
   }
 
-  get chartData () {
-    return this.$store.getters['charts/getChartData']
+  get thermalChartBuffer (): ChartBuffer {
+    return this.$typedState.charts.thermal
   }
 
-  @Watch('chartData')
-  onDataChange (data: any) {
-    if (this.chart && !this.loading) {
+  // Vue 2 doesn't observe typed array writes - `revision` is the signal.
+  get chartRevision (): number {
+    return this.thermalChartBuffer.revision
+  }
+
+  get chartSmoothingWindow (): number {
+    return this.$typedState.config.uiSettings.general.chartSmoothingWindow
+  }
+
+  // Only temperatures are noisy; targets and duty cycles are exact.
+  get smoothableKeys (): string[] {
+    return this.seriesNames
+      .filter(name => parseThermalColumn(name).sub == null)
+  }
+
+  get seriesNames (): string[] {
+    return this.series
+      .map(series => series.name as string)
+  }
+
+  get smoothedChartData (): ChartDataSource {
+    return smoothChartSource(
+      chartBufferSource(this.thermalChartBuffer),
+      this.smoothableKeys,
+      this.chartSmoothingWindow
+    )
+  }
+
+  get chartableSensors (): string[] {
+    return this.$typedGetters['printer/getChartableSensors']
+  }
+
+  get chartSelectedLegends (): ChartSelectedLegends {
+    return this.$typedState.charts.selectedLegends
+  }
+
+  get sensorColors (): Record<string, string> {
+    return this.$typedState.config.uiSettings.dashboard.sensorColors
+  }
+
+  @Watch('sensorColors', { deep: true })
+  onSensorColorsChange () {
+    if (!this.chart) return
+
+    for (const series of this.series) {
+      const baseKey = parseThermalColumn(series.name as string).sensor
+      const color = this.seriesColor(baseKey)
+
+      series.color = color
+
+      if (series.lineStyle) {
+        series.lineStyle.color = color
+      }
+    }
+
+    // Merge (no notMerge) so the imperatively-set dataset is preserved.
+    this.chart.setOption({ series: this.series })
+  }
+
+  // Watch the raw inputs so the paused check below can skip smoothing work.
+  @Watch('chartRevision')
+  @Watch('chartSmoothingWindow')
+  onDataChange () {
+    if (
+      !this.chart ||
+      this.paused
+    ) {
+      return
+    }
+
+    const seriesCount = this.series.length
+
+    this.initSeries()
+
+    if (seriesCount === 0) {
+      // Series deferred at creation (empty store): build now and re-apply.
+      if (this.series.length > 0) {
+        this.onChartReady()
+      }
+
+      return
+    }
+
+    if (this.series.length > seriesCount) {
+      // Merge (no notMerge) so zoom/legend state isn't dropped.
       this.chart.setOption({
-        dataset: {
-          source: data
-        }
+        series: this.series,
+        legend: { selected: this.initialSelected }
       })
+    }
+
+    // Merging recurses into typed arrays index by index, leaving stale rows.
+    this.chart.setOption({
+      dataset: {
+        source: this.smoothedChartData
+      }
+    }, { replaceMerge: 'dataset' })
+  }
+
+  // Merge so the imperatively-set dataset and legend selection are preserved.
+  @Watch('options')
+  onOptionsChange (options: EChartsOption) {
+    if (!this.chart) {
+      return
+    }
+
+    this.chart.setOption(options)
+  }
+
+  created () {
+    this.initSeries()
+  }
+
+  // Builds series for any chartable column that has data but no series yet.
+  initSeries () {
+    const { columns } = this.thermalChartBuffer
+    const sensors = this.chartableSensors
+
+    // Runs on every append, but only a new column or sensor adds a series.
+    if (
+      columns === this.discoveredColumns &&
+      columns.size === this.discoveredColumnCount &&
+      sensors === this.discoveredSensors
+    ) {
+      return
+    }
+
+    this.discoveredColumns = columns
+    this.discoveredColumnCount = columns.size
+    this.discoveredSensors = sensors
+
+    const existing = new Set(this.seriesNames)
+    const newSeries: LineSeriesOption[] = []
+
+    const addSeries = (key: string, sub?: ThermalSubKey) => {
+      const column = thermalColumn(key, sub)
+
+      if (columns.has(column) && !existing.has(column)) {
+        newSeries.push(this.createSeries(key, sub))
+        existing.add(column)
+      }
+    }
+
+    sensors.forEach((key) => {
+      addSeries(key)
+
+      for (const sub of thermalSubKeys) {
+        addSeries(key, sub)
+      }
+    })
+
+    if (newSeries.length > 0) {
+      this.series = markRaw([...this.series, ...newSeries])
     }
   }
 
-  mounted () {
-    this.init()
-    this.loading = false
+  // Apply the full options + current data once the chart is ready.
+  onChartReady () {
+    if (!this.chart) return
+
+    this.chart.setOption({
+      ...this.options,
+      dataset: {
+        source: this.smoothedChartData
+      }
+    }, { notMerge: true })
   }
 
   beforeDestroy () {
     if (typeof window === 'undefined') return
-    if (this.chart) {
-      this.chart.dispose()
-    }
+    this.chart?.dispose()
   }
 
-  init () {
-    // Create the series and associated legends.
-    const dataKeys = Object.keys(this.chartData[0])
-    const keys = this.$store.getters['printer/getChartableSensors'] as string[]
-
-    keys.forEach((key) => {
-      let label = key
-      if (key.includes(' ')) label = key.split(' ')[1]
-
-      this.series.push(this.createSeries(label, key))
-      if (dataKeys.includes(label + 'Target')) this.series.push(this.createSeries(label + 'Target', key))
-      if (dataKeys.includes(label + 'Power')) this.series.push(this.createSeries(label + 'Power', key))
-      if (dataKeys.includes(label + 'Speed')) this.series.push(this.createSeries(label + 'Speed', key))
-    })
-  }
-
-  get options () {
-    const isDark = this.$store.state.config.uiSettings.theme.isDark
-    const isMobile = this.isMobile
+  get options (): EChartsOption {
+    const isDark: boolean = this.$typedState.config.uiSettings.theme.isDark
 
     const fontColor = (isDark) ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)'
-    const fontSize = (isMobile) ? 13 : 14
+    const fontSize = (this.isMobileViewport || this.narrow) ? 13 : 14
 
     const lineStyle = {
       color: (isDark) ? '#ffffff' : '#000000',
@@ -114,18 +290,7 @@ export default class ThermalChart extends Vue {
       opacity: 0.5
     }
 
-    let right = (this.isMobile) ? 15 : 20
-    if (this.showPowerAxis(this.initialSelected)) {
-      right = (this.isMobile) ? 35 : 45
-    }
-    const grid = {
-      top: 20,
-      left: (this.isMobile) ? 35 : 45,
-      right,
-      bottom: (this.isMobile) ? 52 : 38
-    }
-
-    const tooltip = {
+    const tooltip: EChartsOption['tooltip'] = {
       backgroundColor: (isDark) ? 'rgba(15,15,15,0.75)' : 'rgba(255,255,255,0.75)',
       borderColor: (isDark) ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)',
       textStyle: {
@@ -134,14 +299,30 @@ export default class ThermalChart extends Vue {
       }
     }
 
-    const theme = this.$store.getters['config/getTheme']
-    const color = [
-      theme.currentTheme.primary,
-      theme.currentTheme.secondary
+    const theme = this.$vuetify.theme.currentTheme
+    const color: EChartsOption['color'] = [
+      theme.primary?.toString() ?? '',
+      theme.secondary?.toString() ?? ''
     ]
+    const margin = (
+      this.isMobileViewport ||
+      this.narrow
+    )
+      ? 12
+      : 16
 
-    const options = {
-      grid,
+    const options: EChartsOption = {
+      grid: {
+        top: margin,
+        left: margin,
+        right: margin,
+        bottom: margin,
+        outerBoundsMode: 'same',
+        outerBoundsContain: 'auto'
+      },
+      textStyle: {
+        fontFamily: 'Roboto'
+      },
       color,
       legend: {
         show: false,
@@ -160,51 +341,66 @@ export default class ThermalChart extends Vue {
             backgroundColor: tooltip.backgroundColor
           }
         },
-        position: this.tooltipPosition,
-        formatter: (params: any) => {
+        position: (pos, params, el, elRect, size) => {
+          const obj: Record<string, any> = { top: -10 }
+          obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 10
+          return obj
+        },
+        formatter: (params) => {
+          if (!Array.isArray(params)) {
+            return ''
+          }
+
           let text = ''
           params
             .forEach((param: any) => {
               if (
-                !param.seriesName.toLowerCase().endsWith('target') &&
-                !param.seriesName.toLowerCase().endsWith('power') &&
-                !param.seriesName.toLowerCase().endsWith('speed') &&
-                param.seriesName &&
-                param.seriesName in param.value
+                !param.seriesName ||
+                parseThermalColumn(param.seriesName).sub != null
               ) {
-                text += `
-                  <div>
-                    ${param.marker}
-                    <span style="font-size:${fontSize}px;color:${fontColor};font-weight:400;margin-left:2px">
-                      ${this.$filters.startCase(param.seriesName)}:
-                    </span>
-                    <span style="float:right;margin-left:20px;font-size:${fontSize}px;color:${fontColor};font-weight:900">
-                      ${param.value[param.seriesName].toFixed(2)}<small>°C</small>`
-
-                if (param.seriesName + 'Target' in param.value) {
-                  text += ` / ${param.value[param.seriesName + 'Target'].toFixed()}<small>°C</small>`
-                }
-                if (param.seriesName + 'Power' in param.value) {
-                  text += ` / ${(param.value[param.seriesName + 'Power'] * 100).toFixed()}<small>%</small>`
-                }
-                if (param.seriesName + 'Speed' in param.value) {
-                  text += ` / ${(param.value[param.seriesName + 'Speed'] * 100).toFixed()}<small>%</small>`
-                }
-                text += `</span>
-                  <div style="clear: both"></div>
-                </div>
-                <div style="clear: both"></div>`
+                return
               }
+
+              const valueAt = (name: string) => tooltipValueByDimension(param, name)
+
+              const temperature = valueAt(param.seriesName)
+              if (temperature == null) return
+
+              const name = param.seriesName.trim().split(/\s+/).pop() || ''
+              text += `
+                <div>
+                  ${param.marker}
+                  <span style="font-size:${fontSize}px;color:${fontColor};font-weight:400;margin-left:2px">
+                    ${this.$filters.prettyCase(name)}:
+                  </span>
+                  <span style="float:right;margin-left:20px;font-size:${fontSize}px;color:${fontColor};font-weight:900">
+                    ${temperature.toFixed(2)}<small>°C</small>`
+
+              const target = valueAt(thermalColumn(param.seriesName, 'target'))
+              if (target != null) {
+                text += ` / ${target.toFixed()}<small>°C</small>`
+              }
+              const power = valueAt(thermalColumn(param.seriesName, 'power'))
+              if (power != null) {
+                text += ` / ${(power * 100).toFixed()}<small>%</small>`
+              }
+              const speed = valueAt(thermalColumn(param.seriesName, 'speed'))
+              if (speed != null) {
+                text += ` / ${(speed * 100).toFixed()}<small>%</small>`
+              }
+              text += `</span>
+                <div style="clear: both"></div>
+              </div>
+              <div style="clear: both"></div>`
             })
           return text
         }
       },
       xAxis: {
         type: 'time',
-        boundaryGap: false,
         max: 'dataMax',
         min: (value: any) => {
-          const temperature_store_size = this.$store.getters['charts/getChartRetention']
+          const temperature_store_size: number = this.$typedGetters['charts/getChartRetention']
           return value.max - (temperature_store_size * 1000)
         },
         axisTick: {
@@ -215,18 +411,17 @@ export default class ThermalChart extends Vue {
           lineStyle
         },
         axisLabel: {
-          interval: 0,
           margin: 14,
-          color: tooltip.textStyle.color,
+          color: tooltip.textStyle?.color,
           fontSize,
           formatter: '{H}:{mm}',
-          rotate: (this.isMobile) ? 45 : 0
+          rotate: (this.isMobileViewport || this.narrow) ? 45 : 0
         },
         axisPointer: {
           label: {
             show: true,
             margin: 9,
-            formatter: this.xAxisPointerFormatter
+            formatter: (params) => this.$filters.formatTimeWithSeconds(params.value)
           }
         }
       },
@@ -245,10 +440,21 @@ export default class ThermalChart extends Vue {
           splitLine: { show: true, lineStyle },
           minInterval: 20,
           maxInterval: 60,
-          min: this.yAxisTempMin,
-          max: this.yAxisTempMax,
+          min: (extent) => {
+            const min = Math.floor(extent.min / 10) * 10
+
+            return min === extent.min && (min - 10) >= 0
+              ? min - 10
+              : min
+          },
+          max: (extent) => {
+            const max = Math.ceil(extent.max / 10) * 10
+
+            return max === extent.max
+              ? max + 10
+              : max
+          },
           axisLabel: {
-            interval: 0,
             margin: 8,
             color: fontColor,
             fontSize,
@@ -271,11 +477,11 @@ export default class ThermalChart extends Vue {
           min: 0,
           max: 1,
           axisLabel: {
-            interval: 0,
+            show: this.showPowerAxis(this.initialSelected),
             margin: 8,
             color: fontColor,
             fontSize,
-            formatter: this.yAxisPowerFormatter
+            formatter: (value) => `${value * 100}`
           },
           boundaryGap: [0, '100%']
         }
@@ -285,18 +491,23 @@ export default class ThermalChart extends Vue {
         zoomOnMouseWheel: 'shift'
       }],
       series: this.series
-    } as EChartsOption
+    }
 
     return options
   }
 
-  createSeries (label: string, key: string) {
+  seriesColor (baseKey: string): string {
+    return this.$colorset.next(getKlipperType(baseKey), baseKey, this.sensorColors[baseKey])
+  }
+
+  createSeries (baseKey: string, subKey?: ThermalSubKey): LineSeriesOption {
     // Grab the color
-    const color = Vue.$colorset.next(getKlipperType(key), key)
+    const key = thermalColumn(baseKey, subKey)
+    const color = this.seriesColor(baseKey)
 
     // Base properties
-    const series: any = {
-      name: label,
+    const series: LineSeriesOption = {
+      name: key,
       // id,
       type: 'line',
       yAxisIndex: 0,
@@ -304,9 +515,7 @@ export default class ThermalChart extends Vue {
       animation: false,
       color,
       emphasis: {
-        lineStyle: {
-          width: 1.5
-        }
+        focus: 'series'
       },
       lineStyle: {
         color,
@@ -314,101 +523,83 @@ export default class ThermalChart extends Vue {
         width: 1.5,
         opacity: 1
       },
-      areaStyle: { opacity: 0.05 },
-      encode: { x: 'date', y: label }
+      areaStyle: {
+        opacity: 0.05
+      },
+      encode: {
+        x: 'date',
+        y: key
+      }
     }
 
     // If this is a target, adjust its display.
-    if (label.toLowerCase().endsWith('target')) {
+    if (subKey === 'target') {
       series.yAxisIndex = 0
-      series.emphasis.lineStyle.width = 1
-      series.lineStyle.width = 1
-      series.lineStyle.type = 'dashed'
-      series.lineStyle.opacity = 0.8
-      series.areaStyle.opacity = 0
+      series.lineStyle!.width = 1
+      series.lineStyle!.type = 'dashed'
+      series.lineStyle!.opacity = 0.8
+      series.areaStyle!.opacity = 0
     }
 
     // If this is a power or speed, adjust its display.
-    if (
-      label.toLowerCase().endsWith('power') ||
-      label.toLowerCase().endsWith('speed')
-    ) {
+    if (isDutyCycleSubKey(subKey)) {
       series.yAxisIndex = 1
-      series.emphasis.lineStyle.width = 1
-      series.lineStyle.width = 1
-      series.lineStyle.type = 'dotted'
-      series.lineStyle.opacity = 1
-      series.areaStyle.opacity = 0
+      series.lineStyle!.width = 1
+      series.lineStyle!.type = 'dotted'
+      series.lineStyle!.opacity = 1
+      series.areaStyle!.opacity = 0
     }
 
     // Set the initial legend state (power and speed default off)
-    const storedLegends = this.$store.getters['charts/getSelectedLegends']
-    if (storedLegends[label] !== undefined) {
-      this.initialSelected[label] = storedLegends[label]
-    } else {
-      this.initialSelected[label] = !(
-        label.toLowerCase().endsWith('power') ||
-        label.toLowerCase().endsWith('speed')
-      )
-    }
+    this.initialSelected[key] = isThermalLegendSelected(this.chartSelectedLegends, baseKey, subKey)
 
     // Push the series into our options object.
     return series
   }
 
-  showPowerAxis (selected: any) {
-    const filtered = Object.keys(selected)
-      .filter(key => key.toLowerCase().endsWith('power') || key.toLowerCase().endsWith('speed'))
-      .filter(key => selected[key] === true)
-
-    return (filtered.length > 0)
+  showPowerAxis (selected: Record<string, boolean>) {
+    return Object.keys(selected)
+      .some(key =>
+        selected[key] === true &&
+        isDutyCycleSubKey(parseThermalColumn(key).sub)
+      )
   }
 
-  legendToggleSelect (name: string) {
+  highlightSeries (key: string) {
     if (this.chart) {
-      this.chart.dispatchAction({
-        type: 'legendToggleSelect',
-        name
-      })
+      const seriesName = this.seriesNames
+        .filter(name => parseThermalColumn(name).sensor === key)
+
+      this.chart.dispatchAction({ type: 'downplay' })
+      this.chart.dispatchAction({ type: 'highlight', seriesName })
     }
   }
 
-  tooltipPosition (pos: any, params: any, el: HTMLElement, elRect: any, size: any) {
-    const obj: { [index: string]: any } = { top: -10 }
-    obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 10
-    return obj
+  downplaySeries () {
+    if (this.chart) {
+      this.chart.dispatchAction({ type: 'downplay' })
+    }
   }
 
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
-  }
+  updateChartSelectedLegends (chartSelectedLegends: ChartSelectedLegends) {
+    if (this.chart) {
+      const entries = Object.entries(chartSelectedLegends)
+      let index = entries.length
 
-  xAxisPointerFormatter (params: any) {
-    return this.$filters.formatTimeWithSeconds(params.value)
-  }
+      for (const [name, value] of entries) {
+        // only raise events for the last change
+        const silent = --index !== 0
 
-  yAxisPointerFormatter (params: any) {
-    return params.value.toFixed() + '°C'
-  }
-
-  yAxisPowerFormatter (value: any) {
-    return `${value * 100}`
-  }
-
-  yAxisTempMin (value: any) {
-    let num1 = Math.floor(value.min / 10) * 10
-    num1 = (num1 === value.min && (num1 - 10) >= 0)
-      ? num1 - 10
-      : num1
-    return num1
-  }
-
-  yAxisTempMax (value: any) {
-    let num1 = Math.ceil(value.max / 10) * 10
-    num1 = (num1 === value.max)
-      ? num1 + 10
-      : num1
-    return num1
+        this.chart.dispatchAction({
+          type: value
+            ? 'legendSelect'
+            : 'legendUnSelect',
+          name
+        }, {
+          silent
+        })
+      }
+    }
   }
 }
 
@@ -416,8 +607,16 @@ export default class ThermalChart extends Vue {
 
 <style lang='scss' scoped>
   .chart {
-    margin-top: 16px;
+    position: relative;
     width: 100%;
-    // height: 325px;
+  }
+
+  .chart-options {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 2px 0px;
+    margin-right: 16px;
+    z-index: 1;
   }
 </style>

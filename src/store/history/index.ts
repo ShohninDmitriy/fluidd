@@ -1,17 +1,15 @@
-import { Module } from 'vuex'
-import { state } from './state'
+import type { Module } from 'vuex'
+import { createState } from './state'
 import { getters } from './getters'
 import { actions } from './actions'
 import { mutations } from './mutations'
-import { HistoryState } from './types'
-import { RootState } from '../types'
+import type { HistoryState } from './types'
+import type { RootState } from '../types'
 
-const namespaced = true
-
-export const history: Module<HistoryState, RootState> = {
-  namespaced,
-  state,
+export const history = {
+  namespaced: true,
+  state: createState,
   getters,
   actions,
   mutations
-}
+} satisfies Module<HistoryState, RootState>

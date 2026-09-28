@@ -1,8 +1,8 @@
-import { ActionTree } from 'vuex'
-import { WaitState } from './types'
-import { RootState } from '../types'
+import type { ActionTree } from 'vuex'
+import type { WaitState } from './types'
+import type { RootState } from '../types'
 
-export const actions: ActionTree<WaitState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -13,14 +13,14 @@ export const actions: ActionTree<WaitState, RootState> = {
   /**
    * Add's a wait to the list of waits.
    */
-  async addWait ({ commit }, wait) {
+  async addWait ({ commit }, wait: string) {
     commit('setAddWait', wait)
   },
 
   /**
    * Removes a wait from the list of waits.
    */
-  async removeWait ({ commit }, wait) {
+  async removeWait ({ commit }, wait: string) {
     commit('setRemoveWait', wait)
   }
-}
+} satisfies ActionTree<WaitState, RootState>

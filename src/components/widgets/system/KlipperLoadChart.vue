@@ -1,55 +1,52 @@
 <template>
-  <v-col
-    v-if="ready"
-    cols="4"
-    class="chart-wrapper"
-  >
-    <app-chart
-      :data="chartData"
-      :options="options"
-      height="120px"
-    />
-
-    <div class="chart-label-wrapper">
-      <div class="chart-label">
-        <span>{{ $t('app.system_info.label.klipper_load') }}</span>
-        <span v-if="chartData.length">{{ chartData[chartData.length - 1].cputime_change }}%</span>
-      </div>
-    </div>
-  </v-col>
+  <app-inline-chart
+    :data="chartData"
+    :options="options"
+    :labels="labels"
+  />
 </template>
 
 <script lang="ts">
-import { Component, Vue, Watch } from 'vue-property-decorator'
+import { Component, Vue } from 'vue-property-decorator'
+import type { EChartsOption, LineSeriesOption } from 'echarts'
+import type { AppInlineChartLabel } from '@/components/ui/AppInlineChart.vue'
+import type { ChartDataSource } from '@/store/charts/types'
+import { chartBufferSource } from '@/util/chart-buffer'
 
 @Component({})
 export default class KlipperLoadChart extends Vue {
-  ready = false
-
-  get chartData () {
-    return this.$store.state.charts.klipper || []
+  get chartData (): ChartDataSource {
+    return chartBufferSource(this.$typedState.charts.klipper)
   }
 
-  get options () {
-    const o = {
-      ...this.$store.getters['charts/getBaseChartOptions']({
-        cputime_change: '%'
+  get labels (): AppInlineChartLabel[] {
+    return [
+      {
+        text: this.$t('app.system_info.label.klipper_load').toString(),
+        value: 'cputime_change',
+        suffix: ' %'
+      }
+    ]
+  }
+
+  get options (): EChartsOption {
+    return {
+      ...this.$typedGetters['charts/getBaseChartOptions']({
+        cputime_change: ' %'
       }),
       series: this.series
     }
-    return o
   }
 
-  get series () {
-    return this.$store.getters['charts/getBaseSeries']({
-      name: 'load',
-      encode: { x: 'date', y: 'cputime_change' }
-    })
-  }
-
-  @Watch('chartData', { immediate: true })
-  onChartData (data: any) {
-    if (data && data.length > 0) this.ready = true
+  get series (): LineSeriesOption {
+    return {
+      ...this.$typedGetters['charts/getBaseSeries'],
+      name: this.$t('app.system_info.label.load').toString(),
+      encode: {
+        x: 'date',
+        y: 'cputime_change'
+      }
+    }
   }
 }
 </script>

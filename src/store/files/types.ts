@@ -1,139 +1,88 @@
-import { KlipperFileMeta, Thumbnail } from './types.metadata'
-import { HistoryItem } from '@/store/history/types'
+import type { AppFileMeta } from './types.metadata'
+import type { HistoryItem } from '@/store/history/types'
 
-export type { KlipperFileMeta, Thumbnail }
+export type { AppFileMeta }
 
 export interface FilesState {
-  uploads: FilesUpload[];
+  uploads: FileUpload[];
   download: FileDownload | null;
-  currentPaths: CurrentPaths;
-  disk_usage: DiskUsage;
-  rootFiles: RootFiles;
-
-  gcodes: Files[];
-  config: Files[];
-  config_examples: Files[];
-  docs: Files[];
-  logs: Files[];
-  timelapse: Files[]; // may be null, but will never be accessed when feature is unsupported
+  roots: readonly Moonraker.Files.RootInfoWithPath[] | null;
+  currentPaths: Record<string, string | undefined>;
+  diskUsage: Record<string, Readonly<Moonraker.Files.DiskUsage> | undefined>;
+  rootFiles: Record<string, readonly Moonraker.Files.RootFile[] | undefined>;
+  pathContent: Record<string, MoonrakerPathContent | undefined>;
 }
 
-export interface DiskUsage {
-  total: number;
-  used: number;
-  free: number;
+export interface AppDiskUsage extends Moonraker.Files.DiskUsage {
+  usedPercent: number;
+  lowOnSpace: boolean;
 }
 
-export interface CurrentPaths {
-  [root: string]: string;
+export interface MoonrakerPathContent {
+  partial?: boolean;
+  files: (Readonly<Moonraker.Files.File> | Readonly<Moonraker.Files.FileWithMeta>)[];
+  dirs: Readonly<Moonraker.Files.Dir>[];
 }
 
-export interface Files {
-  path: string;
-  items: (FileBrowserEntry | AppFileWithMeta)[];
-}
-
-export interface AppFile extends KlipperFile {
+export interface AppFile extends Moonraker.Files.File, Pick<Moonraker.Files.Metadata, 'thumbnails'> {
   type: 'file';
-  name?: string;
+  name: string;
   extension: string;
-  filename: string;
-  modified: number;
-  size: number;
   path: string;
+  modified: number;
 }
 
-export interface KlipperFile {
-  filename: string;
-  modified: number;
-  size: number;
+export interface AppFileWithMeta extends AppFile, AppFileMeta {
   print_start_time?: number | null;
   job_id?: string | null;
+  history?: HistoryItem;
 }
 
-export interface AppFileWithMeta extends AppFile, KlipperFileMeta {
-  history: HistoryItem;
+export interface AppFileThumbnail extends Moonraker.Files.MetadataThumbnail {
+  url: string;
 }
-export interface KlipperFileWithMeta extends KlipperFile, KlipperFileMeta {}
 
-export interface AppDirectory {
+export interface AppDirectory extends Moonraker.Files.Dir {
   type: 'directory';
-  name?: string;
-  dirname: string;
-  modified: number | null;
-  size: number;
-}
-
-export interface FileMetaDataSocketResponse {
-  estimated_time: string;
-}
-
-export interface FileChangeSocketResponse {
-  action: string;
-  item: FileChangeItem;
-  source_item?: FileChangeItem;
-}
-
-export interface FileChangeItem {
-  root: string;
-  path: string;
+  name: string;
   modified: number;
-  size: number;
 }
 
 export interface FilePaths {
-  filename: string;
-  path: string;
-  rootPath: string;
-}
-
-export interface FileUpdate {
-  paths: FilePaths;
-  file: AppFile | AppFileWithMeta;
   root: string;
+  rootPath: string;
+  rootPathFilename: string;
+  path: string;
+  pathFilename: string;
+  filename: string;
+  extension: string;
+  filtered: boolean;
 }
 
 export interface FileDownload {
+  uid: string;
   filepath: string;
   size: number;
   loaded: number;
   percent: number;
   speed: number;
-  unit: string;
+  abortController: AbortController;
 }
 
-export interface FilesUpload extends FileDownload {
+export interface FileUpload extends Omit<FileDownload, 'abortController'> {
   complete: boolean; // indicates moonraker is finished with the file.
   cancelled: boolean; // in a cancelled state, don't show - nor try to upload.
+  abortController?: AbortController; // not set until the upload of this entry starts.
 }
 
-export type FileFilterType = 'print_start_time' | 'hidden_files' | 'klipper_backup_files'
+export type FileFilterType = 'print_start_time' | 'hidden_files' | 'klipper_backup_files' | 'rolled_log_files' | 'moonraker_backup_files' | 'moonraker_temporary_upload_files' | 'crowsnest_backup_files'
 
-export type FileRoot = 'gcodes' | 'config' | 'config_examples' | 'docs' | 'logs' | 'timelapse'
+export type FileBrowserEntry = AppFile | AppFileWithMeta | AppDirectory
 
-export type FileBrowserEntry = AppFile | AppDirectory
-
-export interface FilePreviewState {
-  open: boolean;
-  filename: string;
-  src: string;
-  type: string;
-  appFile?: AppFile;
-  width?: number;
-}
-
-export interface RootFiles {
-  gcodes: RootFile[];
-  config: RootFile[];
-  config_examples: RootFile[];
-  docs: RootFile[];
-  logs: RootFile[];
-  timelapse: RootFile[];
-}
-
-export interface RootFile {
-  path: string;
-  modified: number;
-  size: number;
-  permissions: string;
+export interface RootProperties {
+  readonly: boolean;
+  accepts: string[];
+  canView: string[];
+  canConfigure: boolean;
+  filterTypes: FileFilterType[]
 }

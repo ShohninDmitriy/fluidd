@@ -1,89 +1,103 @@
-name: RELEASE
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+
+permissions: {}
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    name: Build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    uses: ./.github/workflows/_build.yml
+    permissions:
+      contents: read
+
+  publish-docker:
+    name: Publish
+    needs: build
+    uses: ./.github/workflows/_publish-docker.yml
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+      packages: write
+      artifact-metadata: write
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+      artifact-metadata: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install node
-        uses: actions/setup-node@v3
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
-          node-version: 18
+          egress-policy: audit
 
-      - name: Install deps
-        run: npm ci --no-optional
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - name: Run tests
-        run: npm run test:unit
-
-      - name: Build
-        run: npm run build
+      - name: Download fluidd dist
+        uses: actions/download-artifact@v8
+        with:
+          name: fluidd-${{ github.sha }}
+          path: ./dist
 
       - name: Create Artifact
         run: |
           cd ./dist
-          zip -r fluidd.zip ./
-          cd ..
+          zip -r ../fluidd.zip ./
+
+      - name: Attest fluidd.zip
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ./fluidd.zip
 
       - name: Get version from tag
         id: tag_name
         run: |
-          echo "current_version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          echo "current_version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
-      #- name: Read ChangeLog
-      #  uses: pedrolamas/changelog-reader-action@d71e9d8dc93a56c192a84bddd8af46cf3b1d284b
-      #  id: changelog
-      #  with:
-      #    validation_depth: 1
-      #    version: ${{ steps.tag_name.outputs.current_version }}
-      #    path: ./CHANGELOG.md
+      - name: Read ChangeLog
+        uses: mindsers/changelog-reader-action@1faaf50aa09d5793d9a100819973df801febfb31 # v2.4.0
+        id: changelog
+        with:
+          validation_depth: 1
+          version: ${{ steps.tag_name.outputs.current_version }}
+          path: ./CHANGELOG.md
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          body: |
-            ${{ steps.changelog.outputs.changes }}
-          draft: true
-          prerelease: false
+          name: ${{ steps.tag_name.outputs.current_version }}
+          body: ${{ steps.changelog.outputs.changes }}
+          files: ./fluidd.zip
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') }}
 
-      - name: Upload Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/fluidd.zip
-          asset_name: fluidd.zip
-          asset_content_type: application/zip
-
-      - name: Publish Release
-        uses: eregon/publish-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          release_id: ${{ steps.create_release.outputs.id }}
-
-      #- name: Prepare Deploy
-      #  run: |
-      #    rm ./dist/fluidd.zip
-      #    cp ./server/config.json ./dist/config.json
-
-      #- name: Deploy to Host
-      #  env:
-      #    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #  run: |
-      #    npm run deploy:host
+  publish-web:
+    name: Deploy to Host
+    needs: build
+    if: ${{ github.repository == 'fluidd-core/fluidd' }}
+    uses: ./.github/workflows/_publish-web.yml
+    secrets:
+      bucket: ${{ secrets.S3_BUCKET_NAME }}
+      distribution-id: ${{ secrets.CF_DISTRIBUTION_ID }}
+      aws-role: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE }}
+    permissions:
+      id-token: write
+      contents: read

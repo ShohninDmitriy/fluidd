@@ -9,6 +9,8 @@ app:
       remove_profile: 'Borrar el perfil %{name}'
       scale: Escala de color
       wireframe: Wireframe
+      base: Base
+      active: activo
     msg:
       hint: >-
         Si guarda el perfil con un nombre que no sea %{name}, también puede
@@ -17,34 +19,30 @@ app:
       not_loaded: No está cargada ninguna malla.
     tooltip:
       calibrate: 'Comienza una nueva calibración, se guardará con el nombre ''default'''
-      delete: Elimina el perfil. Esto REINICIARÁ su impresora
+      delete: Elimina el perfil
       load: Cargar el perfil
-      save: >-
-        Guarda el perfil de calibracion en el archivo printer.cfg.  Esto
-        REINICIARÁ su impresora
+      save: Guarda el perfil de calibracion en el archivo printer.cfg
   chart:
     label:
       current: Tª
       item: Nombre
-      'off': Gráfico desactivado
-      'on': Gráfico activado
       power: Potencia
       rate_of_change: Cambio
       target: Objetivo
+      target_temperature: Temperatura objetivo
+      turn_off: Apagar
     tooltip:
       help: >-
-        Mantenga presionada la tecla Mayús para hacer zoom. <br /> Haga clic en
-        un elemento para mostrarlo. <br /> Haga clic en una potencia para
+        Mantenga presionada la tecla <kbd>Mayús</kbd> para hacer zoom. <br /> Haga
+        clic en un elemento para mostrarlo. <br /> Haga clic en una potencia para
         mostrarla.
   console:
     label:
-      auto_scroll: Scroll automático
-      flip_layout: Invertir diseño
       hide_temp_waits: Esconder los mensajes de temperatura
-    placeholder:
-      command: >-
-        ''tabulador'' para autocompletar, ''help'' para comandos, ''flechas''
-        para historia
+    tooltip:
+      help: Introduce "help" para los comandos<br />Utiliza <kbd>Tab</kbd> para 
+        autocompletar<br />Utiliza <kbd>&uarr;</kbd> y <kbd>&darr;</kbd> para el
+        historial
   endpoint:
     error:
       cant_connect: >-
@@ -55,8 +53,15 @@ app:
         Esto puede indicar que necesita modificar su configuración de Moonraker.
         Consulte la documentación sobre las configuraciones con varias
         impresoras <a href="%{url}" target="_blank">aquí</a>.
+      mixed_content: Fluidd esta funcionando a través de HTTPS pero la dirección
+        web utiliza HTTP. Los navegadores web bloquean la conexiones mixtas 
+        (inseguras). Utiliza una dirección segura/HTTPS o configure Fluidd por 
+        HTTP.
+      websocket_failed: El servidor respondió sobre HTTP pero la conexión 
+        WebSocket falló. Si está utilizando un proxy inverso, asegúrese de que 
+        está configurado para actualizar y reenviar conexiones WebSocket.
     hint:
-      add_printer: 'Ex., http://fluiddpi.local'
+      add_printer: 'Ex., http://fluidd.local'
     msg:
       trouble: >-
         ¿Tienes problemas? <a href="%{url}" target="_blank">Haga clic aquí</a>
@@ -66,17 +71,21 @@ app:
         Ingrese la URL de la API. <br />Por ejemplo:<br
         /><blockquote>fluidd.local, https://192.168.1.150</blockquote>
   endstop:
-    label:
-      open: ABIERTO
-      triggered: ACTIVADO
+    states:
+      label:
+        open: ABIERTO
+        triggered: ACTIVADO
     msg:
       subtitle: Presione el botón 'Actualizar' para actualizar el estado.
   file_system:
     filters:
       label:
-        hidden_files: Filtrar archivos ocultos
         print_start_time: Filtrar ya impresos
-        print_start_time_desc: Filtrar archivos que ya ha impreso anteriormente
+        hidden_files: Filtrar archivos y carpetas ocultos
+        klipper_backup_files: Filtar archivos de backup de Klipper
+        rolled_log_files: Filtrar archivos de log rotados
+        moonraker_backup_files: Filtrar archivos de backup de Moonraker
+        crowsnest_backup_files: Filtrar archivos de backup de Crowsnest
     label:
       dir_name: Nombre de la carpeta
       disk_usage: Uso del disco
@@ -86,12 +95,10 @@ app:
       transfer_rate: Tasa de transferencia
       uploaded: Subido
       view_section_documentation: 'Ver documentación sobre ''%{section}'''
+      sd_card_info: Información de la Tarjeta SD
     msg:
-      confirm: ¿Está seguro? Esto borrará todos los subarchivos y subcarpetas.
       not_found: No se encontraron archivos
       processing: Procesando...
-    overlay:
-      label: <strong>Arrastrar</strong> un archivo aquí
     title:
       add_dir: Agregar una carpeta
       add_file: Agregar un archivo
@@ -99,8 +106,28 @@ app:
       rename_dir: Cambiar el nombre de la carpeta
       rename_file: Cambiar el nombre del archivo
       upload_file: Subiendo archivo | Subiendo archivos
+      devices: Dispositivos
+      command_palette: Paleta de comandos
+      duplicate_dir: Directorio duplicado
+      go_to_file: Ir al archivo
+      duplicate_file: Archivo duplicado
+      save_as: Guardar Cómo
     tooltip:
       low_on_space: Espacio en disco limitado
+      root_disabled: '{root} root no esta disponible. Por favor chequear los registros.'
+      items_count: '{count} elemento | {count} elementos'
+    url:
+      klipper_config: '%{klipperDomain}/Config_Reference.html#%{hash}'
+      crowsnest_config: 
+        https://crowsnest.mainsail.xyz/configuration/%{hash}-section
+      moonraker_config: 
+        https://moonraker.readthedocs.io/en/latest/configuration/#%{hash}
+      moonraker_telegram_bot_config: 
+        https://github.com/nlef/moonraker-telegram-bot/wiki/Sample-config#%{hash}
+    overlay:
+      drag_files_enqueue: <strong>Arrastrar</strong> archivos aqui para encolar
+      drag_files_folders_upload: <strong>Arrastrar</strong> archivos y carpetas 
+        aqui para subir
   gcode:
     btn:
       load_current_file: Cargar archivo actual
@@ -118,10 +145,14 @@ app:
       show_next_layer: Mostrar capa siguiente
       show_previous_layer: Mostrar capa anterior
       show_retractions: Mostrar retracciones
+      show_parts: Mostrar partes
     msg:
       confirm: >-
         El archivo "%{filename}" pesa %{size}. Esto podría usar muchos recursos
         de su sistema. ¿Está seguro?
+    overlay:
+      drag_file_load: <strong>Arrastra</strong> un archivo gcode aqui para 
+        cargar
   general:
     btn:
       abort: Abortar
@@ -142,6 +173,7 @@ app:
       download: Descargar
       edit: Editar
       extrude: Extrudir
+      flip_layout: Invertir diseño
       forgot_password: Olvido su contraseña?
       heaters_off: Apagar calentadores
       load_all: Cargar todos
@@ -180,6 +212,34 @@ app:
       upload: Subir
       upload_print: Subir e imprimir
       view: Ver
+      add_to_queue: Agregar a la cola
+      delete: Eliminar
+      create_zip_archive: Crear archivo ZIP
+      duplicate: Duplicado
+      go_to_file: Ir al archivo
+      multiply: Multiplicar
+      reload: Recargar
+      copied: Copiado
+      copy: Copiar
+      exit_layout: Salir del modo diseño
+      job_queue: Cola de trabajo
+      logout: Cerrar sesión
+      print: Imprimir
+      retry: Reintentar
+      filter: Filtro
+      recover: Recuperar
+      reset_default_layout: Restaurar diseño predeterminado
+      select_columns: Seleccionar columnas
+      set_default_layout: Seleccionar el diseño por defecto
+      thumbnail_size: Tamaño de vista previa
+      upload_folder: Subir carpeta
+      refresh_metadata: Actualizar metadatos
+      upload_files: Subir archivos
+      return_dashboard: Volver al panel de control
+      clear: Limpiar
+      power_on_printer: Encender la impresora
+      reset_to_default: Resetear de fábrica
+      scroll_to_latest: Desplazar a la más nueva
     error:
       app_setup_link: >-
         Las instrucciones de instalación de Fluidd están disponibles <a
@@ -191,6 +251,8 @@ app:
       failed_components: >-
         Moonraker ha fallado en los complementos. Verifique los registros,
         actualice su configuración y reinicie Moonraker.
+      printer_powered_off: La impresora está ahora mismo apagada. <br/><br/>Para
+        encender la impresora presione el botón en la izquierda.
     label:
       accel_to_decel: Aceleración a deceleración
       acceleration: Aceleración
@@ -272,17 +334,63 @@ app:
       unsaved_changes: Cambios sin guardar
       used: Usado
       username: Usuario
-      variance: Variación
       velocity: Velocidad
       visible: Visible
       z_offset: Z Offset
+      range: Rango
+      synced_extruder: Extrusor sincronizado
+      upload_and_print: Subir e imprimir
+      stepper_enabled: Stepper habilitado
+      unknown: Desconocido
+      thumbnail_size: Tamaño de la miniatura
+      file_time: Archivo
+      pause_at_next_layer: Pausar en la siguiente capa
+      pause_at_layer_number: Pausar en el número siguiente
+      pressure_advance: Avance de Presión
+      circle: Círculo
+      numeric_prefix_sort: Ordenar Prefijo Numérico
+      auth_source: Fuente de autenticación
+      command: Comando
+      default: Defecto
+      pause_at_layer: Pausar en la Capa
+      compact: Compactar
+      all: Todo
+      manage_accounts: Gestionar Cuentas
+      moonraker: Moonraker
+      version_sort: Ordenar Versión
+      bars: Barras
+      ldap: LDAP
+      cross: Cruz
+      clean_nozzle: Limpiar Boquilla
+      connected: Conectado
+      device: Dispositivo
+      length_in_kilometers: Longitud en kilómetros
+      load_filament: Cargar Filamento
+      disconnected: Desconectado
+      no_data: No hay informacion
+      time_in_days: Tiempo en días
+      unload_filament: Descargar Filamento
     msg:
       bed_screws_adjust: >-
         Haga click en <b>Ajustado</b> si fue necesario un ajuste significativo
         en el tornillo actual, de lo contrario haga click en <b>Aceptar</b> para
         continuar.
       password_changed: Contraseña cambiada
-      wrong_password: Se ha producido un error. ¿Es su contraseña correcta?
+      fluidd_settings_restore_failed: Fallo al restaurar los Ajustes de Fluid!
+      offline_ready: Fluidd se encuentra listo para trabajar fuera de línea.
+      welcome_back: Bienvenido de nuevo. <br>A continuación, inicie sesión para 
+        mantenerse conectado a su impresora.
+      needs_refresh: Nuevo contenido disponible. Haga clic en botón 
+        <b>Actualizar</b> para ver los cambios.
+      pending_configuration_sections_deleted: Las siguientes secciones se 
+        encuentran marcadas para ser eliminadas
+      not_valid_fluidd_backup_file: No es un archivo de respaldo de Fluidd 
+        válido!
+      fluidd_settings_backup_failed: Fallo al restaurar los Ajustes de Fluid!
+      gcode_preview_failed: ¡No se pudo generar la vista previa del archivo 
+        G-code!
+      gcode_preview_truncated: El archivo G-code es demasiado grande; solo se 
+        previsualiza una parte.
     simple_form:
       error:
         arrayofnums: Solo números
@@ -295,11 +403,32 @@ app:
         min_or_0: 'Mín. %{min} o 0'
         password_username: No se puede emparejar con el nombre de usuario
         required: Obligatorio
+        invalid_expression: Expresión no valida
+        invalid_aspect: Relación de aspecto no válida
       msg:
         confirm: ¿Está seguro?
-        confirm_power_device_toggle: ¿Está seguro? Esto alternará la alimentación del dispositivo.
+        confirm_power_device_toggle: ¿Está seguro? Esto alternará la 
+          alimentación del dispositivo.
         confirm_reboot_host: ¿Está seguro? Esto reiniciará el sistema anfitrión.
         confirm_shutdown_host: ¿Está seguro? Esto apagará el sistema anfitrión.
+        confirm_cancel_print: ¿Estás seguro que quieres cancelar la impresión 
+          actual?
+        confirm_change_beacon_model: La impresora está actualmente ocupada. 
+          ¿Estás seguro que quieres cambiar el modelo beacon?
+        confirm_clear_mesh: La impresora está actualmente ocupada. ¿Seguro que 
+          quieres limpiar la malla de la cama?
+        confirm_delete: ¿Estás seguro? Esto va a eliminar los objetos 
+          seleccionados. | ¿Estás seguro? Esto va a eliminar los {count} objetos
+          seleccionados.
+        confirm_emergency_stop: ¿Estás seguro que quieres hacer una parada de 
+          emergencia a la impresora?
+        confirm_exclude_object: ¿Estás seguro que quieres excluir este objeto de
+          la impresión?
+        confirm_forcemove_toggle: ¿Estás seguro? Esto puede dañar la impresora.
+        confirm_load_bedmesh_profile: La impresora está actualmente ocupada. 
+          ¿Estás seguro que quieres cargar el perfil %{name}?
+        confirm_remove_camera: ¿Estás seguro que quieres eliminar la cámara 
+          %{name}?
     table:
       header:
         actions: Acciones
@@ -354,7 +483,8 @@ app:
       estop: Parada de Emergencia
       notifications: Notificaciones
       reload_klipper: Recarga la configuración de Klipper.
-      reload_restart_klipper: Recarga la configuración de Klipper y reinicia los MCUs.
+      reload_restart_klipper: Recarga la configuración de Klipper y reinicia los
+        MCUs.
       restart_klipper: Reinicia el servicio de sistema de Klipper.
   printer:
     state:
@@ -385,13 +515,13 @@ app:
       camera_flip_x: Voltear horizontalmente
       camera_flip_y: Voltear verticalmente
       camera_stream_type: Tipo de stream
-      camera_url: URL de la cámara
       confirm_on_estop: Requerir confirmación para la Parada de Emergencia
       confirm_on_power_device_change: Requiere confirmar cambios de alimentación
       dark_mode: Modo oscuro
       default_extrude_length: Longitud de extrusión por defecto
       default_extrude_speed: Velocidad de extrusión por defecto
-      default_toolhead_move_length: Longitud de movimiento por defecto del cabezal
+      default_toolhead_move_length: Longitud de movimiento por defecto del 
+        cabezal
       default_toolhead_xy_speed: Velocidad XY por defecto del cabezal
       default_toolhead_z_speed: Velocidad Z por defecto del cabezal
       draw_background: Dibujar fondo
@@ -418,7 +548,8 @@ app:
       reset: Restablecer opciones
       retraction_icon_size: Tamaño del icono de retracción
       show_animations: Mostrar animaciones
-      show_bed_screws_adjust_dialog_automatically: Mostrar diálogo de ajuste de tornillos de cama automáticamente
+      show_bed_screws_adjust_dialog_automatically: Mostrar diálogo de ajuste de 
+        tornillos de cama automáticamente
       show_rate_of_change: Mostrar tasa de cambio de temperatura
       solid: Sólido
       starts_with: Comienza con
@@ -430,6 +561,10 @@ app:
       type: Tipo
       unit: Unidad
       z_adjust_values: Valores de ajuste de Z
+      show_logo_on_background: Mostrar logotipo en el fondo
+      drag_and_drop_functionality_for_files_and_folders: Función de arrastrar y 
+        soltar archivos y carpetas
+      force_move_toggle_warning: Requerir confirmación al activar FORCE_MOVE
     timer_options:
       duration: Solo duración
       filament: Estimación por filamento
@@ -490,17 +625,13 @@ app:
       bed_screws_adjust: Ajustar tornillos de la cama
     tooltip:
       absolute_positioning: Posicionamiento Absoluto
-      bed_screws_adjust: BED_SCREWS_ADJUST
       extruder_disabled: >-
         Extrusor deshabilidado, por debajo de min_extrude_temp
         (%{min}<small>°C</small>)
-      force_move: FORCE_MOVE
       home_xy: Origen XY
       home_z: Origen Z
-      motors_off: APAGAR MOTORES
+      motors_off: Apagar Motores
       relative_positioning: Posicionamiento Relativo
-      screws_tilt_calculate: Screws_Tilt_Calculate
-      z_tilt_adjust: Z_Tilt_Adjust
   version:
     btn:
       check_for_updates: Buscar actualizaciones
@@ -528,3 +659,74 @@ app:
       invalid: indica cambios locales a la repo
       packages: Paquetes
       release_notes: Notas de lanzamiento
+  afc:
+    BedTemp: Temperatura de cama
+    Calibrate: Calibrar
+    Cancel: Cancelar
+    Detected: Detectado
+    EjectFilament: Expulsar filamento
+    Ejecting: Expulsando
+    Initialized: Inicializado
+    LaneLoadedNone: NADA
+    LedOff: LEDs Apagadas
+    LedOn: LEDs Encendidos
+    Loading: Cargando
+    ManualEntry: Entrada Manual
+    Material: Material
+    MaterialSubtitle: 'Por ejemplo: ABS, PETG, PLA, etc.'
+    Moving: Moviendo
+    PrepDetected: Filamento detectado pero no cargado
+    Printing: Imprimiendo
+    PrintStartDialog:
+      StartJob: Empezar trabajo
+      SpoolWeightRemaining: '{remaining}g restante ({used}g utilizado)'
+      Question: ¿Quieres empezar a imprimir {filename}?
+      QuestionWithSpool: Quieres empezar a imprimir {filename} con el rollo 
+        activo?
+      SpoolId: 'ID #{id}'
+      LaneWeightRemaining: 'Peso restante: {weight}g'
+    Restoring: Restaurando
+    SelectTool: Seleccione la herramienta
+    SetSpool: Seleccione rollo de filamento
+    Settings: Configuración
+    SettingsDialog:
+      BowdenLength: Longitud del arco
+      BowdenLengthDescription: Esta es la longitud del tubo de Bowden entre el 
+        Hub y el Toolhead.
+      Help: Ayuda
+      Length: Duración
+      LoadUnloadLaneDescription: Haga click en los botones para cargar o 
+        descargar el filamento del rollo al extrusor
+      SaveExtruderValues: Guardar valores del extrusor
+      SaveExtruderValuesDescription: Esto escribirá los valores actuales de 
+        extrusor al archivo de configuración del extrusor actual.
+      SensorAfterExtruder: Sensor después del extrusor
+      SettingsForTitle: Configuración para {name}
+      ToolSensorAfterExtruder: Herramienta del sensor después del extrusor
+      ToolSensorAfterExtruderDescription: Distancia de los engranajes extrusores
+        al sensor tool_end en mm. Esto se utiliza para descargar el filamento de
+        los engranajes de extrusor después de que el sensor tool_end ya no se 
+        activa.
+      ToolStn: Herramienta de longitud de carga
+      ToolStnDescriptionWithEndSensor: Distancia del sensor tool_end al inicio 
+        de la zona de fundición en mm.
+      ToolStnDescriptionWithRamming: Distancia de los engranajes extrusores al 
+        inicio de la zona de fundición en mm.
+      ToolStnUnload: Herramienta de longitud de descarga
+    BedTempSubtitle: Temperatura de la cama para este filamento en °C.
+    BufferDisabled: Buffer No Activo
+    CaptureTd: Capturar TD
+    DebugJson: Debuggear JSON
+    Empty: Vacío
+    Error: Error
+    ExtruderTemp: Temperatura del extrusor
+    ExtruderTempSubtitle: Temperatura del extrusor para este filamento en °C.
+    Functions: Funciones
+    Headline: AFC
+    RammingSensor: Sensor de regulación
+    FilamentForLane: Filamento para {name}
+    ShowTool: Mostrar la herramienta "{name}"
+    AfcSettings: Configuración-AFC
+  database:
+    tooltip:
+      delete_backup: Eliminar Copia de Seguridad

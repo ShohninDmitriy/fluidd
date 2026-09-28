@@ -12,18 +12,16 @@
         <v-switch
           v-model="showAnimations"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
 
       <v-divider />
 
-      <app-setting :title="$t('app.setting.label.group_lower_layers')">
+      <app-setting :title="$t('app.setting.label.draw_origin')">
         <v-switch
-          v-model="groupLowerLayers"
+          v-model="drawOrigin"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
@@ -34,15 +32,34 @@
         <v-switch
           v-model="drawBackground"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
 
       <v-divider />
 
+      <app-setting :title="$t('app.setting.label.default_min_layer_height')">
+        <app-text-field
+          :value="minLayerHeight"
+          :rules="[
+            $rules.required,
+            $rules.numberValid,
+            $rules.numberGreaterThanOrEqual(0.1)
+          ]"
+          filled
+          dense
+          single-line
+          hide-details="auto"
+          suffix="mm"
+          submit-on-change
+          @submit="setMinLayerHeight"
+        />
+      </app-setting>
+
+      <v-divider />
+
       <app-setting :title="$t('app.setting.label.extrusion_line_width')">
-        <v-text-field
+        <app-text-field
           :value="extrusionLineWidth"
           :rules="[
             $rules.required,
@@ -54,14 +71,15 @@
           single-line
           hide-details="auto"
           suffix="mm"
-          @change="setExtrusionLineWidth"
+          submit-on-change
+          @submit="setExtrusionLineWidth"
         />
       </app-setting>
 
       <v-divider />
 
       <app-setting :title="$t('app.setting.label.move_line_width')">
-        <v-text-field
+        <app-text-field
           :value="moveLineWidth"
           :rules="[
             $rules.required,
@@ -73,14 +91,15 @@
           single-line
           hide-details="auto"
           suffix="mm"
-          @change="setMoveLineWidth"
+          submit-on-change
+          @submit="setMoveLineWidth"
         />
       </app-setting>
 
       <v-divider />
 
       <app-setting :title="$t('app.setting.label.retraction_icon_size')">
-        <v-text-field
+        <app-text-field
           :value="retractionIconSize"
           :rules="[
             $rules.required,
@@ -92,7 +111,8 @@
           single-line
           hide-details="auto"
           suffix="mm"
-          @change="setRetractionIconSize"
+          submit-on-change
+          @submit="setRetractionIconSize"
         />
       </app-setting>
 
@@ -102,7 +122,6 @@
         <v-switch
           v-model="flipHorizontal"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
@@ -113,7 +132,6 @@
         <v-switch
           v-model="flipVertical"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
@@ -124,10 +142,21 @@
         <v-switch
           v-model="autoLoadOnPrintStart"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
+
+      <template v-if="autoLoadOnPrintStart">
+        <v-divider />
+
+        <app-setting :title="$t('app.setting.label.auto_load_mobile_on_print_start')">
+          <v-switch
+            v-model="autoLoadMobileOnPrintStart"
+            hide-details
+            @click.native.stop
+          />
+        </app-setting>
+      </template>
 
       <v-divider />
 
@@ -135,7 +164,16 @@
         <v-switch
           v-model="autoFollowOnFileLoad"
           hide-details
-          class="mb-5"
+          @click.native.stop
+        />
+      </app-setting>
+
+      <v-divider />
+
+      <app-setting :title="$t('app.setting.label.hide_single_part_bounding_box')">
+        <v-switch
+          v-model="hideSinglePartBoundingBox"
+          hide-details
           @click.native.stop
         />
       </app-setting>
@@ -158,136 +196,176 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import { defaultState } from '@/store/config/state'
+import { createState } from '@/store/config/state'
 
 @Component({
   components: {}
 })
 export default class GcodePreviewSettings extends Vue {
-  get extrusionLineWidth () {
-    return this.$store.state.config.uiSettings.gcodePreview.extrusionLineWidth
+  get extrusionLineWidth (): number {
+    return this.$typedState.config.uiSettings.gcodePreview.extrusionLineWidth
   }
 
   setExtrusionLineWidth (value: number) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.extrusionLineWidth',
       value: +value,
       server: true
     })
   }
 
-  get moveLineWidth () {
-    return this.$store.state.config.uiSettings.gcodePreview.moveLineWidth
+  get moveLineWidth (): number {
+    return this.$typedState.config.uiSettings.gcodePreview.moveLineWidth
   }
 
   setMoveLineWidth (value: number) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.moveLineWidth',
       value: +value,
       server: true
     })
   }
 
-  get retractionIconSize () {
-    return this.$store.state.config.uiSettings.gcodePreview.retractionIconSize
+  get retractionIconSize (): number {
+    return this.$typedState.config.uiSettings.gcodePreview.retractionIconSize
   }
 
   setRetractionIconSize (value: number) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.retractionIconSize',
       value: +value,
       server: true
     })
   }
 
-  get flipHorizontal () {
-    return this.$store.state.config.uiSettings.gcodePreview.flip.horizontal
+  get flipHorizontal (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.flip.horizontal
   }
 
   set flipHorizontal (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.flip.horizontal',
       value,
       server: true
     })
   }
 
-  get flipVertical () {
-    return this.$store.state.config.uiSettings.gcodePreview.flip.vertical
+  get flipVertical (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.flip.vertical
   }
 
   set flipVertical (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.flip.vertical',
       value,
       server: true
     })
   }
 
-  get drawBackground () {
-    return this.$store.state.config.uiSettings.gcodePreview.drawBackground
+  get drawOrigin (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.drawOrigin
+  }
+
+  set drawOrigin (value: boolean) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.gcodePreview.drawOrigin',
+      value,
+      server: true
+    })
+  }
+
+  get drawBackground (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.drawBackground
   }
 
   set drawBackground (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.drawBackground',
       value,
       server: true
     })
   }
 
-  get showAnimations () {
-    return this.$store.state.config.uiSettings.gcodePreview.showAnimations
+  get showAnimations (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.showAnimations
   }
 
   set showAnimations (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.showAnimations',
       value,
       server: true
     })
   }
 
-  get groupLowerLayers () {
-    return this.$store.state.config.uiSettings.gcodePreview.groupLowerLayers
+  get minLayerHeight (): number {
+    return this.$typedState.config.uiSettings.gcodePreview.minLayerHeight
   }
 
-  set groupLowerLayers (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
-      path: 'uiSettings.gcodePreview.groupLowerLayers',
-      value,
+  setMinLayerHeight (value: number) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.gcodePreview.minLayerHeight',
+      value: +value,
       server: true
     })
   }
 
-  get autoLoadOnPrintStart () {
-    return this.$store.state.config.uiSettings.gcodePreview.autoLoadOnPrintStart
+  get autoLoadOnPrintStart (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.autoLoadOnPrintStart
   }
 
   set autoLoadOnPrintStart (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.autoLoadOnPrintStart',
       value,
       server: true
     })
+
+    if (!value) {
+      this.autoLoadMobileOnPrintStart = false
+    }
   }
 
-  get autoFollowOnFileLoad () {
-    return this.$store.state.config.uiSettings.gcodePreview.autoFollowOnFileLoad
+  get autoLoadMobileOnPrintStart (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.autoLoadMobileOnPrintStart
+  }
+
+  set autoLoadMobileOnPrintStart (value: boolean) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.gcodePreview.autoLoadMobileOnPrintStart',
+      value,
+      server: true
+    })
+  }
+
+  get autoFollowOnFileLoad (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.autoFollowOnFileLoad
   }
 
   set autoFollowOnFileLoad (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview.autoFollowOnFileLoad',
       value,
       server: true
     })
   }
 
+  get hideSinglePartBoundingBox (): boolean {
+    return this.$typedState.config.uiSettings.gcodePreview.hideSinglePartBoundingBox
+  }
+
+  set hideSinglePartBoundingBox (value: boolean) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.gcodePreview.hideSinglePartBoundingBox',
+      value,
+      server: true
+    })
+  }
+
   handleReset () {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.gcodePreview',
-      value: defaultState().uiSettings.gcodePreview,
+      value: createState().uiSettings.gcodePreview,
       server: true
     })
   }

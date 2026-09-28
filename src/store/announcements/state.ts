@@ -1,10 +1,8 @@
-import { AnnouncementsState } from './types'
+import type { AnnouncementsState } from './types'
 
-export const defaultState = (): AnnouncementsState => {
+export const createState = (): AnnouncementsState => {
   return {
     entries: [],
     feeds: []
   }
 }
-
-export const state = defaultState()

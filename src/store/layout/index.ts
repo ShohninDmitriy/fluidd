@@ -1,17 +1,15 @@
-import { Module } from 'vuex'
-import { state } from './state'
+import type { Module } from 'vuex'
+import { createState } from './state'
 import { getters } from './getters'
 import { actions } from './actions'
 import { mutations } from './mutations'
-import { LayoutState } from './types'
-import { RootState } from '../types'
+import type { LayoutState } from './types'
+import type { RootState } from '../types'
 
-const namespaced = true
-
-export const layout: Module<LayoutState, RootState> = {
-  namespaced,
-  state,
+export const layout = {
+  namespaced: true,
+  state: createState,
   getters,
   actions,
   mutations
-}
+} satisfies Module<LayoutState, RootState>

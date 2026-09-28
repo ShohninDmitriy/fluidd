@@ -1,6 +1,4 @@
-import { AppTablePartialHeader } from '@/types/tableheaders'
-import { VuetifyThemeItem } from 'vuetify/types/services/theme'
-import { FileFilterType, FileRoot } from '../files/types'
+import type { FileFilterType } from '../files/types'
 
 export interface ConfigState {
   [key: string]: any;
@@ -13,28 +11,85 @@ export interface ConfigState {
   hostConfig: HostConfig;
 }
 
+export interface TokenKeys {
+  userToken: string;
+  refreshToken: string;
+}
+
 export interface UiSettings {
   general: GeneralConfig;
   theme: ThemeConfig;
+  warnings: WarningsConfig;
   editor: EditorConfig;
   dashboard: DashboardConfig;
-  tableHeaders: AppTableConfiguredHeaders;
+  tableHeaders: TableHeadersConfig;
+  thumbnailSizes: ThumbnailSizesConfig;
   gcodePreview: GcodePreviewConfig;
   fileSystem: FileSystemConfig;
   toolhead: ToolheadConfig;
+  spoolman: SpoolmanConfig;
+  history: HistoryConfig;
+  mmu: MmuConfig;
+  afc: AfcConfig;
+}
+
+export interface WarningsConfig {
+  warnOnCpuThrottled: boolean;
+  warnOnStepperDriverOverheating: boolean;
+}
+
+export interface HistoryConfig {
+  timeInDays: boolean;
+  lengthInKilometers: boolean;
 }
 
 export interface ToolheadConfig {
-  forceMove: boolean;
   extrudeSpeed: number;
   extrudeLength: number;
+}
+
+export interface SpoolmanConfig {
+  autoSpoolSelectionDialog: boolean;
+  autoOpenQRDetectionCamera: string | null;
+  autoSelectSpoolOnMatch: boolean;
+  preferDeviceCamera: boolean;
+  warnOnNotEnoughFilament: boolean;
+  warnOnFilamentTypeMismatch: boolean;
+  selectionDialogSortOrder: {
+    key: string | null;
+    desc: boolean | null;
+  },
+  remainingFilamentUnit: SpoolmanRemainingFilamentUnit;
+  selectedCardFields: string[];
+}
+
+export type SpoolmanRemainingFilamentUnit = 'weight' | 'length'
+
+export interface MmuConfig {
+  showClogDetection: boolean;
+  showTtgMap: boolean;
+  showDetails: boolean;
+  largeFilamentStatus: boolean;
+  showName: boolean;
+  showLogos: boolean;
+  showClimate: boolean;
+  showUnavailableSpoolColor: boolean;
+}
+
+export interface AfcConfig {
+  hiddenExtruders: string[];
+  hiddenUnits: string[];
+  showFilamentName: boolean;
+  showLaneInfinite: boolean;
+  showUnitIcons: boolean;
+  showTd1Color: boolean;
 }
 
 export interface HostConfig {
   endpoints: string[];
   blacklist: string[];
   hosted: boolean;
-  themePresets: SupportedTheme[];
+  themePresets: ThemePreset[];
 }
 
 export interface SupportedLocale {
@@ -46,6 +101,7 @@ export interface GeneralConfig {
   instanceName: string;
   locale: string;
   chartVisible: boolean;
+  chartSmoothingWindow: number;
   hideTempWaits: boolean;
   axis: Axis;
   defaultExtrudeLength: number;
@@ -53,57 +109,92 @@ export interface GeneralConfig {
   defaultToolheadMoveLength: number;
   defaultToolheadXYSpeed: number;
   defaultToolheadZSpeed: number;
+  toolheadControlStyle: ToolheadControlStyle;
   toolheadMoveDistances: number[];
+  toolheadXYMoveDistances: number[];
+  toolheadZMoveDistances: number[];
+  toolheadCircleXYMoveDistances: number[];
+  toolheadCircleZMoveDistances: number[];
+  toolheadCircleXYHomingEnabled: boolean;
   useGcodeCoords: boolean;
   zAdjustDistances: number[];
   enableVersionNotifications: boolean;
   confirmOnEstop: boolean;
   confirmOnPowerDeviceChange: boolean;
   confirmOnSaveConfigAndRestart: boolean;
+  sectionsToIgnorePendingConfigurationChanges: string[];
   dateFormat: string;
   timeFormat: string;
+  enableKeyboardShortcuts: boolean;
+  textSortOrder: TextSortOrder;
+  filesAndFoldersDragAndDrop: boolean;
   showRateOfChange: boolean;
   showRelativeHumidity: boolean;
   showBarometricPressure: boolean;
+  showGasResistance: boolean;
   showSaveConfigAndRestart: boolean;
+  showUploadAndPrint: boolean;
   flipConsoleLayout: boolean;
   cameraFullscreenAction: CameraFullscreenAction;
+  printerPowerDevice: null | string;
   topNavPowerToggle: null | string;
   showManualProbeDialogAutomatically: boolean;
   showBedScrewsAdjustDialogAutomatically: boolean;
+  showScrewsTiltAdjustDialogAutomatically: boolean;
   forceMoveToggleWarning: boolean;
+  printInProgressLayout: PrintInProgressLayout;
+  printProgressCalculation: PrintProgressCalculation[];
+  printEtaCalculation: PrintEtaCalculation[];
   enableDiagnostics: boolean;
-  thumbnailSize: number;
+  colorPickerValueRange: ColorPickerValueRange;
 }
 
-export type CameraFullscreenAction = 'embed' | 'rawstream';
+export type ToolheadControlStyle = 'cross' | 'bars' | 'circle'
+
+export type TextSortOrder = 'default' | 'numeric-prefix' | 'version'
+
+export type CameraFullscreenAction = 'embed' | 'rawstream'
+
+export type PrintInProgressLayout = 'default' | 'compact'
+
+export type ColorPickerValueRange = 'absolute' | 'percentage'
+
+export type PrintProgressCalculation = 'file' | 'fileAbsolute' | 'slicer' | 'filament'
+
+export type PrintEtaCalculation = 'file' | 'slicer'
 
 // Config stored in moonraker db
 export interface ThemeConfig {
-  currentTheme: {[index: string]: string | Partial<VuetifyThemeItem> | undefined }; // the color list.
-  isDark: boolean; // inidicates if the theme as a whole is dark or not.
-  logo: SupportedThemeLogo; // Current logo to use.
+  color: string;
+  isDark: boolean;
+  logo: ThemeLogo;
+  backgroundLogo: boolean;
 }
 
 // Config defined in host
-export interface SupportedTheme {
+export interface ThemePreset {
   name: string;
-  logo: SupportedThemeLogo;
   color: string;
   isDark: boolean;
+  logo: ThemeLogo;
 }
 
-export interface SupportedThemeLogo {
+export interface ThemeLogo {
   src: string;
-  dynamic: boolean;
   dark?: string;
   light?: string;
 }
 
+export type RestoreViewState = 'never' | 'session' | 'local'
+
+export type KlipperSaveAndRestartAction = 'auto' | 'firmware-restart' | 'host-restart' | 'service-restart'
+
 export interface EditorConfig {
   confirmDirtyEditorClose: boolean;
   autoEditExtensions: string[];
+  restoreViewState: RestoreViewState,
   codeLens: boolean;
+  klipperSaveAndRestartAction: KlipperSaveAndRestartAction;
 }
 
 export interface Axis {
@@ -116,24 +207,24 @@ export interface AxisConfig {
 
 export interface DashboardConfig {
   tempPresets: TemperaturePreset[];
+  sensorColors: Record<string, string>;
 }
 
 export interface SaveByPath {
   path: string;
-  value: string | boolean | number;
+  value: unknown;
   server?: boolean;
 }
 
 export interface InitConfig {
   apiConfig: ApiConfig | InstanceConfig;
   hostConfig?: HostConfig;
-  apiConnected?: boolean;
-  apiAuthenticated?: boolean;
 }
 
 export interface ApiConfig {
   apiUrl: string;
   socketUrl: string;
+  name?: string;
 }
 
 // Saved to localstorage.
@@ -143,14 +234,10 @@ export interface InstanceConfig extends ApiConfig {
 }
 
 export interface TemperaturePreset {
-  id: number;
+  id: number | string;
   name: string;
-  values: TemperaturePresetValues;
+  values: Record<string, TemperaturePresetValue>;
   gcode?: string;
-}
-
-export interface TemperaturePresetValues {
-  [key: string]: TemperaturePresetValue;
 }
 
 export interface TemperaturePresetValue {
@@ -159,26 +246,46 @@ export interface TemperaturePresetValue {
   active: boolean;
 }
 
-export interface AppTableConfiguredHeaders {
-  [root: string]: AppTablePartialHeader[];
+export interface TableHeadersConfig extends Record<string, ConfiguredTableHeader[] | undefined> {
+}
+
+export interface ThumbnailSizesConfig extends Record<string, number | undefined> {
+}
+
+export interface ConfiguredTableHeader {
+  value: string;
+  visible?: boolean;
 }
 
 export interface GcodePreviewConfig {
   extrusionLineWidth: number;
   moveLineWidth: number;
   retractionIconSize: number;
+  drawOrigin: boolean;
   drawBackground: boolean;
   showAnimations: boolean;
-  groupLowerLayers: boolean;
+  minLayerHeight: number;
   autoLoadOnPrintStart: boolean;
+  autoLoadMobileOnPrintStart: boolean;
   autoFollowOnFileLoad: boolean;
+  hideSinglePartBoundingBox: boolean;
   autoZoom: boolean;
   flip: {
     horizontal: boolean;
     vertical: boolean;
   };
+  showCurrentLayer: boolean;
+  showNextLayer: boolean;
+  showPreviousLayer: boolean;
+  showMoves: boolean;
+  showExtrusions: boolean;
+  showRetractions: boolean;
+  showParts: boolean;
+  followProgress: boolean;
 }
 
 export interface FileSystemConfig {
-  activeFilters: Partial<Record<FileRoot, FileFilterType[]>>
+  activeFilters: Record<string, FileFilterType[]>;
+  sortBy: Record<string, string | null>;
+  sortDesc: Record<string, boolean | null>;
 }

@@ -1,96 +1,190 @@
 <template>
-  <v-dialog
-    v-model="file.open"
-    :width="width"
+  <app-dialog
+    v-model="open"
+    :title="filename"
+    :width="calculatedWidth"
+    no-actions
   >
-    <v-form>
-      <v-card>
-        <v-card-title class="card-heading py-2">
-          <span class="focus--text">{{ file.filename }}</span>
-        </v-card-title>
+    <v-card-text class="py-4">
+      <v-layout
+        v-if="!isMarkdown"
+        justify-center
+      >
+        <video
+          v-if="isVideo"
+          controls
+          disablePictureInPicture
+          playsinline
+        >
+          <source
+            :src="src"
+            :type="type"
+          >
+        </video>
 
-        <v-card-text class="py-4">
-          <v-layout justify-center>
-            <video
-              v-if="isVideo"
-              controls
-            >
-              <source
-                :src="file.src"
-                :type="file.type"
-              >
-            </video>
+        <img
+          v-else-if="isImage"
+          :src="src"
+        >
 
-            <img
-              v-else-if="isImage"
-              :src="file.src"
-            >
+        <div v-else>
+          {{ $t('app.general.simple_form.msg.no_file_preview', { name: (extension ? `${extension} files` : filename) }) }}
+        </div>
+      </v-layout>
 
-            <div v-else>
-              {{ $t('app.general.simple_form.msg.no_file_preview', { name: (file.appFile ? `.${file.appFile.extension.toUpperCase()} files` : file.filename) }) }}
-            </div>
-          </v-layout>
-        </v-card-text>
+      <div
+        v-else-if="renderedMarkdown"
+        v-safe-html="renderedMarkdown"
+        class="markdown-container"
+      />
+    </v-card-text>
 
-        <template v-if="file.appFile && (removable || downloadable)">
-          <v-divider />
+    <template v-if="file">
+      <v-divider />
 
-          <v-card-actions class="pt-4">
-            <v-spacer />
-            <app-btn
-              v-if="file.appFile && removable"
-              text
-              color="error"
-              @click="$emit('remove', file.appFile, () => file.open = false)"
-            >
-              <v-icon>$delete</v-icon>
-              {{ $t('app.general.btn.remove') }}
-            </app-btn>
-            <app-btn
-              v-if="file.appFile && downloadable"
-              color="primary"
-              @click="$emit('download', file.appFile)"
-            >
-              <v-icon>$download</v-icon>
-              {{ $t('app.general.btn.download') }}
-            </app-btn>
-          </v-card-actions>
-        </template>
-      </v-card>
-    </v-form>
-  </v-dialog>
+      <v-card-actions class="pt-4">
+        <v-spacer />
+        <app-btn
+          v-if="!readonly"
+          text
+          color="error"
+          @click="$emit('remove', file)"
+        >
+          <v-icon>$delete</v-icon>
+          {{ $t('app.general.btn.remove') }}
+        </app-btn>
+        <app-btn
+          color="primary"
+          @click="$emit('download', file)"
+        >
+          <v-icon>$download</v-icon>
+          {{ $t('app.general.btn.download') }}
+        </app-btn>
+      </v-card-actions>
+    </template>
+  </app-dialog>
 </template>
 
 <script lang="ts">
-import { Component, Prop, Mixins } from 'vue-property-decorator'
+import { Component, Prop, Mixins, VModel, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import { FilePreviewState } from '@/store/files/types'
+import type { AppFile } from '@/store/files/types'
+import { Marked, type MarkedExtension, type Tokens } from 'marked'
+import { baseUrl } from 'marked-base-url'
+import { consola } from 'consola'
 
 @Component({})
 export default class FilePreviewDialog extends Mixins(StateMixin) {
-  @Prop({ type: Boolean, default: false })
-  readonly value!: boolean
+  @VModel({ type: Boolean })
+  open?: boolean
 
-  @Prop({ type: Object, required: true })
-  readonly file!: FilePreviewState
+  @Prop({ type: String })
+  readonly path?: string
 
-  @Prop({ type: Boolean, default: false })
-  readonly downloadable!: boolean
+  @Prop({ type: Object })
+  readonly file?: AppFile
 
-  @Prop({ type: Boolean, default: false })
-  readonly removable!: boolean
+  @Prop({ type: String, required: true })
+  readonly filename!: string
 
-  get width () {
+  @Prop({ type: String })
+  readonly extension?: string
+
+  @Prop({ type: String, required: true })
+  readonly src!: string
+
+  @Prop({ type: String, required: true })
+  readonly type!: string
+
+  @Prop({ type: Number })
+  readonly width?: number
+
+  @Prop({ type: Boolean })
+  readonly readonly?: boolean
+
+  renderedMarkdown: string | null = null
+
+  abortController: AbortController | null = null
+
+  get calculatedWidth () {
     const defaultWidth = window.innerWidth * (this.$vuetify.breakpoint.mdAndDown ? 1 : 0.75)
-    return Math.min(window.innerWidth * 0.9, Math.max(this.file.width ?? defaultWidth, defaultWidth / 2))
+    return Math.min(window.innerWidth * 0.9, Math.max(this.width ?? defaultWidth, defaultWidth / 2))
   }
 
   get isVideo () {
-    return this.file.type.startsWith('video/')
+    return this.type.startsWith('video/')
   }
 
   get isImage () {
-    return this.file.type === 'image'
+    return this.type.startsWith('image/')
+  }
+
+  get isMarkdown () {
+    return this.type.startsWith('text/markdown')
+  }
+
+  get apiUrl (): string {
+    return this.$typedState.config.apiUrl
+  }
+
+  async LoadMarkdown (signal: AbortSignal) {
+    if (!this.path) {
+      // refuse rendering markdown if no base path has been supplied
+      consola.error('[FilePreviewDialog] missing path property in markdown viewer')
+
+      return
+    }
+
+    try {
+      const response = await fetch(this.src, { signal })
+      const data = await response.text()
+
+      const apiFileUrl = `${this.apiUrl}/server/files/${this.path}/`
+
+      const baseUrlExtension = baseUrl(apiFileUrl)
+
+      const customExtension: MarkedExtension = {
+        renderer: {
+          link (args: Tokens.Link) {
+            const html = this.constructor.prototype.link.call(this, args)
+
+            return html.replace(/^<a /, '<a target="_blank" rel="noopener noreferrer" ')
+          }
+        }
+      }
+
+      const marked = new Marked(baseUrlExtension, customExtension)
+
+      const renderedMarkdown = await marked.parse(data, {
+        async: true
+      })
+
+      if (!signal.aborted) {
+        this.renderedMarkdown = renderedMarkdown
+      }
+    } catch (error: unknown) {
+      if (!signal.aborted) {
+        consola.error('[FilePreviewDialog] load markdown', error)
+      }
+    }
+  }
+
+  @Watch('open')
+  onOpenChanged (value: boolean) {
+    if (value && this.isMarkdown) {
+      const controller = this.abortController = new AbortController()
+
+      this.LoadMarkdown(controller.signal)
+    } else {
+      this.abortController?.abort()
+      this.abortController = null
+
+      this.renderedMarkdown = null
+    }
+  }
+
+  beforeDestroy () {
+    this.abortController?.abort()
   }
 }
 </script>
@@ -98,6 +192,29 @@ export default class FilePreviewDialog extends Mixins(StateMixin) {
 <style lang="scss" scoped>
 video, img {
   max-width: 100%;
-  max-height: calc(90vh - (24px + 16px + 8px) * 2);
+  max-height: calc(90vh - 144px);
+}
+
+:deep(.markdown-container) {
+  img {
+    max-width: 100% !important;
+  }
+
+  table {
+    border-collapse: collapse;
+
+    th, td {
+      border: 1px solid;
+      padding: 2px 6px;
+    }
+  }
+
+  pre > code {
+    display: block;
+  }
+
+  * {
+    margin-bottom: 1em;
+  }
 }
 </style>

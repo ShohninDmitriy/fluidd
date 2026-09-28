@@ -2,8 +2,6 @@
   <collapsable-card
     :title="$t('app.timelapse.title.timelapse_status')"
     icon="$info"
-    class="mb-2 sb-sm-4"
-    :draggable="false"
   >
     <v-card-text>
       <v-row>
@@ -33,9 +31,8 @@
       <v-row>
         <v-col cols="12">
           <v-layout justify-center>
-            <app-slider
+            <app-named-slider
               v-model="selectedFrame"
-              full-width
               :label="$tc('app.timelapse.label.frame')"
               :min="1"
               :max="frameCount"
@@ -76,9 +73,11 @@
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import FileSystem from '@/components/widgets/filesystem/FileSystem.vue'
-import { RenderStatus, TimelapseLastFrame, TimelapseSettings } from '@/store/timelapse/types'
+import type { TimelapseLastFrame } from '@/store/timelapse/types'
 import { SocketActions } from '@/api/socketActions'
 import CameraItem from '@/components/widgets/camera/CameraItem.vue'
+import FilesMixin from '@/mixins/files'
+import { defaultWritableSettings } from '@/store/timelapse/state'
 
 @Component({
   components: {
@@ -86,11 +85,11 @@ import CameraItem from '@/components/widgets/camera/CameraItem.vue'
     FileSystem
   }
 })
-export default class StatusCard extends Mixins(StateMixin) {
+export default class StatusCard extends Mixins(StateMixin, FilesMixin) {
   selectedFrameNumber = 0
 
   saveFrames () {
-    SocketActions.machineTimelapseSaveFrames(this.$waits.onTimelapseSaveFrame)
+    SocketActions.machineTimelapseSaveFrames()
   }
 
   get savingFrames () {
@@ -106,21 +105,15 @@ export default class StatusCard extends Mixins(StateMixin) {
   }
 
   get previewUrl () {
-    const url = new URL(this.apiUrl ?? document.location.origin)
+    const file = this.lastFrame?.file
 
-    if (this.lastFrame && this.lastFrame?.file) {
-      let file = this.lastFrame?.file
-      if (this.selectedFrame) {
-        const [ext] = file.split('.').slice(-1)
-        file = `frame${this.selectedFrame.toString().padStart(6, '0')}.${ext}`
-      }
+    if (file) {
+      const fullFile = this.selectedFrame
+        ? `frame${this.selectedFrame.toString().padStart(6, '0')}.${file.split('.').pop()}`
+        : file
 
-      url.pathname = `/server/files/timelapse_frames/${file}`
-    } else {
-      return
+      return this.createFileUrl(fullFile, 'timelapse_frames')
     }
-
-    return url.toString()
   }
 
   get isRendering () {
@@ -131,20 +124,20 @@ export default class StatusCard extends Mixins(StateMixin) {
     return this.lastFrame?.uniqueCount
   }
 
-  get camera () {
-    return this.$store.getters['cameras/getCameraById'](this.settings.camera)
+  get camera (): Moonraker.Webcam.Entry | undefined {
+    return this.$typedGetters['webcams/getWebcamById'](this.settings.camera)
   }
 
-  get settings (): TimelapseSettings {
-    return this.$store.getters['timelapse/getSettings']
+  get settings (): Moonraker.Timelapse.WriteableSettings {
+    return this.$typedState.timelapse.settings ?? defaultWritableSettings
   }
 
-  get lastFrame (): TimelapseLastFrame | undefined {
-    return this.$store.getters['timelapse/getLastFrame']
+  get lastFrame (): TimelapseLastFrame | null {
+    return this.$typedGetters['timelapse/getLastFrame']
   }
 
-  get renderStatus (): RenderStatus | undefined {
-    return this.$store.getters['timelapse/getRenderStatus']
+  get renderStatus (): Moonraker.Timelapse.RenderResponse | null {
+    return this.$typedState.timelapse.renderStatus
   }
 
   get renderProgress () {
@@ -156,16 +149,13 @@ export default class StatusCard extends Mixins(StateMixin) {
 
     return 0
   }
-
-  get apiUrl () {
-    return this.$store.state.config.apiUrl
-  }
 }
 </script>
 
 <style lang="scss" scoped>
 .thumbnail {
   width: 100%;
+  pointer-events: none;
 }
 
 .render-progress {

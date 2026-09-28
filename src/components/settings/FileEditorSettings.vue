@@ -8,13 +8,10 @@
       dense
       class="mb-4"
     >
-      <app-setting
-        :title="$t('app.setting.label.confirm_dirty_editor_close')"
-      >
+      <app-setting :title="$t('app.setting.label.confirm_dirty_editor_close')">
         <v-switch
           v-model="confirmDirtyEditorClose"
           hide-details
-          class="mb-5"
           @click.native.stop
         />
       </app-setting>
@@ -37,14 +34,35 @@
 
       <v-divider />
 
-      <app-setting
-        :title="$t('app.setting.label.show_code_lens')"
-      >
+      <app-setting :title="$t('app.setting.label.save_and_restore_view_state')">
+        <v-select
+          v-model="restoreViewState"
+          filled
+          dense
+          hide-details="auto"
+          :items="availableRestoreViewState"
+        />
+      </app-setting>
+
+      <v-divider />
+
+      <app-setting :title="$t('app.setting.label.show_code_lens')">
         <v-switch
           v-model="codeLens"
           hide-details
-          class="mb-5"
           @click.native.stop
+        />
+      </app-setting>
+
+      <v-divider />
+
+      <app-setting :title="$t('app.setting.label.klipper_save_and_restart_action')">
+        <v-select
+          v-model="klipperSaveAndRestartAction"
+          filled
+          dense
+          hide-details="auto"
+          :items="availableKlipperSaveAndRestartActions"
         />
       </app-setting>
 
@@ -67,18 +85,17 @@
 <script lang="ts">
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import { defaultState } from '@/store/config/state'
+import { createState } from '@/store/config/state'
+import type { KlipperSaveAndRestartAction, RestoreViewState } from '@/store/config/types'
 
-@Component({
-  components: {}
-})
+@Component({})
 export default class FileEditorSettings extends Mixins(StateMixin) {
   get confirmDirtyEditorClose (): boolean {
-    return this.$store.state.config.uiSettings.editor.confirmDirtyEditorClose
+    return this.$typedState.config.uiSettings.editor.confirmDirtyEditorClose
   }
 
   set confirmDirtyEditorClose (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.editor.confirmDirtyEditorClose',
       value,
       server: true
@@ -86,36 +103,99 @@ export default class FileEditorSettings extends Mixins(StateMixin) {
   }
 
   get autoEditExtensions (): string[] {
-    return this.$store.state.config.uiSettings.editor.autoEditExtensions
+    return this.$typedState.config.uiSettings.editor.autoEditExtensions
   }
 
   set autoEditExtensions (value: string[]) {
-    value = value.map((ext: string) => ext.startsWith('.') ? ext : `.${ext}`)
-    value = value.filter((ext: string, index: number) => value.indexOf(ext) === index) // deduplicate entries
-
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.editor.autoEditExtensions',
-      value: value.sort(),
+      value: [
+        ...new Set(value.map(ext => ext.startsWith('.') ? ext : `.${ext}`))
+      ].sort((a, b) => a.localeCompare(b)),
       server: true
     })
   }
 
+  get restoreViewState (): RestoreViewState {
+    return this.$typedState.config.uiSettings.editor.restoreViewState
+  }
+
+  set restoreViewState (value: RestoreViewState) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.editor.restoreViewState',
+      value,
+      server: true
+    })
+  }
+
+  get availableRestoreViewState (): { value: RestoreViewState, text: string }[] {
+    return [
+      {
+        value: 'never',
+        text: this.$tc('app.setting.label.never')
+      },
+      {
+        value: 'session',
+        text: this.$tc('app.setting.label.to_browser_session_storage')
+      },
+      {
+        value: 'local',
+        text: this.$tc('app.setting.label.to_browser_local_storage')
+      }
+    ]
+  }
+
   get codeLens (): boolean {
-    return this.$store.state.config.uiSettings.editor.codeLens
+    return this.$typedState.config.uiSettings.editor.codeLens
   }
 
   set codeLens (value: boolean) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.editor.codeLens',
       value,
       server: true
     })
   }
 
+  get klipperSaveAndRestartAction (): KlipperSaveAndRestartAction {
+    return this.$typedState.config.uiSettings.editor.klipperSaveAndRestartAction
+  }
+
+  set klipperSaveAndRestartAction (value: KlipperSaveAndRestartAction) {
+    this.$typedDispatch('config/saveByPath', {
+      path: 'uiSettings.editor.klipperSaveAndRestartAction',
+      value,
+      server: true
+    })
+  }
+
+  get availableKlipperSaveAndRestartActions (): { value: KlipperSaveAndRestartAction, text: string }[] {
+    const isSimulavrMcu: boolean = this.$typedGetters['printer/getIsSimulavrMcu']
+
+    return [
+      {
+        value: 'auto',
+        text: `${this.$tc('app.setting.label.auto')} (${isSimulavrMcu ? this.$tc('app.setting.label.service_restart') : this.$tc('app.setting.label.firmware_restart')})`,
+      },
+      {
+        value: 'firmware-restart',
+        text: this.$tc('app.setting.label.firmware_restart')
+      },
+      {
+        value: 'host-restart',
+        text: this.$tc('app.setting.label.host_restart')
+      },
+      {
+        value: 'service-restart',
+        text: this.$tc('app.setting.label.service_restart')
+      }
+    ]
+  }
+
   handleReset () {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.editor',
-      value: defaultState().uiSettings.editor,
+      value: createState().uiSettings.editor,
       server: true
     })
   }

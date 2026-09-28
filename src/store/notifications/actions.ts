@@ -1,10 +1,10 @@
-import { ActionTree } from 'vuex'
-import { EventBus, FlashMessageTypes } from '@/eventBus'
+import type { ActionTree } from 'vuex'
+import { EventBus } from '@/eventBus'
 import { v4 as uuidv4 } from 'uuid'
-import { NotificationsState, AppPushNotification, AppNotification } from './types'
-import { RootState } from '../types'
+import type { NotificationsState, AppPushNotification, AppNotification } from './types'
+import type { RootState } from '../types'
 
-export const actions: ActionTree<NotificationsState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -28,7 +28,7 @@ export const actions: ActionTree<NotificationsState, RootState> = {
         // snackbar: true,
         id: uuidv4(),
         type: 'info',
-        timestamp: new Date().getTime() / 1000,
+        timestamp: Date.now() / 1000,
         clear: true,
         merge: false
       },
@@ -46,7 +46,7 @@ export const actions: ActionTree<NotificationsState, RootState> = {
 
       if (payload.snackbar) {
         // Emit if snackbar is true.
-        EventBus.$emit(n.title, { type: FlashMessageTypes.error })
+        EventBus.$emit(n.title, { type: 'error' })
       }
     }
   },
@@ -71,4 +71,4 @@ export const actions: ActionTree<NotificationsState, RootState> = {
 
     dispatch('announcements/dismissAll', {}, { root: true })
   }
-}
+} satisfies ActionTree<NotificationsState, RootState>

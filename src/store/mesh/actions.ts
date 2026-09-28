@@ -1,8 +1,8 @@
-import { ActionTree } from 'vuex'
-import { MeshState } from './types'
-import { RootState } from '../types'
+import type { ActionTree } from 'vuex'
+import type { MatrixType, MeshState } from './types'
+import type { RootState } from '../types'
 
-export const actions: ActionTree<MeshState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -10,23 +10,23 @@ export const actions: ActionTree<MeshState, RootState> = {
     commit('setReset')
   },
 
-  async onMatrix ({ commit }, payload) {
+  async onMatrix ({ commit }, payload: MatrixType) {
     commit('setMatrix', payload)
   },
 
-  async onScale ({ commit }, payload) {
+  async onScale ({ commit }, payload: number) {
     commit('setScale', payload)
   },
 
-  async onBoxScale ({ commit }, payload) {
+  async onBoxScale ({ commit }, payload: number) {
     commit('setBoxScale', payload)
   },
 
-  async onWireframe ({ commit }, payload) {
+  async onWireframe ({ commit }, payload: boolean) {
     commit('setWireframe', payload)
   },
 
-  async onFlatSurface ({ commit }, payload) {
+  async onFlatSurface ({ commit }, payload: boolean) {
     commit('setFlatSurface', payload)
   }
-}
+} satisfies ActionTree<MeshState, RootState>

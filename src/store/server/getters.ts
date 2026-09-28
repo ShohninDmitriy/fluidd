@@ -1,35 +1,20 @@
-import { GetterTree } from 'vuex'
-import { ServerInfo, ServerConfig, ServerState, SystemInfo, ServerSystemStat, ServiceInfo, ServiceState } from './types'
-import { RootState } from '../types'
+import type { GetterTree } from 'vuex'
+import type { ServerState, ServiceInfo } from './types'
+import type { RootState } from '../types'
 import { Globals } from '@/globals'
+import { gte, valid } from 'semver'
+import type { KlippyApp } from '../printer/types'
 
-export const getters: GetterTree<ServerState, RootState> = {
-  /**
-   * Get's the current server info
-   */
-  getInfo: (state): ServerInfo => {
-    return state.info
-  },
+export const getters = {
+  getIsMinApiVersion: (state) => (minVersion: string): boolean => {
+    const apiVersion = state.info.api_version_string
 
-  /**
-   * Gets the current system info
-   */
-  getSystemInfo: (state): SystemInfo | null => {
-    return state.system_info
-  },
-
-  /**
-   * Return server config
-   */
-  getConfig: (state): ServerConfig => {
-    return state.config
-  },
-
-  /**
-   * Return server process stats
-   */
-  getProcessStats: (state): ServerSystemStat[] => {
-    return state.moonraker_stats
+    return !!(
+      apiVersion &&
+      valid(apiVersion) &&
+      valid(minVersion) &&
+      gte(apiVersion, minVersion)
+    )
   },
 
   /**
@@ -45,7 +30,7 @@ export const getters: GetterTree<ServerState, RootState> = {
    */
   getServices: (state): ServiceInfo[] => {
     const available_services: string[] = state.system_info?.available_services || []
-    const service_states: ServiceState = state.system_info?.service_state || {}
+    const service_states: Moonraker.Machine.ServiceState = state.system_info?.service_state || {}
 
     const services: ServiceInfo[] = [...available_services].sort().map((name: string) => {
       return name in service_states
@@ -60,7 +45,7 @@ export const getters: GetterTree<ServerState, RootState> = {
    * Maps configuration files to an object representing a config doc link,
    * along with a service name.
    */
-  getConfigMapByFilename: (state, getters, rootState) => (filename: string) => {
+  getConfigMapByFilename: (state, getters, rootState, rootGetters) => (filename: string) => {
     const configMap = Globals.CONFIG_SERVICE_MAP
 
     // First, see if can find an exact match.
@@ -76,16 +61,23 @@ export const getters: GetterTree<ServerState, RootState> = {
       item = configMap.find(o => o.suffix && filename.endsWith(o.suffix.toLowerCase()))
     }
 
+    if (
+      item?.service === 'klipper' &&
+      item.link
+    ) {
+      const klippyApp: KlippyApp = rootGetters['printer/getKlippyApp']
+
+      item.link = item.link.replace('{klipperDomain}', klippyApp.domain)
+    }
+
     if (item) {
       const itemService = item?.service
       const instanceIds = rootState.server.system_info?.instance_ids
 
       return {
-        serviceSupported: (instanceIds && itemService in instanceIds) || getters.getServices.some((i: ServiceInfo) => i.name === itemService),
+        serviceSupported: (instanceIds && itemService in instanceIds) || (getters.getServices as ServiceInfo[]).some(i => i.name === itemService),
         ...item
       }
     }
-
-    return {}
   }
-}
+} satisfies GetterTree<ServerState, RootState>

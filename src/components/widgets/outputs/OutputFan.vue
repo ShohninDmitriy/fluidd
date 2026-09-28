@@ -1,26 +1,25 @@
 <template>
   <div>
-    <app-slider
+    <app-named-slider
       v-if="fan.controllable"
       suffix="%"
-      input-xs
       :value="value"
       :reset-value="0"
       :label="(rpm) ? `${fan.prettyName} <small>${rpm}</small>` : fan.prettyName"
       :rules="[
         customRules.minFan
       ]"
-      :disabled="!klippyReady"
-      :locked="!klippyReady || isMobile"
+      :disabled="!klippyReady || fan.disconnected"
+      :locked="isMobileUserAgent"
       :loading="hasWait(`${$waits.onSetFanSpeed}${fan.name}`)"
-      @change="handleChange"
+      @submit="handleChange"
     />
 
     <v-layout
       v-else
       align-center
       justify-space-between
-      :class="{ 'text--disabled': !klippyReady }"
+      :class="{ 'text--disabled': !klippyReady || fan.disconnected }"
     >
       <div class="text-body-1">
         {{ fan.prettyName }}
@@ -31,8 +30,8 @@
           class="mr-2"
         >{{ rpm }}</small>
         <span
+          v-safe-html="prettyValue"
           class="focus--text"
-          v-html="prettyValue"
         />
       </div>
     </v-layout>
@@ -41,23 +40,25 @@
 
 <script lang="ts">
 import { Component, Mixins, Prop } from 'vue-property-decorator'
-import { Fan } from '@/store/printer/types'
+import type { Fan } from '@/store/printer/types'
 import StateMixin from '@/mixins/state'
+import BrowserMixin from '@/mixins/browser'
+import { encodeGcodeParamValue } from '@/util/gcode-helpers'
 
 @Component({})
-export default class OutputFan extends Mixins(StateMixin) {
+export default class OutputFan extends Mixins(StateMixin, BrowserMixin) {
   @Prop({ type: Object, required: true })
   readonly fan!: Fan
 
   get prettyValue () {
     return (this.value === 0)
       ? this.$t('app.general.label.off')
-      : this.$t('app.general.label.on')
+      : `${this.value} %`
   }
 
   get value () {
     if (!this.fan.speed) return 0
-    const speed = this.fan.speed / (this.fan.config.max_power || 1)
+    const speed = this.fan.speed / (this.fan.config?.max_power || 1)
     return Math.round(speed * 100)
   }
 
@@ -69,7 +70,7 @@ export default class OutputFan extends Mixins(StateMixin) {
     }
     if (this.fan.type === 'fan_generic') {
       target = target / 100
-      this.sendGcode(`SET_FAN_SPEED FAN=${this.fan.name} SPEED=${target}`, `${this.$waits.onSetFanSpeed}${this.fan.name}`)
+      this.sendGcode(`SET_FAN_SPEED FAN=${encodeGcodeParamValue(this.fan.name)} SPEED=${target}`, `${this.$waits.onSetFanSpeed}${this.fan.name}`)
     }
   }
 
@@ -77,10 +78,6 @@ export default class OutputFan extends Mixins(StateMixin) {
     return (this.fan.rpm)
       ? this.fan.rpm.toFixed() + ' rpm'
       : undefined
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
   }
 
   get customRules () {

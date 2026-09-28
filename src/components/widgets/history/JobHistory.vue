@@ -1,13 +1,19 @@
 <template>
   <div class="file-system">
-    <v-toolbar
-      dense
-    >
+    <v-toolbar dense>
       <v-spacer />
+
+      <app-thumbnail-size v-model="thumbnailSize" />
+
+      <app-column-picker
+        v-if="headers"
+        key-name="history"
+        :headers="configurableHeaders"
+      />
 
       <div
         style="max-width: 160px;"
-        class="mr-1"
+        class="ms-1 my-1"
       >
         <v-text-field
           v-model="search"
@@ -15,172 +21,118 @@
           dense
           single-line
           hide-details
+          spellcheck="false"
           append-icon="$magnify"
-          @keyup="$emit('update:search', search);"
+          @focus="$event.target.select()"
         />
       </div>
-
-      <app-column-picker
-        v-if="headers"
-        key-name="history"
-        :headers="headers"
-      />
     </v-toolbar>
 
     <v-data-table
       :items="history"
-      :headers="visibleHeaders"
+      :headers="headers"
       :items-per-page="15"
-      :item-class="getRowClasses"
-      :single-expand="true"
       :search="search"
-      :expanded="expanded"
       mobile-breakpoint="0"
       item-key="job_id"
       sort-by="start_time"
       sort-desc
+      fixed-header
     >
-      <template #expanded-item="{ headers, item }">
-        <td
-          :colspan="headers.length"
-          class="pa-4"
+      <template #[`footer.page-text`]="{ pageStart, pageStop, itemsLength }">
+        {{
+          itemsLength === 0
+            ? '–'
+            : allLoaded
+              ? $t('app.general.table.footer.item_range', { pageStart, pageStop, itemsLength })
+              : $t('app.general.table.footer.item_range_loaded', { pageStart, pageStop, itemsLength })
+        }}
+      </template>
+
+      <template #item="{ headers, item }">
+        <app-data-table-row
+          :key="item.job_id"
+          :headers="headers"
+          :item="item"
+          :class="{
+            'v-data-table__inactive': !item.exists
+          }"
+          :custom-getter="getItemValue"
         >
-          <div class="chip-group">
-            <template v-for="(key, i) in Object.keys(item.metadata)">
-              <v-chip
-                v-if="key !== 'thumbnails'"
-                :key="i"
-                small
-              >
-                {{ key }}: {{ item.metadata[key] }}
-              </v-chip>
-            </template>
-          </div>
-        </td>
-      </template>
-
-      <template
-        #[`item.data-table-icons`]="{ item }"
-      >
-        <!-- If the item no longer exists. -->
-        <v-icon
-          v-if="!item.exists"
-          class="mr-2"
-          color="secondary"
-        >
-          $fileCancel
-        </v-icon>
-
-        <!-- If the item exists, but has no thumbnail data. -->
-        <v-icon
-          v-if="item.exists && !item.metadata.thumbnails"
-          class="mr-2"
-        >
-          $fileDocument
-        </v-icon>
-
-        <!-- If the item exists, and we have thumbnail data. -->
-        <img
-          v-if="item.exists && item.metadata.thumbnails && item.metadata.thumbnails.length"
-          class="mr-2 file-icon-thumb"
-          :src="getThumbUrl(item.metadata.thumbnails, getFilePaths(item.filename).path, false, item.metadata.modified)"
-          :width="24"
-        >
-      </template>
-
-      <template
-        #[`item.filename`]="{ item }"
-      >
-        <span class="">
-          {{ getFilePaths(item.filename).filename }}
-        </span>
-      </template>
-
-      <template
-        #[`item.status`]="{ item }"
-      >
-        <job-history-item-status :job="item" />
-      </template>
-
-      <template
-        #[`item.start_time`]="{ item }"
-      >
-        <span class="text-no-wrap">
-          {{ $filters.formatDateTime(item.start_time * 1000) }}
-        </span>
-      </template>
-
-      <template
-        #[`item.end_time`]="{ item }"
-      >
-        <span
-          v-if="item.status !== 'in_progress'"
-          class="text-no-wrap"
-        >
-          {{ $filters.formatDateTime(item.end_time * 1000) }}
-        </span>
-        <span v-else>--</span>
-      </template>
-
-      <template
-        #[`item.print_duration`]="{ item }"
-      >
-        <span class="text-no-wrap">
-          {{ $filters.formatCounterTime(item.print_duration) }}
-        </span>
-      </template>
-
-      <template
-        #[`item.total_duration`]="{ item }"
-      >
-        <span class="text-no-wrap">
-          {{ $filters.formatCounterTime(item.total_duration) }}
-        </span>
-      </template>
-
-      <template
-        #[`item.filament_used`]="{ item }"
-      >
-        <span class="text-no-wrap">
-          {{ $filters.getReadableLengthString(item.filament_used) }}
-        </span>
-      </template>
-
-      <template
-        #[`item.metadata.size`]="{ item }"
-      >
-        <span class="text-no-wrap">
-          {{ $filters.getReadableFileSizeString(item.metadata.size) }}
-        </span>
-      </template>
-
-      <template
-        #[`item.actions`]="{ item }"
-      >
-        <div class="text-no-wrap">
-          <v-btn
-            icon
-            small
-            @click="handleRemoveJob(item)"
-          >
-            <v-icon
-              small
-              color=""
+          <template #[`item.data-table-icons`]>
+            <v-layout
+              justify-center
+              class="no-pointer-events"
             >
-              $delete
-            </v-icon>
-          </v-btn>
-          <v-btn
-            class="v-data-table__expand-icon"
-            color=""
-            :class="{ 'v-data-table__expand-icon--active': isExpanded(item) }"
-            icon
-            small
-            @click.prevent.stop="toggleRowExpand(item)"
-          >
-            <v-icon>$chevronDown</v-icon>
-          </v-btn>
-        </div>
+              <!-- If the item no longer exists. -->
+              <v-icon
+                v-if="!item.exists"
+                color="grey"
+              >
+                $fileCancel
+              </v-icon>
+
+              <!-- If the item exists, but has no thumbnail data. -->
+              <v-icon
+                v-else-if="!item.metadata.thumbnails?.length"
+                color="grey"
+              >
+                $file
+              </v-icon>
+
+              <!-- If the item exists, and we have thumbnail data. -->
+              <img
+                v-else
+                class="file-icon-thumb"
+                :style="{
+                  'max-width': `${thumbnailSize}px`,
+                  'max-height': `${thumbnailSize}px`
+                }"
+                :src="getThumbUrl(item.metadata, 'gcodes', getFilePaths(item.filename).path, thumbnailSize > 16, item.metadata.modified)"
+                @error="handleJobThumbnailError(item)"
+              >
+            </v-layout>
+          </template>
+
+          <template #[`item.status`]>
+            <job-history-item-status :job="item" />
+          </template>
+
+          <template #[`item-value.metadata.filament_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
+          </template>
+
+          <template #[`item-value.metadata.extruder_colors`]="{ value }">
+            <app-data-table-cell-colors :colors="value" />
+          </template>
+
+          <template #[`item-value.metadata.filament_temps`]="{ value }">
+            <app-data-table-cell-temps :temps="value" />
+          </template>
+
+          <template #[`item-value.metadata.first_layer_bed_temp`]="{ value }">
+            {{ value }}<small>°C</small>
+          </template>
+
+          <template #[`item-value.metadata.first_layer_extr_temp`]="{ value }">
+            {{ value }}<small>°C</small>
+          </template>
+
+          <template #[`item-value.metadata.chamber_temp`]="{ value }">
+            {{ value }}<small>°C</small>
+          </template>
+
+          <template #[`item.actions`]>
+            <app-btn
+              icon
+              @click="handleRemoveJob(item)"
+            >
+              <v-icon dense>
+                $delete
+              </v-icon>
+            </app-btn>
+          </template>
+        </app-data-table-row>
       </template>
     </v-data-table>
   </div>
@@ -191,9 +143,11 @@ import { Component, Mixins } from 'vue-property-decorator'
 import JobHistoryItemStatus from './JobHistoryItemStatus.vue'
 import FilesMixin from '@/mixins/files'
 import getFilePaths from '@/util/get-file-paths'
-import { HistoryItem } from '@/store/history/types'
+import type { HistoryItem } from '@/store/history/types'
 import { SocketActions } from '@/api/socketActions'
-import { AppTableHeader } from '@/types'
+import type { AppDataTableHeader } from '@/types'
+import type { DataTableHeader } from 'vuetify'
+import type { DefaultGetterFunction } from '@/components/ui/AppDataTableRow.vue'
 
 @Component({
   components: {
@@ -201,63 +155,400 @@ import { AppTableHeader } from '@/types'
   }
 })
 export default class JobHistory extends Mixins(FilesMixin) {
-  expanded: HistoryItem[] = []
   search = ''
 
-  get headers (): AppTableHeader[] {
-    const headers = [
-      { text: '', value: 'data-table-icons', sortable: false, width: '24px' },
-      { text: this.$tc('app.general.table.header.name'), value: 'filename' },
-      { text: this.$tc('app.general.table.header.status'), value: 'status', configurable: true },
-      { text: this.$tc('app.general.table.header.start_time'), value: 'start_time', configurable: true },
-      { text: this.$tc('app.general.table.header.end_time'), value: 'end_time', configurable: true },
-      { text: this.$tc('app.general.table.header.print_duration'), value: 'print_duration', configurable: true },
-      { text: this.$tc('app.general.table.header.total_duration'), value: 'total_duration', configurable: true },
-      { text: this.$tc('app.general.table.header.filament_used'), value: 'filament_used', configurable: true },
-      { text: this.$t('app.general.table.header.size'), value: 'metadata.size', width: '1%', configurable: true },
-      { text: this.$tc('app.general.table.header.actions'), value: 'actions', sortable: false, align: 'end' }
+  get auxiliaryDataHeaders (): AppDataTableHeader[] {
+    const auxiliaryDataHeaders = this.history
+      .reduce<Record<string, string>>((headers, item) => {
+        if (item.auxiliary_data) {
+          for (const auxiliaryDataItem of item.auxiliary_data) {
+            headers[auxiliaryDataItem.name] = auxiliaryDataItem.description
+          }
+        }
+
+        return headers
+      }, {})
+
+    for (const sensor of this.sensors) {
+      if (sensor.history_fields) {
+        for (const historyField of sensor.history_fields) {
+          auxiliaryDataHeaders[historyField.field] = historyField.description
+        }
+      }
+    }
+
+    return Object.entries(auxiliaryDataHeaders)
+      .map(([name, description]): AppDataTableHeader => ({
+        text: this.$filters.prettyCase(description),
+        value: `auxiliary_data.${name}`,
+        cellClass: 'text-no-wrap'
+      }))
+  }
+
+  get configurableHeaders (): AppDataTableHeader[] {
+    const headers: AppDataTableHeader[] = [
+      {
+        text: this.$tc('app.general.table.header.status'),
+        value: 'status',
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.start_time'),
+        value: 'start_time',
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.end_time'),
+        value: 'end_time',
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.print_duration'),
+        value: 'print_duration',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.total_duration'),
+        value: 'total_duration',
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_used'),
+        value: 'filament_used',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.user'),
+        value: 'user',
+        visible: false,
+        cellClass: 'text-no-wrap',
+      },
+      {
+        text: this.$tc('app.general.table.header.height'),
+        value: 'metadata.object_height',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.first_layer_height'),
+        value: 'metadata.first_layer_height',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.layer_height'),
+        value: 'metadata.layer_height',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_name'),
+        value: 'metadata.filament_name',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_colors'),
+        value: 'metadata.filament_colors',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.extruder_colors'),
+        value: 'metadata.extruder_colors',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_temps'),
+        value: 'metadata.filament_temps',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_type'),
+        value: 'metadata.filament_type',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament'),
+        value: 'metadata.filament_total',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_change_count'),
+        value: 'metadata.filament_change_count',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_weight_total'),
+        value: 'metadata.filament_weight_total',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.filament_weights'),
+        value: 'metadata.filament_weights',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.mmu_print'),
+        value: 'metadata.mmu_print',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.referenced_tools'),
+        value: 'metadata.referenced_tools',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.nozzle_diameter'),
+        value: 'metadata.nozzle_diameter',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.slicer'),
+        value: 'metadata.slicer',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.slicer_version'),
+        value: 'metadata.slicer_version',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.printer_vendor'),
+        value: 'metadata.printer_vendor',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.printer_model'),
+        value: 'metadata.printer_model',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.printer_variant'),
+        value: 'metadata.printer_variant',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.profile_version'),
+        value: 'metadata.profile_version',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.estimated_time'),
+        value: 'metadata.estimated_time',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.first_layer_bed_temp'),
+        value: 'metadata.first_layer_bed_temp',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.first_layer_extr_temp'),
+        value: 'metadata.first_layer_extr_temp',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.chamber_temp'),
+        value: 'metadata.chamber_temp',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      {
+        text: this.$tc('app.general.table.header.file_processors'),
+        value: 'metadata.file_processors',
+        visible: false,
+        cellClass: 'text-no-wrap'
+      },
+      ...this.auxiliaryDataHeaders,
+      {
+        text: this.$tc('app.general.table.header.modified'),
+        value: 'metadata.modified',
+        cellClass: 'text-no-wrap',
+        width: '1%'
+      },
+      {
+        text: this.$tc('app.general.table.header.size'),
+        value: 'metadata.size',
+        cellClass: 'text-no-wrap',
+        width: '1%'
+      },
     ]
-    const key = 'history'
-    return this.$store.getters['config/getMergedTableHeaders'](headers, key)
+
+    const mergedTableHeaders: AppDataTableHeader[] = this.$typedGetters['config/getMergedTableHeaders'](headers, 'history')
+
+    return mergedTableHeaders
   }
 
-  get visibleHeaders (): AppTableHeader[] {
-    return this.headers.filter(header => header.visible || header.visible === undefined)
+  get headers (): DataTableHeader[] {
+    return [
+      {
+        text: '',
+        value: 'data-table-icons',
+        sortable: false,
+        width: 24
+      },
+      {
+        text: this.$tc('app.general.table.header.name'),
+        value: 'filename'
+      },
+      ...this.configurableHeaders
+        .filter(header => header.visible !== false),
+      {
+        text: this.$tc('app.general.table.header.actions'),
+        value: 'actions',
+        sortable: false,
+        align: 'end'
+      }
+    ]
   }
 
-  get history () {
-    return this.$store.getters['history/getHistory']
+  get thumbnailSize (): number {
+    return this.$typedState.config.uiSettings.thumbnailSizes.history ?? 32
   }
 
-  getRowClasses (item: HistoryItem) {
-    if (!item.exists) return 'v-data-table__inactive'
-    return ''
+  set thumbnailSize (value: number) {
+    this.$typedDispatch('config/updateThumbnailSizes', { name: 'history', size: value })
+  }
+
+  get sensors (): Moonraker.Sensor.Entry[] {
+    return this.$typedGetters['sensors/getSensors']
+  }
+
+  get history (): HistoryItem[] {
+    return this.$typedGetters['history/getHistory']
+  }
+
+  get allLoaded (): boolean {
+    return this.$typedState.history.allLoaded
   }
 
   getFilePaths (filename: string) {
     return getFilePaths(filename, 'gcodes')
   }
 
-  getFilename (filename: string) {
-    return filename.split('/').pop() || ''
-  }
+  async handleRemoveJob (job: HistoryItem) {
+    const result = await this.$confirm(
+      this.$tc('app.general.simple_form.msg.confirm_delete', 1),
+      { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
+    )
 
-  handleRemoveJob (job: HistoryItem) {
-    SocketActions.serverHistoryDeleteJob(job.job_id)
-  }
-
-  isExpanded (row: HistoryItem) {
-    if (this.expanded.length <= 0) return false
-    const r = this.expanded[0] as HistoryItem
-    return (row.job_id === r.job_id)
-  }
-
-  toggleRowExpand (row: HistoryItem) {
-    if (this.isExpanded(row)) {
-      this.expanded = []
-    } else {
-      this.expanded = [row]
+    if (result) {
+      SocketActions.serverHistoryDeleteJob(job.job_id)
     }
+  }
+
+  handleJobThumbnailError (job: HistoryItem) {
+    this.$typedDispatch('history/clearHistoryThumbnails', job.job_id)
+  }
+
+  getItemValue (item: HistoryItem, header: DataTableHeader, defaultGetter: DefaultGetterFunction) {
+    if (header.value.startsWith('auxiliary_data.')) {
+      const auxiliaryDataItemName = header.value.substring(15)
+
+      const { value, units } = item.auxiliary_data?.find(x => x.name === auxiliaryDataItemName) ?? {}
+
+      if (
+        Array.isArray(value) &&
+        value.length > 0
+      ) {
+        return value
+          .map(x => this.formatValueWithUnits(x, units))
+      }
+
+      return this.formatValueWithUnits(value, units)
+    }
+
+    const value = defaultGetter(item, header)
+
+    if (typeof value === 'number') {
+      switch (header.value) {
+        case 'start_time':
+        case 'end_time':
+        case 'metadata.modified': {
+          return this.$filters.formatDateTime(value * 1000)
+        }
+
+        case 'metadata.size':
+          return this.$filters.getReadableFileSizeString(value)
+
+        case 'print_duration':
+        case 'total_duration':
+        case 'metadata.estimated_time':
+          return this.$filters.formatCounterSeconds(value)
+
+        case 'filament_used':
+        case 'metadata.filament_total':
+        case 'metadata.object_height':
+          return this.$filters.getReadableLengthString(value)
+
+        case 'metadata.filament_weight_total':
+          return this.$filters.getReadableWeightString(value)
+
+        case 'metadata.first_layer_height':
+        case 'metadata.layer_height':
+        case 'metadata.nozzle_diameter':
+          return `${value} mm`
+      }
+    }
+
+    if (Array.isArray(value) && value.length > 0) {
+      switch (header.value) {
+        case 'metadata.filament_weights':
+          return value
+            .map(x => typeof x === 'number'
+              ? this.$filters.getReadableWeightString(x)
+              : x
+            )
+
+        case 'metadata.file_processors':
+        case 'metadata.referenced_tools':
+          return value
+            .map(x => typeof x === 'string'
+              ? this.$filters.prettyCase(x)
+              : x
+            )
+      }
+    }
+
+    return value
+  }
+
+  formatValueWithUnits (value: unknown, units?: string | null) {
+    if (typeof value === 'number') {
+      const roundedValue = Math.round(value * 100) / 100
+
+      return units
+        ? `${roundedValue} ${units}`
+        : roundedValue.toString()
+    }
+
+    if (typeof value === 'string' && units) {
+      return `${value} ${units}`
+    }
+
+    return value
   }
 }
 </script>

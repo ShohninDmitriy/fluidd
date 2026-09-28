@@ -1,14 +1,15 @@
 import Vue from 'vue'
-import { MutationTree } from 'vuex'
-import { defaultState as getDefaultState } from './state'
-import { LayoutConfig, LayoutState, Layouts } from './types'
+import type { MutationTree } from 'vuex'
+import { createState } from './state'
+import type { LayoutConfig, LayoutState, LayoutContainer } from './types'
+import type { DiagnosticsCardContainer } from '../diagnostics/types'
 
-export const mutations: MutationTree<LayoutState> = {
+export const mutations = {
   /**
    * Reset state
    */
   setReset (state) {
-    Object.assign(state, getDefaultState())
+    Object.assign(state, createState())
   },
 
   /**
@@ -19,23 +20,55 @@ export const mutations: MutationTree<LayoutState> = {
    */
   setInitLayout (state, payload: LayoutState) {
     if (payload && Object.keys(payload).length > 0) {
-      const defaultState = getDefaultState()
-      const migratableLayouts = ['dashboard']
+      const defaultLayouts = createState().layouts
 
-      for (const [layout, defaultComponents] of Object.entries(defaultState.layouts)) {
-        if (!payload.layouts[layout]) {
-          payload.layouts[layout] = defaultComponents
-        } else if (migratableLayouts.includes(layout)) {
-          const defaultComponentIds = Object.values(defaultComponents).flat().map(card => card.id)
-          const currentComponentIds = Object.values(payload.layouts[layout]).flat().map(card => card.id)
+      // add new layouts
+      for (const [layoutKey, defaultLayout] of Object.entries(defaultLayouts)) {
+        if (!payload.layouts[layoutKey]) {
+          payload.layouts[layoutKey] = defaultLayout
+        }
+      }
 
-          for (const [container, defaultContainerComponents] of Object.entries(defaultComponents)) {
-            const currentContainerComponents = payload.layouts[layout][container] || []
+      // migrate existing layouts
+      const migratableLayoutKeys = ['dashboard']
 
-            payload.layouts[layout][container] = [
+      for (const [layoutKey, currentLayout] of Object.entries(payload.layouts)) {
+        for (const [containerKey, components] of Object.entries(currentLayout)) {
+          currentLayout[containerKey] = Array.isArray(components)
+            ? components
+              .filter(card => card != null)
+            : []
+        }
+
+        const migratableLayoutKey = migratableLayoutKeys.find(key => layoutKey.startsWith(key))
+
+        if (migratableLayoutKey) {
+          const defaultLayout = defaultLayouts[migratableLayoutKey]
+          const defaultComponentIds = Object.values(defaultLayout).flat().map(card => card.id)
+          const currentComponentIds = Object.values(currentLayout).flat().map(card => card.id)
+
+          for (const [containerKey, defaultContainerComponents] of Object.entries(defaultLayout)) {
+            const currentContainerComponents = currentLayout[containerKey] || []
+
+            currentLayout[containerKey] = [
               ...currentContainerComponents.filter(component => defaultComponentIds.includes(component.id)),
               ...defaultContainerComponents.filter(component => !currentComponentIds.includes(component.id))
             ]
+          }
+        }
+
+        // diagnostics specific layout updates
+        if (layoutKey.startsWith('diagnostics')) {
+          const diagnostics = currentLayout as DiagnosticsCardContainer
+
+          for (const diagnosticsCardConfigs of Object.values(diagnostics)) {
+            for (const diagnosticsCardConfig of diagnosticsCardConfigs) {
+              for (const axis of diagnosticsCardConfig.axes) {
+                for (const metric of axis.metrics) {
+                  metric.style.fillColor = metric.style.fillColor ?? null
+                }
+              }
+            }
           }
         }
       }
@@ -44,7 +77,7 @@ export const mutations: MutationTree<LayoutState> = {
     }
   },
 
-  setLayoutChange (state, payload: { name: string; value: Layouts }) {
+  setLayoutChange (state, payload: { name: string; value: LayoutContainer }) {
     Vue.set(state.layouts, payload.name, payload.value)
   },
 
@@ -54,4 +87,4 @@ export const mutations: MutationTree<LayoutState> = {
   setUpdateConfig (state, payload: { name: string; container: string; i: number; value: LayoutConfig }) {
     Vue.set(state.layouts[payload.name][payload.container], payload.i, payload.value)
   }
-}
+} satisfies MutationTree<LayoutState>

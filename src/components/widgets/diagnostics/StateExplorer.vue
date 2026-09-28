@@ -11,15 +11,20 @@
 <script lang="ts">
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import JsonViewer from 'vue-json-viewer'
+import JsonViewerModule from 'vue-json-viewer'
+
+// Rolldown (Vite 8) doesn't auto-unwrap __esModule CJS modules
+const JsonViewer = JsonViewerModule.default ?? JsonViewerModule
 
 @Component({
-  components: { JsonViewer }
+  components: {
+    JsonViewer
+  }
 })
 export default class StateExplorer extends Mixins(StateMixin) {
   get state () {
     return {
-      printer: this.$store.state.printer.printer
+      printer: this.$typedState.printer.printer
     }
   }
 
@@ -31,7 +36,7 @@ export default class StateExplorer extends Mixins(StateMixin) {
   handleClick (path: string) {
     const sanitizedPath = path
       .replace('$.', '')
-      .replace(/\.(\w*[^\w\S.]+\w*)/g, (_, match) => {
+      .replace(/\.(\w*\s+\w*)/g, (_, match) => {
         if (isNaN(match)) return `['${match}']`
         return `[${match}]`
       })

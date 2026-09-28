@@ -1,12 +1,11 @@
-import Vue from 'vue'
-import { ActionTree } from 'vuex'
-import { AuthState } from './types'
-import { RootState } from '../types'
-import { httpClientActions } from '@/api/httpClientActions'
-import router from '@/router'
-import consola from 'consola'
+import type { ActionTree } from 'vuex'
+import type { AuthState } from './types'
+import type { RootState } from '../types'
+import { consola } from 'consola'
+import { SocketActions } from '@/api/socketActions'
+import type { TokenKeys } from '../config/types'
 
-export const actions: ActionTree<AuthState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -18,228 +17,126 @@ export const actions: ActionTree<AuthState, RootState> = {
    * Inits moonraker component
    */
   async init ({ commit }) {
-    // Load current user.
-    await httpClientActions.accessCurrentUserGet()
-      .then(response => response.data.result)
-      .then((user) => commit('setCurrentUser', user))
+    await Promise.all([
+      // Load current user.
+      SocketActions.accessGetUser()
+        .then(response => commit('setCurrentUser', response)),
 
-    // Load user list.
-    await httpClientActions.accessUsersListGet()
-      .then(response => response.data.result.users)
-      .then((users) => commit('setUsers', users))
+      // Load user list.
+      SocketActions.accessUsersList()
+        .then(response => commit('setUsers', response.users)),
 
-    // Load our current API key.
-    await httpClientActions.accessApiKeyGet()
-      .then(response => response.data.result)
-      .then((key) => commit('setApiKey', key))
+      // Load our current API key.
+      SocketActions.accessGetApiKey()
+        .then(response => commit('setApiKey', response)),
+    ])
+  },
+
+  async login ({ commit, dispatch, rootGetters }, { username, password, source }) {
+    const user = await SocketActions.accessLogin(username, password, source)
+
+    // Successful login. Moonraker has authenticated the current socket as
+    // this user; store the tokens and hand off to the socket state machine,
+    // which will re-identify (reading the fresh token from localStorage) and
+    // run the post-auth bootstrap on the transition to `ready`.
+    const keys: TokenKeys = rootGetters['config/getTokenKeys']
+    localStorage.setItem(keys.userToken, user.token)
+    localStorage.setItem(keys.refreshToken, user.refresh_token)
+    commit('setCurrentUser', {
+      username: user.username,
+      source: user.source
+    })
+
+    await dispatch('socket/onSetStatus', 'identifying', { root: true })
+
+    return user
   },
 
   /**
-   * Init auth status / tokens.
+   * Logout the user. Removes their tokens and clears the in-memory auth state.
+   * For a full logout, also transitions the socket to `authenticating` so
+   * App.vue renders the login overlay. The websocket connection is intentionally
+   * kept open so the login overlay can call access.info / access.login over it.
    */
-  async initAuth ({ commit, rootState, rootGetters }) {
-    // No known API?
-    // This is likely a new setup with no known instances yet. Set auth to true
-    // and move on until we know more.
-    if (rootState.config.apiUrl === '') {
-      commit('setAuthenticated', true)
-      return
-    }
+  async logout ({ commit, dispatch, rootGetters, rootState }, payload: { invalidate?: boolean; partial?: boolean } = {}) {
+    const { invalidate = false, partial = false } = payload
 
-    // Load our tokens and apply them if found.
-    const keys = rootGetters['config/getTokenKeys']
-    const refreshToken = localStorage.getItem(keys['refresh-token'])
-    const token = localStorage.getItem(keys['user-token'])
-    if (token && refreshToken) {
-      // We have tokens, commit to them to memory and setup the axios auth
-      // header.
-      commit('setToken', token)
-      commit('setRefreshToken', refreshToken)
-      httpClientActions.defaults.headers.common.Authorization = `Bearer ${token}`
-    } else {
-      // No tokens, delete auth header.
-      delete httpClientActions.defaults.headers.common.Authorization
-    }
-  },
-
-  /**
-   * Inspects the auth token to determine its validity.
-   */
-  async checkToken ({ state }) {
-    if (state.token?.exp) {
-      const exp = state.token.exp
-      const now = Date.now() / 1000 // now in unixtime.
-      const isExpiring = (exp - now) < 300 // refresh within 5 minutes / 5 * 60
-      if (isExpiring) {
-        consola.debug('checkToken - isExpiring', new Date(now * 1000), new Date(exp * 1000))
-        return true
-      } else {
-        // console.debug('checkToken - not isExpiring', new Date(now * 1000), new Date(exp * 1000))
-        return false
+    // Invalidate all sessions (server-side). The current socket session becomes
+    // anonymous; Moonraker does not close the connection.
+    if (invalidate) {
+      try {
+        await SocketActions.accessLogout({ suppressError: true })
+      } catch (e) {
+        consola.debug('accessLogout failed', e)
       }
     }
-    return false
-  },
 
-  /**
-   * Refresh the auth tokens.
-   */
-  async refreshTokens ({ commit, rootGetters }) {
-    const keys = rootGetters['config/getTokenKeys']
-    const refresh_token = localStorage.getItem(keys['refresh-token'])
-    return httpClientActions.accessRefreshJwtPost(refresh_token || '', {
-      withAuth: false
-    })
-      .then(response => response.data.result)
-      .then((response) => {
-        // We've successfully retrieved a token. Set the new header and
-        // store data, and move on.
-        localStorage.setItem(keys['user-token'], response.token)
-        commit('setToken', response.token)
-        httpClientActions.defaults.headers.common.Authorization = `Bearer ${response.token}`
-        return Promise.resolve(response.token)
-      })
-      .catch(() => {
-        // Error on refresh, we resolve and move on because our request will
-        // invoke a 401, which will then send the user to the login page.
-        return Promise.resolve()
-      })
-  },
+    const keys: TokenKeys = rootGetters['config/getTokenKeys']
+    localStorage.removeItem(keys.userToken)
+    localStorage.removeItem(keys.refreshToken)
 
-  async getAuthInfo () {
-    return httpClientActions.accessInfoGet({ withAuth: false })
-      .then(r => {
-        return {
-          defaultSource: r.data.result.default_source,
-          availableSources: r.data.result.available_sources
-        }
-      }).catch(() => {
-        // external authentication sources not supported
-        return {}
-      })
-  },
-
-  async login ({ commit, rootGetters }, { username, password, source }) {
-    const keys = rootGetters['config/getTokenKeys']
-    return httpClientActions.accessLoginPost(username, password, source)
-      .then(response => response.data.result)
-      .then(user => {
-        // Successful login. Set the tokens and auth status and move on.
-        localStorage.setItem(keys['user-token'], user.token)
-        localStorage.setItem(keys['refresh-token'], user.refresh_token)
-        httpClientActions.defaults.headers.common.Authorization = `Bearer ${user.token}`
-        commit('setAuthenticated', true)
-        commit('setCurrentUser', {
-          username: user.username,
-          source: user.source
-        })
-        commit('setToken', user.token)
-        commit('setRefreshToken', user.refresh_token)
-        return Promise.resolve(user)
-      })
-      .catch(err => {
-        // Unsuccessful login. Remove any existing keys, set auth and move on.
-        localStorage.removeItem(keys['user-token'])
-        localStorage.removeItem(keys['refresh-token'])
-        delete httpClientActions.defaults.headers.common.Authorization
-        return Promise.reject(err)
-      })
-  },
-
-  /**
-   * Logout the user. This should remove their token from local storage,
-   * shut down the socket and send them back to the login page.
-   */
-  async logout ({ commit, rootGetters }, options?: { invalidate: boolean; partial: boolean }) {
-    const opts = {
-      ...{
-        invalidate: false,
-        partial: false
-      },
-      ...options
-    }
-
-    const keys = rootGetters['config/getTokenKeys']
-
-    // Do we want to invalidate all sessions?
-    if (opts.invalidate) await httpClientActions.accessLogoutPost()
-
-    // Remove the tokens from local storage..
-    localStorage.removeItem(keys['user-token'])
-    localStorage.removeItem(keys['refresh-token'])
-
-    // Remove the authentication header.
-    delete httpClientActions.defaults.headers.common.Authorization
-
-    // Clear the in memory store.
     commit('setCurrentUser', null)
-    commit('setToken', null)
-    commit('setRefreshToken', null)
 
-    // If not a partial logout, then close the socket and set unauthenticated.
-    // Partial logouts are used for trusted clients, in that they remain
-    // authenticated (and socket remains open) when logging out.
-    if (!opts.partial) {
-      if (Vue.$socket) Vue.$socket.close()
-      commit('setAuthenticated', false)
-      if (router.currentRoute.path !== '/login') router.push('/login')
+    // Full logout: show the login form. Partial logouts are used for trusted
+    // clients so they remain signed in after clearing their user tokens.
+    if (!partial) {
+      const status = rootState.socket.status
+      if (status === 'ready' || status === 'identifying') {
+        await dispatch('socket/onSetStatus', 'authenticating', { root: true })
+      }
     }
   },
 
   /**
-   * Checks the current users trust, with no token. This acts as a logout
-   * and / or trust check, in that if the user is not trusted - then we log
-   * them out which bumps them to the login page.
+   * Checks whether the current connection still has passwordless access (i.e.
+   * Moonraker reports trusted:true AND login is not required). If so, a partial
+   * logout keeps them signed in as the trusted user. Otherwise, a full logout
+   * shows the login overlay. login_required overrides trusted_clients whenever
+   * force_logins is enabled with at least one user configured.
    */
-  async checkTrust ({ dispatch, commit, rootGetters }) {
-    const keys = rootGetters['config/getTokenKeys']
-    const token = localStorage.getItem(keys['user-token'])
+  async checkTrust ({ dispatch, commit }) {
+    try {
+      const info = await SocketActions.accessInfo({ suppressError: true })
 
-    // Clear the token.
-    delete httpClientActions.defaults.headers.common.Authorization
+      if (info.trusted && !info.login_required) {
+        await dispatch('logout', { partial: true })
 
-    // Make the request.
-    await httpClientActions.accessCurrentUserGet({ withAuth: false })
-      .then(response => response.data.result)
-      .then((user) => {
-        // Re-apply the token.
-        httpClientActions.defaults.headers.common.Authorization = `Bearer ${token}`
+        try {
+          const user = await SocketActions.accessGetUser({ suppressError: true })
+          commit('setCurrentUser', user)
+        } catch (e) {
+          consola.debug('accessGetUser after trust check failed', e)
+        }
+        return
+      }
+    } catch (e) {
+      consola.debug('accessInfo during checkTrust failed', e)
+    }
 
-        // no error, so must be trusted. partial logout.
-        dispatch('logout', { partial: true })
-        commit('setCurrentUser', user)
-      })
-      .catch(() => {
-        // error. not trusted. log'em out.
-        dispatch('logout')
-      })
+    // Not trusted or login is required: full logout.
+    await dispatch('logout', { invalidate: true })
   },
 
-  async addUser (_, user) {
-    return httpClientActions.accessUserPost(user.username, user.password)
-      .then(() => {
-        return Promise.resolve(user)
-      })
+  /**
+   * Moonraker invalidated the current session (we triggered logout, or another
+   * client called access.logout with invalidate=true). The session is already
+   * invalid server-side, so run a plain logout without re-invalidating.
+   */
+  async onUserLoggedOut ({ dispatch }) {
+    await dispatch('logout')
   },
 
-  async removeUser (_, user) {
-    return httpClientActions.accessUserDelete(user.username)
-      .then(() => {
-        return Promise.resolve(user)
-      })
-  },
-
-  async onUserCreated ({ commit }, user) {
+  async onUserCreated ({ commit }, user: { username: string }) {
     commit('setAddUser', user)
   },
 
-  async onUserDeleted ({ commit }, user) {
+  async onUserDeleted ({ commit }, user: { username: string }) {
     commit('setRemoveUser', user)
   },
 
   async refreshApiKey ({ commit }) {
-    return httpClientActions.accessApiKeyPost()
-      .then(response => response.data.result)
-      .then(key => commit('setApiKey', key))
+    const key = await SocketActions.accessPostApiKey()
+
+    commit('setApiKey', key)
   }
-}
+} satisfies ActionTree<AuthState, RootState>

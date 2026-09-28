@@ -1,21 +1,25 @@
-import { GetterTree } from 'vuex'
-import { TimelapseSettings, TimelapseState } from './types'
-import { RootState } from '../types'
+import type { GetterTree } from 'vuex'
+import type { TimelapseState } from './types'
+import type { RootState } from '../types'
 
-export const getters: GetterTree<TimelapseState, RootState> = {
-  getSettings: (state) => {
-    return state.settings
-  },
-
+export const getters = {
   getLastFrame: (state) => {
-    return state.lastFrame
+    const lastFrame = state.lastFrame
+
+    if (lastFrame == null) {
+      return null
+    }
+
+    const uniqueCount = +(lastFrame.framecount ?? lastFrame.lastframefile?.match(/\d+/)?.[0] ?? 0)
+
+    return {
+      count: lastFrame.framecount,
+      uniqueCount,
+      file: lastFrame.lastframefile
+    }
   },
 
-  getRenderStatus: (state) => {
-    return state.renderStatus
-  },
-
-  isBlockedSetting: (state) => {
-    return (setting: keyof TimelapseSettings): boolean => state.settings?.blockedsettings.includes(setting) ?? true
+  isBlockedSetting: (state) => (setting: string): boolean => {
+    return state.settings?.blockedsettings.includes(setting) ?? true
   }
-}
+} satisfies GetterTree<TimelapseState, RootState>

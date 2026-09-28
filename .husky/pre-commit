@@ -1,8 +1,11 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+git diff --cached --name-only --diff-filter=ACMR -z \
+  | grep -izE '\.(js|mjs|ts|vue)$' \
+  | xargs -0 -r pnpm exec eslint --max-warnings 0
 
-FILES_TO_LINT=$(git diff --cached --name-only --diff-filter=ACM | grep -iE "\.(js|jsx|ts|tsx|vue)$" || true)
+if git diff --cached --name-only --diff-filter=ACMR | grep -iqE '^src/globals\.ts$|\.(vue|svg)$'; then
+  git diff --cached --name-only --diff-filter=ACMR -z \
+    | grep -izE '^src/globals\.ts$|\.(vue|svg)$' \
+    | xargs -0 -r node tools/svgo.mjs
 
-if [ -n "$FILES_TO_LINT" ]; then
-  npx --no eslint $FILES_TO_LINT
+  git update-index --again
 fi

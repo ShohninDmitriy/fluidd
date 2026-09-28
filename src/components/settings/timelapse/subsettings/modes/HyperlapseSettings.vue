@@ -5,8 +5,7 @@
       :title="$t('app.timelapse.setting.hyperlapse_cycle')"
       :sub-title="subtitleIfBlocked(hyperlapseCycleBlocked)"
     >
-      <v-text-field
-        ref="hyperlapseCycleElement"
+      <app-text-field
         :value="hyperlapseCycle"
         :rules="[
           $rules.required,
@@ -19,40 +18,35 @@
         dense
         single-line
         suffix="s"
-        @change="setHyperlapseCycle"
+        submit-on-change
+        @submit="setHyperlapseCycle"
       />
     </app-setting>
   </div>
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Ref } from 'vue-property-decorator'
+import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import { TimelapseSettings } from '@/store/timelapse/types'
 import { SocketActions } from '@/api/socketActions'
-import { VInput } from '@/types'
+import { defaultWritableSettings } from '@/store/timelapse/state'
 
 @Component({})
 export default class HyperlapseSettings extends Mixins(StateMixin) {
-  @Ref('hyperlapseCycleElement')
-  readonly hyperlapseCycleElement!: VInput
-
-  get hyperlapseCycleBlocked () {
-    return this.$store.getters['timelapse/isBlockedSetting']('hyperlapse_cycle')
+  get hyperlapseCycleBlocked (): boolean {
+    return this.$typedGetters['timelapse/isBlockedSetting']('hyperlapse_cycle')
   }
 
   get hyperlapseCycle () {
-    return this.settings?.hyperlapse_cycle
+    return this.settings.hyperlapse_cycle
   }
 
   setHyperlapseCycle (value: number) {
-    if (this.hyperlapseCycleElement.valid) {
-      SocketActions.machineTimelapseSetSettings({ hyperlapse_cycle: value })
-    }
+    SocketActions.machineTimelapsePostSettings({ hyperlapse_cycle: value })
   }
 
-  get settings (): TimelapseSettings {
-    return this.$store.getters['timelapse/getSettings']
+  get settings (): Moonraker.Timelapse.WriteableSettings {
+    return this.$typedState.timelapse.settings ?? defaultWritableSettings
   }
 
   subtitleIfBlocked (blocked: boolean): string {

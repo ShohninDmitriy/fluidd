@@ -1,226 +1,158 @@
-import 'monaco-editor/esm/vs/editor/editor.all.js'
+// All editor features (find, folding, hover, quick access, iPad keyboard, …).
+// Full list of features on 'monaco-editor/esm/metadata.js'
+import 'monaco-editor/features/register.all.js'
 
-// full list of features on 'monaco-editor/esm/metadata.js'
-import 'monaco-editor/esm/vs/editor/standalone/browser/accessibilityHelp/accessibilityHelp.js'
-import 'monaco-editor/esm/vs/editor/standalone/browser/iPadShowKeyboard/iPadShowKeyboard.js'
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js'
-import 'monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js'
+import 'monaco-editor/language/css/monaco.contribution'
+import 'monaco-editor/language/json/monaco.contribution'
+import 'monaco-editor/languages/definitions/css/register.js'
+import 'monaco-editor/languages/definitions/markdown/register.js'
 
-import 'monaco-editor/esm/vs/language/css/monaco.contribution'
-import 'monaco-editor/esm/vs/language/json/monaco.contribution'
-import 'monaco-editor/esm/vs/basic-languages/css/css.contribution'
-import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution'
+import EditorWorker from 'monaco-editor/editor/editor.worker?worker'
+import JsonWorker from 'monaco-editor/language/json/json.worker?worker'
+import CssWorker from 'monaco-editor/language/css/css.worker?worker'
 
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
+import * as monaco from 'monaco-editor/editor/editor.api'
 
-import { loadWASM } from 'onigasm'
-import onigasmWasm from 'onigasm/lib/onigasm.wasm?url'
-
-import { IGrammarDefinition, Registry } from 'monaco-textmate'
-import { wireTmGrammars } from 'monaco-editor-textmate'
 import getVueApp from '@/util/get-vue-app'
-import themeDark from '@/monaco/theme/editor.dark.theme.json'
-import themeLight from '@/monaco/theme/editor.light.theme.json'
 
-import { MonacoLanguageImports } from '@/dynamicImports'
+import type { KlippyApp } from '@/store/printer/types'
 
-type CodeLensSupportedService = 'klipper' | 'moonraker' | 'moonraker-telegram-bot'
+import * as gcodeMonarchLanguage from '@/monaco/language/gcode.monarch'
+import * as klipperConfigMonarchLanguage from '@/monaco/language/klipper-config.monarch'
+import * as moonrakerConfigMonarchLanguage from '@/monaco/language/moonraker-config.monarch'
+import logMonarchLanguage from '@/monaco/language/log.monarch'
+import { type CodeLensSupportedService, MonacoCodeLensProvider, MonacoDocumentSymbolProvider, MonacoFoldingRangeProvider } from './monacoProviders'
 
-const isCodeLensSupportedService = (service: string) : service is CodeLensSupportedService => [
-  'klipper',
-  'moonraker',
-  'moonraker-telegram-bot'
-].includes(service)
-
-const getDocsSection = (service: CodeLensSupportedService, sectionName: string) => {
-  switch (service) {
-    case 'klipper':
-      if (sectionName.startsWith('stepper_')) {
-        return 'stepper'
-      }
-
-      if (/^extruder\d{0,2}$/.test(sectionName)) {
-        return 'extruder'
-      }
-
-      break
-
-    case 'moonraker':
-      if (sectionName.startsWith('include')) {
-        return 'include-directives'
-      }
-
-      break
+self.MonacoEnvironment = {
+  getWorker (_: string, label: string) {
+    switch (label) {
+      case 'json':
+        return new JsonWorker()
+      case 'css':
+      case 'scss':
+      case 'less':
+        return new CssWorker()
+      default:
+        return new EditorWorker()
+    }
   }
-
-  return sectionName
 }
 
 async function setupMonaco () {
-  await loadWASM(onigasmWasm)
-
-  // Register our custom TextMate languages.
-  const registry = new Registry({
-    getGrammarDefinition: async (scopeName): Promise<IGrammarDefinition> => {
-      const languageName = scopeName.split('.').pop() ?? ''
-      const language = await MonacoLanguageImports[languageName]()
-      return {
-        format: 'json',
-        content: language
-      }
-    }
-  })
-
-  // Load our grammars...
-  const grammars = new Map()
-  grammars.set('gcode', 'source.gcode')
-  grammars.set('klipper-config', 'source.klipper-config')
-  grammars.set('log', 'text.log')
-
-  // ... and our languages
   monaco.languages.register({ id: 'gcode', extensions: ['gcode', 'g', 'gc', 'gco', 'ufp', 'nc'] })
-  monaco.languages.register({ id: 'klipper-config', extensions: ['cfg', 'conf'] })
+  monaco.languages.register({ id: 'klipper-config', extensions: ['cfg'] })
+  monaco.languages.register({ id: 'moonraker-config', extensions: ['conf'] })
   monaco.languages.register({ id: 'log', extensions: ['log'] })
 
-  // Define how commenting works.
-  monaco.languages.setLanguageConfiguration('gcode', {
-    comments: {
-      lineComment: ';'
-    }
-  })
-  monaco.languages.setLanguageConfiguration('klipper-config', {
-    comments: {
-      lineComment: '#'
-    }
-  })
+  monaco.languages.setLanguageConfiguration('gcode', gcodeMonarchLanguage.conf)
+  monaco.languages.setLanguageConfiguration('klipper-config', klipperConfigMonarchLanguage.conf)
+  monaco.languages.setLanguageConfiguration('moonraker-config', moonrakerConfigMonarchLanguage.conf)
+
+  monaco.languages.setMonarchTokensProvider('gcode', gcodeMonarchLanguage.language)
+  monaco.languages.setMonarchTokensProvider('klipper-config', klipperConfigMonarchLanguage.language)
+  monaco.languages.setMonarchTokensProvider('moonraker-config', moonrakerConfigMonarchLanguage.language)
+  monaco.languages.setMonarchTokensProvider('log', logMonarchLanguage)
 
   const app = getVueApp()
+  const klippyApp: KlippyApp = app.$typedGetters['printer/getKlippyApp']
 
   monaco.editor.registerCommand('fluidd_open_docs', (_, service: CodeLensSupportedService, hash: string) => {
     const serviceKey = service.replace(/-/g, '_')
-    const url = app.$t(`app.file_system.url.${serviceKey}_config`, { hash }).toString()
+
+    const url = app.$t(`app.file_system.url.${serviceKey}_config`, {
+      hash,
+      klipperDomain: klippyApp.domain
+    }).toString()
 
     window.open(url)
   })
 
-  monaco.languages.registerCodeLensProvider('klipper-config', {
-    provideCodeLenses: (model) => {
-      const { service } = app.$store.getters['server/getConfigMapByFilename'](model.uri.path.split('/').pop())
+  monaco.languages.registerDocumentSymbolProvider(['klipper-config', 'moonraker-config'], new MonacoDocumentSymbolProvider())
 
-      if (!isCodeLensSupportedService(service)) {
-        return null
-      }
+  monaco.languages.registerCodeLensProvider(['klipper-config', 'moonraker-config'], new MonacoCodeLensProvider())
 
-      const linesContent = model.getLinesContent()
+  monaco.languages.registerFoldingRangeProvider(['klipper-config', 'moonraker-config', 'gcode'], new MonacoFoldingRangeProvider())
 
-      const sections = linesContent.reduce((ranges, lineContent, index) => {
-        const section = /^\[([^\]]+)\]/.exec(lineContent)
-        if (section) {
-          const [sectionName] = section[1].split(' ')
-
-          const referenceSection = getDocsSection(service, sectionName)
-
-          return ranges.concat({
-            referenceSection,
-            range: {
-              startLineNumber: index + 1,
-              startColumn: model.getLineFirstNonWhitespaceColumn(index + 1),
-              endLineNumber: index + 1,
-              endColumn: model.getLineLastNonWhitespaceColumn(index + 1)
-            }
-          })
-        }
-        return ranges
-      }, [] as { referenceSection: string, range: monaco.IRange }[])
-
-      return {
-        lenses: sections.map((section, index) =>
-          ({
-            range: section.range,
-            id: `docs${index}`,
-            command: {
-              id: 'fluidd_open_docs',
-              title: app.$t('app.file_system.label.view_section_documentation', { section: section.referenceSection }).toString(),
-              arguments: [service, section.referenceSection]
-            }
-          })
-        ),
-        dispose: () => undefined
-      }
+  monaco.editor.defineTheme('light-converted', {
+    base: 'vs',
+    inherit: true,
+    rules: [
+      { token: 'comment.control.save-config', foreground: '7b2fbe', fontStyle: 'italic' },
+      { token: 'entity.name.section', foreground: '267f99', fontStyle: 'bold' },
+      { token: 'variable.name', foreground: '0070c1' },
+      { token: 'delimiter', foreground: '666666' },
+      { token: 'constant.language', foreground: '0000ff' },
+      { token: 'string', foreground: 'a31515' },
+      { token: 'comment', foreground: '008000', fontStyle: 'italic' },
+      { token: 'tag', foreground: '767676' },
+      { token: 'keyword.command.g', foreground: '267f99', fontStyle: 'bold' },
+      { token: 'keyword.command.m', foreground: '267f99', fontStyle: 'bold' },
+      { token: 'keyword.command.n', foreground: '767676' },
+      { token: 'keyword.command', foreground: '0070c1', fontStyle: 'bold' },
+      { token: 'keyword.macro', foreground: '0070c1', fontStyle: 'bold' },
+      { token: 'keyword.param.e', foreground: '267f99' },
+      { token: 'keyword.param.i', foreground: '267f99' },
+      { token: 'keyword.param.j', foreground: '267f99' },
+      { token: 'keyword.param.k', foreground: '267f99' },
+      { token: 'keyword.param.x', foreground: '267f99' },
+      { token: 'keyword.param.y', foreground: '267f99' },
+      { token: 'keyword.param.z', foreground: '267f99' },
+      { token: 'keyword.param.f', foreground: 'a31515' },
+      { token: 'keyword.param.p', foreground: '7b2fbe' },
+      { token: 'keyword.param.s', foreground: '7b2fbe' },
+      { token: 'keyword.param.t', foreground: '7b2fbe' },
+      { token: 'keyword.param', foreground: '0070c1' },
+      { token: 'operator', foreground: '767676' },
+      { token: 'string.quote', foreground: 'a31515' },
+      { token: 'delimiter.jinja', foreground: 'af00db' },
+      { token: 'keyword.control.jinja', foreground: 'af00db' },
+      { token: 'variable.jinja', foreground: '001080' },
+      { token: 'number.jinja', foreground: '098658' }
+    ],
+    colors: {},
+  })
+  monaco.editor.defineTheme('dark-converted', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'comment.control.save-config', foreground: 'c586c0', fontStyle: 'italic' },
+      { token: 'entity.name.section', foreground: '4ec9b0', fontStyle: 'bold' },
+      { token: 'variable.name', foreground: '9cdcfe' },
+      { token: 'delimiter', foreground: '808080' },
+      { token: 'constant.language', foreground: '569cd6' },
+      { token: 'string', foreground: 'ce9178' },
+      { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+      { token: 'tag', foreground: '808080' },
+      { token: 'keyword.command.g', foreground: '4ec9b0', fontStyle: 'bold' },
+      { token: 'keyword.command.m', foreground: '4ec9b0', fontStyle: 'bold' },
+      { token: 'keyword.command.n', foreground: '808080' },
+      { token: 'keyword.command', foreground: '9cdcfe', fontStyle: 'bold' },
+      { token: 'keyword.macro', foreground: '9cdcfe', fontStyle: 'bold' },
+      { token: 'keyword.param.e', foreground: '4ec9b0' },
+      { token: 'keyword.param.i', foreground: '4ec9b0' },
+      { token: 'keyword.param.j', foreground: '4ec9b0' },
+      { token: 'keyword.param.k', foreground: '4ec9b0' },
+      { token: 'keyword.param.x', foreground: '4ec9b0' },
+      { token: 'keyword.param.y', foreground: '4ec9b0' },
+      { token: 'keyword.param.z', foreground: '4ec9b0' },
+      { token: 'keyword.param.f', foreground: 'ce9178' },
+      { token: 'keyword.param.p', foreground: 'c586c0' },
+      { token: 'keyword.param.s', foreground: 'c586c0' },
+      { token: 'keyword.param.t', foreground: 'c586c0' },
+      { token: 'keyword.param', foreground: '9cdcfe' },
+      { token: 'operator', foreground: 'd4d4d4' },
+      { token: 'string.quote', foreground: 'ce9178' },
+      { token: 'delimiter.jinja', foreground: 'c586c0' },
+      { token: 'keyword.control.jinja', foreground: 'c586c0' },
+      { token: 'variable.jinja', foreground: '9cdcfe' },
+      { token: 'number.jinja', foreground: 'b5cea8' }
+    ],
+    colors: {
+      'editor.background': '#28282b',
+      'editor.lineHighlightBackground': '#3a3a3e',
+      'minimap.background': '#28282b'
     },
-    resolveCodeLens: (_model, codeLens) => codeLens
   })
-
-  monaco.languages.registerFoldingRangeProvider('klipper-config', {
-    provideFoldingRanges: (model) => {
-      const linesContent = model.getLinesContent()
-
-      const sectionBlocks = linesContent.reduce((sectionBlocks, lineContent, index) => {
-        const isSection = /^\[([^\]]+)\]/.test(lineContent)
-
-        if (isSection) {
-          return sectionBlocks.concat({
-            start: index + 1,
-            end: index + 1
-          })
-        }
-
-        const isNotComment = /^\s*[^#;]/.test(lineContent)
-
-        if (isNotComment && sectionBlocks.length > 0) {
-          sectionBlocks[sectionBlocks.length - 1].end = index + 1
-        }
-
-        return sectionBlocks
-      }, [] as Array<{ start: number, end: number }>)
-
-      const commentBlocks = linesContent.reduce((commentBlocks, lineContent, index) => {
-        lineContent = lineContent.trim()
-
-        if (lineContent.length > 0) {
-          const isComment = ['#', ';'].includes(lineContent[0])
-
-          const lastCommentBlock = commentBlocks.length > 0 ? commentBlocks[commentBlocks.length - 1] : undefined
-
-          if (isComment) {
-            if (lastCommentBlock && !lastCommentBlock.complete) {
-              lastCommentBlock.end = index + 1
-            } else {
-              return commentBlocks.concat({
-                start: index + 1,
-                end: index + 1,
-                complete: false
-              })
-            }
-          } else if (lastCommentBlock) {
-            lastCommentBlock.complete = true
-          }
-        }
-
-        return commentBlocks
-      }, [] as Array<{start: number, end: number, complete: boolean}>)
-
-      return [
-        ...sectionBlocks.map(section => ({
-          start: section.start,
-          end: section.end,
-          kind: monaco.languages.FoldingRangeKind.Region
-        })),
-        ...commentBlocks.map(section => ({
-          start: section.start,
-          end: section.end,
-          kind: monaco.languages.FoldingRangeKind.Comment
-        }))
-      ]
-    }
-  })
-
-  // Defined the themes.
-  monaco.editor.defineTheme('dark-converted', themeDark as any)
-  monaco.editor.defineTheme('light-converted', themeLight as any)
-
-  // Wire it up.
-  await wireTmGrammars(monaco, registry, grammars)
 
   return monaco
 }

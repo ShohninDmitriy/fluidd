@@ -1,13 +1,15 @@
 <template>
   <div
     class="chart"
-    :style="{ 'height': height }"
+    :style="{
+      height: $filters.getPixelsString(height)
+    }"
   >
     <e-chart
       ref="chart"
       :option="opts"
-      :update-options="{ notMerge: false }"
-      :init-options="{ renderer: 'canvas' }"
+      :update-options="updateOptions"
+      :init-options="initOptions"
       autoresize
     />
 
@@ -18,33 +20,47 @@
 </template>
 
 <script lang='ts'>
-import { Vue, Component, Prop, Watch, Ref } from 'vue-property-decorator'
-import type { ECharts, EChartsOption, GraphicComponentOption } from 'echarts'
+import { Component, Prop, Watch, Ref, Mixins } from 'vue-property-decorator'
+import type { ECharts, EChartsInitOpts, EChartsOption, GraphicComponentOption, SetOptionOpts } from 'echarts'
 import { merge, cloneDeepWith } from 'lodash-es'
+import BrowserMixin from '@/mixins/browser'
+import type { BedSize } from '@/store/printer/types'
+import downloadUrl from '@/util/download-url'
 
 @Component({})
-export default class EChartsBedMesh extends Vue {
-  @Prop({ type: Array, required: true, default: {} })
+export default class BedMeshChart extends Mixins(BrowserMixin) {
+  @Prop({ type: Array, required: true })
   readonly data!: []
 
-  @Prop({ type: Array, required: false, default: () => [] })
+  @Prop({ type: Array, default: () => [] })
   readonly graphics!: GraphicComponentOption[]
 
-  @Prop({ type: Object, default: {} })
-  readonly options!: any
+  @Prop({ type: Object, default: () => {} })
+  readonly options!: Record<string, unknown>
 
-  @Prop({ type: String, default: '100%' })
-  readonly height!: string
+  @Prop({ type: [String, Number], default: '100%' })
+  readonly height!: string | number
 
   @Ref('chart')
-  readonly chart!: ECharts
+  readonly chart?: ECharts
 
-  get flatSurface () {
-    return this.$store.state.mesh.flatSurface
+  // Stable references so component re-renders don't make vue-echarts dispose/
+  // re-init the chart, which would reset the 3D camera (rotation/zoom) state.
+  readonly updateOptions: SetOptionOpts = Object.freeze({ notMerge: false })
+  readonly initOptions: EChartsInitOpts = Object.freeze({ renderer: 'canvas' })
+
+  get flatSurface (): boolean {
+    return this.$typedState.mesh.flatSurface
+  }
+
+  get bedSize (): BedSize {
+    return this.$typedGetters['printer/getBedSize']
   }
 
   @Watch('flatSurface')
   onFlatSurfaceChange (value: boolean) {
+    if (!this.chart) return
+
     const type = value ? 'legendSelect' : 'legendUnSelect'
     this.chart.dispatchAction({
       type,
@@ -58,26 +74,22 @@ export default class EChartsBedMesh extends Vue {
 
   beforeDestroy () {
     if (typeof window === 'undefined') return
-    this.chart.dispose()
+    this.chart?.dispose()
   }
 
   get opts (): EChartsOption {
     // If options includes series data, rip it out so we can merge it with
     // the given series in our initial options.
-    const darkMode = this.$store.state.config.uiSettings.theme.isDark
-    const fontSize = (this.isMobile) ? 14 : 16
-    let labelBackground = 'rgba(10,10,10,0.90)'
+    const darkMode: boolean = this.$typedState.config.uiSettings.theme.isDark
+
+    const fontColor = (darkMode) ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)'
+    const fontSize = (this.isMobileViewport) ? 14 : 16
+    const labelBackground = (darkMode) ? 'rgba(10,10,10,0.90)' : 'rgba(255,255,255,0.90)'
     const opacity = 0.10
-    let fontColor = 'rgba(255,255,255,0.25)'
-    let lineColor = '#ffffff'
+    const lineColor = (darkMode) ? '#ffffff' : '#000000'
     const visualMap = {
-      itemWidth: (this.isMobile) ? 15 : 25,
-      itemHeight: (this.isMobile) ? 140 : 280
-    }
-    if (!darkMode) {
-      labelBackground = 'rgba(255,255,255,0.90)'
-      fontColor = 'rgba(0,0,0,0.45)'
-      lineColor = '#000000'
+      itemWidth: (this.isMobileViewport) ? 15 : 25,
+      itemHeight: (this.isMobileViewport) ? 140 : 280
     }
 
     const axisCommon = {
@@ -138,9 +150,12 @@ export default class EChartsBedMesh extends Vue {
       }
     })
 
-    const opts = {
+    const opts: EChartsOption = {
       legend: {
         show: false
+      },
+      textStyle: {
+        fontFamily: 'Roboto'
       },
       darkMode,
       tooltip: {
@@ -150,7 +165,33 @@ export default class EChartsBedMesh extends Vue {
           color: fontColor,
           fontSize: 18
         },
-        formatter: this.tooltipFormatter
+        formatter: (params: any) => {
+          let text = ''
+          if (params.value && Array.isArray(params.value)) {
+            text += `
+              <div>
+                <span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${params.color};"></span>
+                <span style="font-size:16px;color:${fontColor};font-weight:400;margin-left:2px">
+                  ${this.$filters.prettyCase(params.seriesName)}
+                </span>
+                <div style="clear: both"></div>
+                <span style="font-size:16px;color:${fontColor};font-weight:400;margin-left:2px">
+                  x: ${params.value[0].toFixed(4)}
+                </span>
+                <div style="clear: both"></div>
+                <span style="font-size:16px;color:${fontColor};font-weight:400;margin-left:2px">
+                  y: ${params.value[1].toFixed(4)}
+                </span>
+                <div style="clear: both"></div>
+                <span style="font-size:16px;color:${fontColor};font-weight:400;margin-left:2px">
+                  z: ${params.value[2].toFixed(4)}
+                </span>
+                <div style="clear: both"></div>
+              </div>
+              `
+          }
+          return text
+        }
       },
       visualMap: {
         type: 'continuous',
@@ -174,10 +215,14 @@ export default class EChartsBedMesh extends Vue {
       },
       xAxis3D: {
         type: 'value',
+        min: this.bedSize.minX,
+        max: this.bedSize.maxX,
         ...axisCommon
       },
       yAxis3D: {
         type: 'value',
+        min: this.bedSize.minY,
+        max: this.bedSize.maxY,
         ...axisCommon
       },
       zAxis3D: {
@@ -197,50 +242,33 @@ export default class EChartsBedMesh extends Vue {
       },
       graphic,
       series: [...this.data]
-    } as EChartsOption
+    }
 
     // Merge the default options with the given prop.
     merge(opts, this.options)
     return opts
   }
 
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
-  }
+  async downloadImage () {
+    if (!this.chart) return
 
-  tooltipFormatter (params: any) {
-    let text = ''
-    if (params.value && Array.isArray(params.value)) {
-      text += `
-        <div>
-          <span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${params.color};"></span>
-          <span style="font-size:16px;color:#666;font-weight:400;margin-left:2px">
-            ${params.seriesName}
-          </span>
-          <div style="clear: both"></div>
-          <span style="font-size:16px;color:#666;font-weight:400;margin-left:2px">
-            x: ${params.value[0].toFixed(4)}
-          </span>
-          <div style="clear: both"></div>
-          <span style="font-size:16px;color:#666;font-weight:400;margin-left:2px">
-            y: ${params.value[1].toFixed(4)}
-          </span>
-          <div style="clear: both"></div>
-          <span style="font-size:16px;color:#666;font-weight:400;margin-left:2px">
-            z: ${params.value[2].toFixed(4)}
-          </span>
-          <div style="clear: both"></div>
-        </div>
-        `
-    }
-    return text
+    const url = this.chart.getDataURL({
+      type: 'png',
+      backgroundColor: '#262629'
+    })
+
+    const filename = [
+      'bedmesh',
+      this.$typedState.printer.printer.bed_mesh?.profile_name
+    ].filter(x => x).join('-')
+
+    downloadUrl(filename, url)
   }
 }
 </script>
 
 <style lang='scss' scoped>
   .chart {
-    margin-top: 16px;
     width: 100%;
     // height: 625px;
   }

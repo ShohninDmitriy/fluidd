@@ -1,59 +1,112 @@
 import Vue from 'vue'
-import { MutationTree } from 'vuex'
-import { defaultState } from './state'
-import { HistoryItem, HistoryState } from './types'
+import type { MutationTree } from 'vuex'
+import { createState } from './state'
+import type { HistoryState } from './types'
 
-export const mutations: MutationTree<HistoryState> = {
+export const mutations = {
   /**
    * Reset state
    */
   setReset (state) {
-    Object.assign(state, defaultState())
+    Object.assign(state, createState())
   },
 
   /**
    * Applies currently known history totals
    */
-  setHistoryTotals (state, payload: HistoryState) {
-    if (payload) Vue.set(state, 'job_totals', payload.job_totals)
+  setHistoryTotals (state, payload: Moonraker.History.TotalsResponse) {
+    state.job_totals = payload.job_totals
   },
 
   /**
    * Applies history list
    */
-  setHistoryList (state, payload: HistoryState) {
-    if (payload.jobs !== undefined) Vue.set(state, 'jobs', payload.jobs)
-    if (payload.count !== undefined) Vue.set(state, 'count', payload.count)
-  },
-
-  /**
-   * Adds a history item.
-   */
-  setAddHistory (state, payload: HistoryItem) {
-    if (payload) {
-      state.jobs.push(payload)
-      state.count++
+  setHistoryList (state, payload: Moonraker.History.ListResponse) {
+    if (payload.jobs != null) {
+      state.jobs = payload.jobs
+        .map(job => Object.freeze(job))
     }
   },
 
   /**
    * Updates a history item.
    */
-  setUpdateHistory (state, payload: HistoryItem) {
+  setUpdateHistory (state, payload: Moonraker.History.Job) {
     if (payload) {
       const i = state.jobs.findIndex(job => job.job_id === payload.job_id)
+
       if (i >= 0) {
-        Vue.set(state.jobs, i, payload)
+        Vue.set(state.jobs, i, Object.freeze(payload))
+      } else {
+        state.jobs.push(Object.freeze(payload))
+      }
+
+      state.unresolvedJobIds.delete(payload.job_id)
+    }
+  },
+
+  /**
+   * Updates or adds many history items in a single mutation.
+   */
+  setUpdateHistoryJobs (state, payload: Moonraker.History.Job[]) {
+    for (const job of payload) {
+      const i = state.jobs.findIndex(({ job_id }) => job_id === job.job_id)
+
+      if (i >= 0) {
+        Vue.set(state.jobs, i, Object.freeze(job))
+      } else {
+        state.jobs.push(Object.freeze(job))
+      }
+
+      state.unresolvedJobIds.delete(job.job_id)
+    }
+  },
+
+  setClearHistoryThumbnails (state, payload: string) {
+    if (payload) {
+      const i = state.jobs.findIndex(job => job.job_id === payload)
+
+      if (i >= 0) {
+        const job = state.jobs[i]
+
+        Vue.set(state.jobs, i, Object.freeze({
+          ...job,
+          metadata: {
+            ...job.metadata,
+            thumbnails: []
+          }
+        }))
       }
     }
   },
 
-  setDeleteJob (state, payload: string[]) {
+  setDeleteJobs (state, payload: string[]) {
     if (payload) {
-      payload.forEach((job_id) => {
-        const i = state.jobs.findIndex(job => job.job_id === job_id)
-        if (i >= 0) state.jobs.splice(i, 1)
-      })
+      for (const jobId of payload) {
+        const i = state.jobs.findIndex(job => job.job_id === jobId)
+
+        if (i >= 0) {
+          state.jobs.splice(i, 1)
+        }
+
+        state.unresolvedJobIds.add(jobId)
+      }
     }
+  },
+
+  setAddUnresolvedJobIds (state, payload: string[]) {
+    for (const jobId of payload) {
+      state.unresolvedJobIds.add(jobId)
+    }
+  },
+
+  setRemoveUnresolvedJobIds (state, payload: string[]) {
+    for (const jobId of payload) {
+      state.unresolvedJobIds.delete(jobId)
+    }
+  },
+
+  setAllLoaded (state, payload: boolean) {
+    state.allLoaded = payload
   }
-}
+} satisfies MutationTree<HistoryState>

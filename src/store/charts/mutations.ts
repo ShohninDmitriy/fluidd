@@ -1,53 +1,78 @@
 import Vue from 'vue'
-import { MutationTree } from 'vuex'
-import { ChartData, ChartState } from './types'
-import { defaultState } from './state'
+import type { MutationTree } from 'vuex'
+import { appendChartSamples, createChartBuffer, resizeChartBuffer } from '@/util/chart-buffer'
+import { Globals } from '@/globals'
+import type { ChartBucket, ChartBuffer, ChartEntriesPayload, ChartEntryPayload, ChartsDbDocument, ChartSelectedLegends, ChartState } from './types'
+import { createState } from './state'
 
-export const mutations: MutationTree<ChartState> = {
+const resolveBuffer = (state: ChartState, payload: ChartBucket): ChartBuffer => {
+  switch (payload.bucket) {
+    case 'mcu':
+    case 'sensor': {
+      const group = payload.bucket === 'mcu'
+        ? state.mcus
+        : state.sensors
+
+      if (!group[payload.id]) {
+        Vue.set(group, payload.id, createChartBuffer(Globals.CHART_SYSTEM_RETENTION))
+      }
+
+      return group[payload.id]
+    }
+
+    default: {
+      const buffer = state[payload.bucket]
+
+      if ('retention' in payload) {
+        resizeChartBuffer(buffer, payload.retention)
+      }
+
+      return buffer
+    }
+  }
+}
+
+export const mutations = {
   /**
-   * Reset state
+   * Reset our store
    */
   setReset (state) {
-    // Remove unknown keys first.
-    const d = defaultState()
-    Object.keys(state).forEach(key => {
-      if (!Object.keys(d).includes(key)) delete state[key]
-    })
+    Object.assign(state, createState())
+  },
 
-    Object.assign(state, defaultState())
+  setResetChartStore (state) {
+    const { thermal, ready } = createState()
+
+    Object.assign(state, {
+      thermal,
+      ready
+    })
   },
 
   /**
    * Init the chart store from db
    */
-  setInitCharts (state, payload: ChartState) {
-    if (payload) Object.assign(state, payload)
+  setInitCharts (state, payload: ChartsDbDocument) {
+    if (payload?.selectedLegends) state.selectedLegends = payload.selectedLegends
   },
 
   /**
    * Inits the chart store from moonraker.
    */
-  setChartStore (state, payload: ChartData[]) {
-    state.chart = payload
+  setThermalStore (state, payload: ChartBuffer) {
+    state.thermal = payload
     state.ready = true
   },
 
-  /**
-   * Adds a single chart entry.
-   */
-  setChartEntry (state, payload: { type: string; retention: number; data: ChartData }) {
-    // Dont keep data older than our set retention
-    if (!state[payload.type]) {
-      Vue.set(state, payload.type, [])
-      // console.log('created new array', payload.type)
-    }
-    state[payload.type].push(payload.data)
-    // console.log('set data', payload.type, payload.data)
-    const firstInRange = state[payload.type].findIndex((entry: ChartData) => (Date.now() - entry.date.valueOf()) / 1000 < payload.retention)
-    if (firstInRange > 0) state[payload.type].splice(0, firstInRange)
+  setChartEntry (state, payload: ChartEntryPayload) {
+    appendChartSamples(resolveBuffer(state, payload), [payload])
   },
 
-  setSelectedLegends (state, payload) {
+  setChartEntries (state, payload: ChartEntriesPayload) {
+    appendChartSamples(resolveBuffer(state, payload), payload.samples)
+  },
+
+  setSelectedLegends (state, payload: ChartSelectedLegends) {
     state.selectedLegends = payload
   }
-}
+} satisfies MutationTree<ChartState>

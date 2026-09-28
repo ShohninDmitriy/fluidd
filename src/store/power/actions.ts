@@ -1,9 +1,9 @@
-import { ActionTree } from 'vuex'
-import { DevicePowerState } from './types'
-import { RootState } from '../types'
+import type { ActionTree } from 'vuex'
+import type { DevicePowerState } from './types'
+import type { RootState } from '../types'
 import { SocketActions } from '@/api/socketActions'
 
-export const actions: ActionTree<DevicePowerState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -21,7 +21,7 @@ export const actions: ActionTree<DevicePowerState, RootState> = {
   /**
    * Inits the list of available devices. Notified by init action.
    */
-  async onInit ({ commit }, payload) {
+  async onInit ({ commit }, payload: Moonraker.Power.DevicesResponse) {
     if (
       payload.devices &&
       payload.devices.length > 0
@@ -33,15 +33,7 @@ export const actions: ActionTree<DevicePowerState, RootState> = {
   /**
    * Fires when we receive a notification of power changing
    */
-  async onStatus ({ commit }, payload) {
+  async onStatus ({ commit }, payload: Moonraker.Power.StatusResponse) {
     commit('setStatus', payload)
   },
-
-  /**
-   * On toggling a power device.
-   */
-  async onToggle ({ commit }, payload) {
-    commit('setStatus', payload)
-  }
-
-}
+} satisfies ActionTree<DevicePowerState, RootState>

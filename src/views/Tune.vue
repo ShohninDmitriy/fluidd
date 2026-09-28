@@ -8,7 +8,7 @@
       cols="12"
       md="8"
     >
-      <bed-mesh-card :full-screen="true" />
+      <bed-mesh-card fullscreen />
     </v-col>
     <v-col
       cols="12"
@@ -16,10 +16,25 @@
     >
       <bed-mesh-controls
         v-if="supportsBedMesh"
-        class="mb-2 mb-sm-4"
+        class="mb-2 mb-md-4"
       />
-      <end-stops-card class="mb-2 mb-sm-4" />
-      <runout-sensors-card v-if="supportsRunoutSensors" />
+
+      <end-stops-card
+        v-if="supportsEndStops"
+        class="mb-2 mb-md-4"
+      />
+
+      <runout-sensors-card
+        v-if="supportsRunoutSensors"
+        fullscreen
+        class="mb-2 mb-md-4"
+      />
+
+      <beacon-card
+        v-if="supportsBeacon"
+        fullscreen
+        class="mb-2 mb-md-4"
+      />
     </v-col>
   </v-row>
 </template>
@@ -32,27 +47,35 @@ import BedMeshCard from '@/components/widgets/bedmesh/BedMeshCard.vue'
 import BedMeshControls from '@/components/widgets/bedmesh/BedMeshControls.vue'
 import EndStopsCard from '@/components/widgets/endstops/EndStopsCard.vue'
 import RunoutSensorsCard from '@/components/widgets/runout-sensors/RunoutSensorsCard.vue'
+import BeaconCard from '@/components/widgets/beacon/BeaconCard.vue'
 
 @Component({
   components: {
     BedMeshCard,
     BedMeshControls,
     EndStopsCard,
-    RunoutSensorsCard
+    RunoutSensorsCard,
+    BeaconCard
   }
 })
 export default class Tune extends Mixins(StateMixin) {
-  get supportsBedMesh () {
-    return this.$store.getters['mesh/getSupportsBedMesh']
+  get supportsBedMesh (): boolean {
+    return this.$typedGetters['mesh/getSupportsBedMesh']
+  }
+
+  get supportsEndStops () {
+    return (
+      this.$typedGetters['printer/getSteppers'].length > 0 ||
+      this.$typedGetters['printer/getProbe'] != null
+    )
   }
 
   get supportsRunoutSensors () {
-    return this.$store.getters['printer/getRunoutSensors'].length
+    return this.$typedGetters['printer/getRunoutSensors'].length > 0
   }
 
-  get supportsEndstops () {
-    const endStops = this.$store.getters['printer/getEndstops']
-    return (Object.keys(endStops).length > 0)
+  get supportsBeacon (): boolean {
+    return this.$typedGetters['printer/getSupportsBeacon']
   }
 }
 </script>

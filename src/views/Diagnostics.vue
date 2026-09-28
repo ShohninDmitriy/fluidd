@@ -36,28 +36,22 @@
           :lg="columnSpan"
           :class="{ 'drag': inLayout }"
         >
-          <draggable
+          <app-draggable
             v-model="containers[containerIndex]"
             class="list-group"
-            v-bind="dragOptions"
-            @start.stop="drag = true"
+            :options="draggableOptions"
             @end.stop="updateLayout"
           >
-            <transition-group
-              type="transition"
-              :name="!drag ? 'flip-list' : null"
-            >
-              <template v-for="c in container">
-                <diagnostics-card
-                  v-if="c.enabled || inLayout"
-                  :key="c.id"
-                  :config="c"
-                  class="mb-2 mb-sm-4"
-                  @edit="handleEditCard"
-                />
-              </template>
-            </transition-group>
-          </draggable>
+            <template v-for="c in container">
+              <diagnostics-card
+                v-if="c.enabled || inLayout"
+                :key="c.id"
+                :config="c"
+                class="mb-2 mb-md-4"
+                @edit="handleEditCard"
+              />
+            </template>
+          </app-draggable>
         </v-col>
       </template>
     </v-row>
@@ -74,18 +68,17 @@
 
 <script lang="ts">
 import { Component, Mixins, Watch } from 'vue-property-decorator'
-import draggable from 'vuedraggable'
 import { v4 as uuidv4 } from 'uuid'
 import StateMixin from '@/mixins/state'
-import { DiagnosticsCardConfig, DiagnosticsCardContainer } from '@/store/diagnostics/types'
+import type { DiagnosticsCardConfig, DiagnosticsCardContainer } from '@/store/diagnostics/types'
 import DiagnosticsCard from '@/components/widgets/diagnostics/DiagnosticsCard.vue'
 import DiagnosticsCardConfigDialog from '@/components/widgets/diagnostics/DiagnosticsCardConfigDialog.vue'
-import { LayoutConfig } from '@/store/layout/types'
-import { defaultState } from '@/store/layout/state'
+import type { LayoutConfig } from '@/store/layout/types'
+import { createDiagnosticsCardState } from '@/store/layout/state'
+import type Sortable from 'sortablejs'
 
 @Component({
   components: {
-    draggable,
     DiagnosticsCard,
     DiagnosticsCardConfigDialog
   }
@@ -96,7 +89,6 @@ export default class Diagnostics extends Mixins(StateMixin) {
     card: null
   }
 
-  drag = false
   containers: Array<DiagnosticsCardConfig[]> = []
 
   mounted () {
@@ -104,14 +96,14 @@ export default class Diagnostics extends Mixins(StateMixin) {
   }
 
   handleAddCard () {
-    const clonedDefaultCard = JSON.parse(JSON.stringify(defaultState().layouts.diagnostics.container1[0]))
-    clonedDefaultCard.id = ''
-    this.dialogState.card = clonedDefaultCard
+    const defaultCard = createDiagnosticsCardState()
+    defaultCard.id = ''
+    this.dialogState.card = defaultCard
     this.dialogState.active = true
   }
 
   handleEditCard (card: DiagnosticsCardConfig) {
-    this.dialogState.card = JSON.parse(JSON.stringify(card))
+    this.dialogState.card = JSON.parse(JSON.stringify(card)) as DiagnosticsCardConfig
     this.dialogState.active = true
   }
 
@@ -154,12 +146,19 @@ export default class Diagnostics extends Mixins(StateMixin) {
     return 12 / this.columnCount
   }
 
+  get draggableOptions (): Sortable.Options {
+    return {
+      group: 'diagnostics',
+      disabled: !this.inLayout
+    }
+  }
+
   get inLayout (): boolean {
-    return (this.$store.state.config.layoutMode)
+    return this.$typedState.config.layoutMode
   }
 
   get layout (): DiagnosticsCardContainer {
-    return this.$store.getters['layout/getLayout']('diagnostics')
+    return this.$typedGetters['layout/getLayout']('diagnostics') as DiagnosticsCardContainer
   }
 
   @Watch('layout', { deep: true })
@@ -173,19 +172,8 @@ export default class Diagnostics extends Mixins(StateMixin) {
     this.containers = containers.slice(0, 4)
   }
 
-  get dragOptions () {
-    return {
-      animation: 200,
-      handle: '.handle',
-      group: 'diagnostics',
-      disabled: !this.inLayout,
-      ghostClass: 'ghost'
-    }
-  }
-
   updateLayout () {
-    this.drag = false
-    this.$store.dispatch('layout/onLayoutChange', {
+    this.$typedDispatch('layout/onLayoutChange', {
       name: 'diagnostics',
       value: {
         container1: this.containers[0],

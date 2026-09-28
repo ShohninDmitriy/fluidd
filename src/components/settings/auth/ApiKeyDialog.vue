@@ -1,57 +1,44 @@
 <template>
-  <v-dialog
+  <app-dialog
     v-model="open"
-    :max-width="500"
+    :title="$t('app.general.label.api_key')"
+    max-width="500"
   >
-    <v-form>
-      <v-card>
-        <v-card-title class="card-heading py-2">
-          <span class="focus--text">{{ $t('app.general.label.api_key') }}</span>
-        </v-card-title>
+    <v-card-text>
+      <v-text-field
+        :value="apiKey"
+        filled
+        dense
+        single-line
+        hide-details
+        readonly
+      />
 
-        <v-divider />
+      <v-layout
+        align-center
+        column
+        class="pt-4"
+      >
+        <app-qr-code
+          :value="apiKey"
+          centered
+        />
+      </v-layout>
+    </v-card-text>
 
-        <v-card-text class="py-4">
-          <v-text-field
-            :value="apiKey"
-            filled
-            dense
-            single-line
-            hide-details
-            readonly
-          />
-        </v-card-text>
+    <template #actions>
+      <v-spacer />
 
-        <v-divider />
-
-        <v-layout
-          align-center
-          column
-          class="py-4"
-        >
-          <app-qr-code
-            :value="apiKey"
-            centered
-          />
-        </v-layout>
-
-        <v-divider />
-
-        <v-card-actions>
-          <v-spacer />
-
-          <app-btn
-            color="primary"
-            text
-            type="button"
-            @click="handleRefreshApiKey"
-          >
-            {{ $t('app.general.btn.refresh') }}
-          </app-btn>
-        </v-card-actions>
-      </v-card>
-    </v-form>
-  </v-dialog>
+      <app-btn
+        color="primary"
+        text
+        type="button"
+        @click="handleRefreshApiKey"
+      >
+        {{ $t('app.general.btn.refresh') }}
+      </app-btn>
+    </template>
+  </app-dialog>
 </template>
 
 <script lang="ts">
@@ -59,15 +46,15 @@ import { Component, Vue, VModel } from 'vue-property-decorator'
 
 @Component({})
 export default class ApiKeyDialog extends Vue {
-  @VModel({ type: Boolean, required: true })
-    open!: boolean
+  @VModel({ type: Boolean })
+  open?: boolean
 
-  get apiKey () {
-    return this.$store.getters['auth/getApiKey']
+  get apiKey (): string {
+    return this.$typedState.auth.apiKey
   }
 
   handleRefreshApiKey () {
-    this.$store.dispatch('auth/refreshApiKey')
+    this.$typedDispatch('auth/refreshApiKey')
   }
 }
 </script>

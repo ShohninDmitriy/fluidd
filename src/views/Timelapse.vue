@@ -7,13 +7,12 @@
       <collapsable-card
         :title="$t('app.general.title.timelapse')"
         icon="$video"
-        :draggable="false"
       >
         <file-system
           :roots="'timelapse'"
           name="timelapse"
           bulk-actions
-          :max-height="816"
+          class="full-screen"
         />
       </collapsable-card>
     </v-col>
@@ -22,8 +21,15 @@
       cols="12"
       md="4"
     >
-      <timelapse-status-card @openRenderDialog="openRenderDialog" />
-      <timelapse-settings-card @openRenderDialog="openRenderDialog" />
+      <timelapse-status-card
+        class="mb-2 mb-md-4"
+        @openRenderDialog="openRenderDialog"
+      />
+
+      <timelapse-settings-card
+        class="mb-2 mb-md-4"
+        @openRenderDialog="openRenderDialog"
+      />
     </v-col>
 
     <timelapse-render-settings-dialog
@@ -60,3 +66,10 @@ export default class Timelapse extends Mixins(StateMixin) {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+  .full-screen {
+    max-height: calc(100vh - 190px);
+    max-height: calc(100svh - 190px);
+  }
+</style>

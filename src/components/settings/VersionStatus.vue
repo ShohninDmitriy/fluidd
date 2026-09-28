@@ -5,6 +5,7 @@
       small
       outlined
       :color="(disabled) ? 'grey darken-2' : 'success'"
+      class="ml-1"
     >
       {{ $t('app.version.label.up_to_date') }}
     </v-chip>
@@ -19,6 +20,7 @@
           outlined
           :disabled="disabled"
           :color="(disabled) ? 'grey darken-2' : 'error'"
+          class="ml-1"
           v-on="on"
         >
           {{ $t('app.version.label.dirty') }}
@@ -37,6 +39,7 @@
           small
           outlined
           :color="(disabled) ? 'grey darken-2' : 'error'"
+          class="ml-1"
           v-on="on"
         >
           {{ $t('app.version.label.invalid') }}
@@ -76,19 +79,19 @@ import { Component, Prop } from 'vue-property-decorator'
 
 @Component({})
 export default class VersionStatus extends Vue {
-  @Prop({ type: Boolean, default: false })
-  readonly hasUpdate!: boolean
+  @Prop({ type: Boolean })
+  readonly hasUpdate?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly disabled!: boolean
+  @Prop({ type: Boolean })
+  readonly disabled?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly loading!: boolean
+  @Prop({ type: Boolean })
+  readonly loading?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly dirty!: boolean
+  @Prop({ type: Boolean })
+  readonly dirty?: boolean
 
   @Prop({ type: Boolean, default: true })
-  readonly valid!: boolean
+  readonly valid?: boolean
 }
 </script>

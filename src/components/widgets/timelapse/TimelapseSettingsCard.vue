@@ -2,8 +2,6 @@
   <collapsable-card
     :title="$t('app.timelapse.title.timelapse_settings')"
     icon="$cog"
-    class=""
-    :draggable="false"
   >
     <app-setting
       :title="$t('app.timelapse.setting.enable')"
@@ -55,41 +53,44 @@
 <script lang="ts">
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import { TimelapseSettings } from '@/store/timelapse/types'
+import type { TimelapseLastFrame } from '@/store/timelapse/types'
 import { SocketActions } from '@/api/socketActions'
+import { defaultWritableSettings } from '@/store/timelapse/state'
 
 @Component({})
 export default class TimelapseSettingsCard extends Mixins(StateMixin) {
-  get enabledBlocked () {
-    return this.$store.getters['timelapse/isBlockedSetting']('enabled')
+  get enabledBlocked (): boolean {
+    return this.$typedGetters['timelapse/isBlockedSetting']('enabled')
   }
 
   get enabled () {
-    return this.settings?.enabled
+    return this.settings.enabled
   }
 
   set enabled (value: boolean) {
-    SocketActions.machineTimelapseSetSettings({ enabled: value })
+    SocketActions.machineTimelapsePostSettings({ enabled: value })
   }
 
-  get autoRenderBlocked () {
-    return this.$store.getters['timelapse/isBlockedSetting']('autorender')
+  get autoRenderBlocked (): boolean {
+    return this.$typedGetters['timelapse/isBlockedSetting']('autorender')
   }
 
   get autoRender () {
-    return this.settings?.autorender
+    return this.settings.autorender
   }
 
   set autoRender (value: boolean) {
-    SocketActions.machineTimelapseSetSettings({ autorender: value })
+    SocketActions.machineTimelapsePostSettings({ autorender: value })
   }
 
   get frameCount () {
-    return this.$store.getters['timelapse/getLastFrame']?.count
+    const lastFrame: TimelapseLastFrame | null = this.$typedGetters['timelapse/getLastFrame']
+
+    return lastFrame?.count
   }
 
-  get settings (): TimelapseSettings {
-    return this.$store.getters['timelapse/getSettings']
+  get settings (): Moonraker.Timelapse.WriteableSettings {
+    return this.$typedState.timelapse.settings ?? defaultWritableSettings
   }
 
   subtitleIfBlocked (blocked: boolean): string {

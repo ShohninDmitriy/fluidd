@@ -1,12 +1,16 @@
 <template>
   <app-btn
     v-if="isExpanded"
-    color=""
     :disabled="disabled"
     :loading="loading"
+    color=""
+    class="me-1"
     @click="$emit('click')"
   >
-    <v-icon class="mr-1">
+    <v-icon
+      left
+      color="warning"
+    >
       $save
     </v-icon>
     <span>{{ $t('app.general.btn.save_config_and_restart') }}</span>
@@ -19,11 +23,9 @@
     <template #activator="{ on, attrs }">
       <app-btn
         v-bind="attrs"
-        fab
-        small
+        icon
         text
-        color=""
-        :elevation="0"
+        color="warning"
         :disabled="disabled"
         :loading="loading"
         v-on="on"
@@ -41,11 +43,11 @@ import { Component, Prop, Vue } from 'vue-property-decorator'
 
 @Component({})
 export default class AppSaveConfigAndRestartBtn extends Vue {
-  @Prop({ type: Boolean, default: false })
-  readonly disabled!: boolean
+  @Prop({ type: Boolean })
+  readonly disabled?: boolean
 
-  @Prop({ type: Boolean, default: false })
-  readonly loading!: boolean
+  @Prop({ type: Boolean })
+  readonly loading?: boolean
 
   get isExpanded () {
     return this.$vuetify.breakpoint.mdAndUp

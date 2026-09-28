@@ -41,13 +41,11 @@
         </app-btn>
       </app-setting>
 
-      <v-divider v-if="users.length > 0" />
+      <template v-for="user in users">
+        <v-divider :key="`user:divider:${user.username}`" />
 
-      <template
-        v-for="(user, i) in users"
-      >
         <app-setting
-          :key="`user-${user.username}`"
+          :key="`user::${user.username}`"
           :sub-title="
             user.username === currentUser ? $t('app.general.label.current_user') :
             user.source !== 'moonraker' ? $t('app.general.label.user_managed_source', { source: $t(`app.general.label.${user.source}`) }) :
@@ -61,111 +59,86 @@
 
           <app-btn
             :disabled="user.username === currentUser || user.source !== 'moonraker'"
-            fab
-            text
-            x-small
-            color=""
+            icon
             @click.stop="handleRemoveUser(user)"
           >
-            <v-icon color="">
-              $close
+            <v-icon dense>
+              $delete
             </v-icon>
           </app-btn>
         </app-setting>
-
-        <v-divider
-          v-if="i < users.length - 1"
-          :key="`divider-${user.username}`"
-        />
       </template>
 
-      <user-config-dialog
-        v-if="userDialogState.open"
-        v-model="userDialogState.open"
-        :user="userDialogState.user"
-        @save="userDialogState.handler"
+      <add-user-dialog
+        v-if="addUserDialogOpen"
+        v-model="addUserDialogOpen"
+        @save="handleSaveUser"
       />
 
       <api-key-dialog
-        v-if="apiKeyDialogState.open"
-        v-model="apiKeyDialogState.open"
+        v-if="apiKeyDialogOpen"
+        v-model="apiKeyDialogOpen"
       />
     </v-card>
   </div>
 </template>
 
 <script lang="ts">
-import { AppUser } from '@/store/auth/types'
+import type { AppUser } from '@/store/auth/types'
 import { Component, Vue } from 'vue-property-decorator'
-import UserConfigDialog from './UserConfigDialog.vue'
+import AddUserDialog from './AddUserDialog.vue'
 import ApiKeyDialog from './ApiKeyDialog.vue'
+import { SocketActions } from '@/api/socketActions'
 
 @Component({
   components: {
-    UserConfigDialog,
+    AddUserDialog,
     ApiKeyDialog
   }
 })
 export default class AuthSettings extends Vue {
   search = ''
-  categoryId: string | undefined = undefined
+  categoryId?: string = undefined
+  addUserDialogOpen = false
+  apiKeyDialogOpen = false
 
-  userDialogState: any = {
-    open: false,
-    user: null,
-    handler: null
-  }
-
-  apiKeyDialogState: any = {
-    open: false
-  }
-
-  get users () {
-    return this.$store.getters['auth/getUsers']
+  get users (): AppUser[] {
+    return this.$typedState.auth.users
   }
 
   get currentUser () {
-    const currentUser = this.$store.getters['auth/getCurrentUser']
-    return (currentUser && currentUser.username) ? currentUser.username : ''
+    const currentUser: AppUser | null = this.$typedState.auth.currentUser
+
+    return currentUser?.username ?? ''
   }
 
   handleAddUserDialog () {
-    this.userDialogState = {
-      open: true,
-      user: { username: '', password: '' },
-      handler: this.handleSaveUser
-    }
-  }
-
-  handleEditUserDialog (user: AppUser) {
-    this.userDialogState = {
-      open: true,
-      user,
-      handler: this.handleSaveUser
-    }
+    this.addUserDialogOpen = true
   }
 
   handleApiKeyDialog () {
-    this.apiKeyDialogState.open = true
+    this.apiKeyDialogOpen = true
   }
 
-  handleRemoveUser (user: AppUser) {
-    this.$confirm(
-      this.$tc('app.general.simple_form.msg.confirm'),
+  async handleRemoveUser (user: AppUser) {
+    const result = await this.$confirm(
+      this.$t('app.general.simple_form.msg.confirm_remove_user', { username: user.username }).toString(),
       { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
     )
-      .then(res => {
-        if (res) {
-          this.$store.dispatch('auth/removeUser', user)
-        }
-      })
+
+    if (result) {
+      await SocketActions.accessDeleteUser(user.username)
+    }
   }
 
-  async handleSaveUser (user: AppUser) {
-    await this.$store.dispatch('auth/addUser', user)
+  async handleSaveUser (user: { username: string, password: string }) {
+    const isFirstUser = this.users.length === 0
 
-    // We only want to check trust if this is the first user being added.
-    if (this.users.length === 0) this.$store.dispatch('auth/checkTrust')
+    await SocketActions.accessPostUser(user.username, user.password)
+
+    if (isFirstUser) {
+      this.$typedDispatch('auth/checkTrust')
+    }
   }
 }
 </script>

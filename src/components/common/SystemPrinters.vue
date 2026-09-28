@@ -2,10 +2,10 @@
   <v-list dense>
     <v-subheader>{{ $t('app.general.label.printers') }}</v-subheader>
 
-    <template v-for="(instance, index) in instances">
+    <template v-for="instance in instances">
       <v-list-item
-        :key="index"
-        color="primary"
+        :key="instance.apiUrl"
+        class="instance-item"
         :class="{ 'v-item--active v-list-item--active': instance.active }"
         @click.stop="activateInstance(instance)"
       >
@@ -18,11 +18,9 @@
         <v-list-item-action v-if="!instance.active">
           <app-btn
             icon
-            small
-            color=""
             @click.stop="removeInstance(instance)"
           >
-            <v-icon small>
+            <v-icon dense>
               $delete
             </v-icon>
           </app-btn>
@@ -52,8 +50,8 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins } from 'vue-property-decorator'
-import { InitConfig, InstanceConfig } from '@/store/config/types'
+import { Component, Mixins, Watch } from 'vue-property-decorator'
+import type { InstanceConfig } from '@/store/config/types'
 import StateMixin from '@/mixins/state'
 import { appInit } from '@/init'
 
@@ -61,52 +59,50 @@ import { appInit } from '@/init'
 export default class SystemPrinters extends Mixins(StateMixin) {
   instanceDialogOpen = false
 
-  get instanceName () {
-    return this.$store.state.config.uiSettings.general.instanceName
+  get instanceName (): string {
+    return this.$typedState.config.uiSettings.general.instanceName
   }
 
-  get instances () {
-    return this.$store.getters['config/getInstances']
+  get instances (): InstanceConfig[] {
+    return this.$typedGetters['config/getInstances']
   }
 
-  mounted () {
-    // If we have no api's configured at all, open the dialog.
-    if (this.$store.state.config.apiUrl === '') {
+  @Watch('socketInitializing')
+  onSocketInitializingChanged (value: boolean) {
+    if (!value && this.$typedState.config.apiUrl === '') {
       this.instanceDialogOpen = true
     }
   }
 
-  removeInstance (instance: InstanceConfig) {
-    this.$store.dispatch('config/removeInstance', instance)
+  async removeInstance (instance: InstanceConfig) {
+    const result = await this.$confirm(
+      this.$t('app.general.simple_form.msg.confirm_remove_printer', { name: instance.name }).toString(),
+      { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
+    )
+
+    if (result) {
+      this.$typedDispatch('config/removeInstance', instance)
+    }
   }
 
   addInstanceDialog () {
     this.instanceDialogOpen = true
   }
 
-  activateInstance (instance: InstanceConfig) {
+  async activateInstance (instance: InstanceConfig) {
     // Close the drawer
     this.$emit('click')
     if (!instance.active) {
-      // Close the socket.
-      this.$socket.close()
-
       // Re-init the app.
-      appInit(instance, this.$store.state.config.hostConfig)
-        .then((config: InitConfig) => {
-          // Reconnect the socket with the new instance url.
-          if (config.apiConfig.socketUrl && config.apiConnected && config.apiAuthenticated) {
-            this.$socket.connect(config.apiConfig.socketUrl)
-          }
-        })
+      await appInit(instance, this.$typedState.config.hostConfig)
     }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-  :deep(.instance-item .v-list-item__action ) {
-    margin: 6px 0;
+  :deep(.v-list-item__action) {
+    margin: 6px -6px 6px 0;
   }
   :deep(.v-list-item--active::before) {
     opacity: 0.08;

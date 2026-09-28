@@ -7,12 +7,14 @@
       <collapsable-card
         :title="$t('app.general.title.config_files')"
         icon="$codeJson"
-        :draggable="false"
+        :help-tooltip="$t('app.general.tooltip.file_browser_help')"
+        class="mb-2 mb-md-4"
       >
         <file-system
           :roots="['config']"
-          :max-height="816"
           name="configure"
+          bulk-actions
+          class="full-screen"
         />
       </collapsable-card>
     </v-col>
@@ -23,12 +25,13 @@
       <collapsable-card
         :title="$t('app.general.title.other_files')"
         icon="$files"
-        :draggable="false"
+        :help-tooltip="$t('app.general.tooltip.file_browser_configuration_help')"
+        class="mb-2 mb-md-4"
       >
         <file-system
-          :roots="['logs', 'docs', 'config_examples']"
-          :max-height="816"
+          :roots="roots"
           name="configure"
+          class="full-screen"
         />
       </collapsable-card>
     </v-col>
@@ -55,21 +58,32 @@ import DiskUsageCard from '@/components/widgets/system/DiskUsageCard.vue'
 export default class Configure extends Mixins(StateMixin) {
   get hasGraphData () {
     return (
-      this.$store.state.charts.klipper !== undefined ||
-      this.$store.state.charts.moonraker !== undefined ||
-      this.$store.state.charts.memory !== undefined
+      this.$typedState.charts.klipper !== undefined ||
+      this.$typedState.charts.moonraker !== undefined ||
+      this.$typedState.charts.memory !== undefined
     )
   }
 
-  get breakpoint () {
-    if (this.$vuetify.breakpoint.mdAndDown) {
-      return 12
-    }
-    return 6
-  }
+  get roots () {
+    const roots = ['logs', 'docs', 'config_examples']
+    const excludeRoots = ['gcodes', 'config', 'timelapse', 'timelapse_frames']
 
-  get supportsHistory () {
-    return this.$store.getters['server/componentSupport']('history')
+    const registeredDirectories: string[] = this.$typedState.server.info.registered_directories || []
+
+    for (const root of registeredDirectories) {
+      if (!excludeRoots.includes(root) && !roots.includes(root)) {
+        roots.push(root)
+      }
+    }
+
+    return roots
   }
 }
 </script>
+
+<style lang="scss" scoped>
+  .full-screen {
+    max-height: calc(100vh - 190px);
+    max-height: calc(100svh - 190px);
+  }
+</style>

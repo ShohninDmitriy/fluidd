@@ -1,10 +1,11 @@
-import { GetterTree } from 'vuex'
-import { LayoutState, LayoutContainer, LayoutConfig } from './types'
-import { RootState } from '../types'
+import type { GetterTree } from 'vuex'
+import type { LayoutState, LayoutContainer, LayoutConfig } from './types'
+import type { RootState } from '../types'
 import { cloneDeep } from 'lodash-es'
 import vuetify from '@/plugins/vuetify'
+import type { AppUser } from '../auth/types'
 
-export const getters: GetterTree<LayoutState, RootState> = {
+export const getters = {
   /**
    * Return the state / config of a layout item given its page and id.
    */
@@ -30,10 +31,19 @@ export const getters: GetterTree<LayoutState, RootState> = {
     }
   },
 
-  isEnabledInLayout: (state, getters) => (layout: string, id: string) => {
-    const configs = Object.values(getters.getLayout(layout) ?? {}).flat() as LayoutConfig[]
+  isEnabledInLayout: (state, getters) => (name: string, id: string): boolean => {
+    const layout: LayoutContainer | undefined = getters.getLayout(name)
+    const configs = layout
+      ? Object.values(layout).flat()
+      : []
 
     return configs.find(configs => configs.id === id)?.enabled ?? false
+  },
+
+  isEnabledInCurrentLayout: (state, getters) => (id: string): boolean => {
+    const layout: string = getters.getSpecificLayoutName
+
+    return getters.isEnabledInLayout(layout, id)
   },
 
   /**
@@ -50,6 +60,7 @@ export const getters: GetterTree<LayoutState, RootState> = {
    */
   getConfig: (state, getters) => (name: string, id: string): LayoutConfig | undefined => {
     const containers: LayoutContainer = getters.getLayout(name)
+
     if (containers) {
       for (const l in containers) {
         const config = containers[l].find(layout => layout.id === id)
@@ -58,11 +69,17 @@ export const getters: GetterTree<LayoutState, RootState> = {
     }
   },
 
-  getSpecificLayoutName: (state, getters, rootState, rootGetters): string => {
-    const user = rootGetters['auth/getCurrentUser']
+  getSpecificLayoutName: (state, getters, rootState): string => {
+    const user: AppUser | null = rootState.auth.currentUser
+
     if (!user) return 'dashboard'
 
     const size = vuetify.framework.breakpoint.name
-    return `dashboard-${size}-${user.username}`
+
+    // encode . and % to avoid issues with Moonraker DB keys (dots are JSON path separators)
+    const username = user.username
+      .replace(/[%.]/g, (m) => `%${m.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
+
+    return `dashboard-${size}-${username}`
   }
-}
+} satisfies GetterTree<LayoutState, RootState>

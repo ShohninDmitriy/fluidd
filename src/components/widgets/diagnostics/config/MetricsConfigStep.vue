@@ -45,9 +45,8 @@
                 class="d-flex justify-center"
               >
                 <app-btn
-                  small
                   icon
-                  color=""
+                  small
                   @click.stop="removeMetric(i, j)"
                 >
                   <v-icon dense>
@@ -75,10 +74,10 @@
 
               <app-setting :title="$t('app.setting.label.line_color')">
                 <app-color-picker
-                  :primary="metric.style.lineColor"
+                  :value="metric.style.lineColor"
                   :title="metric.name"
                   dot
-                  @change="handleColorChange('lineColor', metric, $event)"
+                  @input="metric.style.lineColor = $event"
                 />
               </app-setting>
 
@@ -99,16 +98,16 @@
 
               <app-setting :title="$t('app.setting.label.fill_color')">
                 <app-color-picker
-                  :primary="metric.style.fillColor ?? metric.style.lineColor"
+                  :value="metric.style.fillColor ?? metric.style.lineColor"
                   :title="metric.name"
                   dot
-                  @change="handleColorChange('fillColor', metric, $event)"
+                  @input="metric.style.fillColor = $event"
                 />
               </app-setting>
 
               <v-divider />
 
-              <app-slider
+              <app-named-slider
                 v-model="metric.style.fillOpacity"
                 class="px-4 py-3"
                 :label="$t('app.setting.label.fill_opacity')"
@@ -158,9 +157,9 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from 'vue-property-decorator'
-import { DiagnosticsCardConfig, Metric } from '@/store/diagnostics/types'
+import type { DiagnosticsCardConfig } from '@/store/diagnostics/types'
 import MetricsCollectorConfig from './MetricsCollectorConfig.vue'
-import { defaultState } from '@/store/layout/state'
+import { createDiagnosticsCardState } from '@/store/layout/state'
 
 @Component({
   components: {
@@ -180,13 +179,8 @@ export default class MetricsConfigStep extends Vue {
     { text: this.$t('app.setting.label.dashed'), value: 'dashed' }
   ]
 
-  handleColorChange (prop: 'lineColor' | 'fillColor', metric: Metric, event: any) {
-    metric.style[prop] = event.color.hexString
-  }
-
   addMetric (axis: number) {
-    const defaultCard = defaultState().layouts.diagnostics.container1[0] as DiagnosticsCardConfig
-    const defaultMetric = defaultCard.axes[0].metrics[0]
+    const defaultMetric = createDiagnosticsCardState().axes[0].metrics[0]
 
     this.config.axes[axis].metrics.push(defaultMetric)
   }

@@ -1,41 +1,22 @@
-import { KlipperFileMeta } from '@/store/files/types.metadata'
+import type { AppFileMeta } from '@/store/files/types.metadata'
 
 export interface HistoryState {
-  count: number;
-  jobs: HistoryItem[];
-  job_totals: HistoryRollUp;
+  jobs: Readonly<Moonraker.History.Job>[];
+  job_totals: Moonraker.History.JobTotals;
+  unresolvedJobIds: Set<string>;
+  allLoaded: boolean;
 }
 
-export interface HistoryItem {
-  job_id: string;
-  exists: boolean;
-  end_time: string | null;
-  filament_used: number;
-  filename: string;
-  metadata?: KlipperFileMeta;
-  print_duration: number;
-  status: HistoryItemStatus;
-  start_time: number;
-  total_duration: number;
-  path?: string;
+export interface HistoryItem extends Omit<Moonraker.History.Job, 'metadata'> {
+  metadata?: AppFileMeta;
 }
 
-export interface HistoryRollUp {
-  total_jobs: number;
-  total_time: number;
-  total_print_time: number;
-  total_filament_used: number;
-  longest_job: number;
-  longest_print: number;
-}
+export type HistoryItemStatus = 'completed' | 'cancelled' | 'error' | 'printing' | 'in_progress' | 'server_exit' | 'klippy_shutdown' | 'klippy_disconnect' | 'interrupted'
 
-export enum HistoryItemStatus {
-  Completed = 'completed',
-  Cancelled = 'cancelled',
-  Error = 'error',
-  Printing = 'printing',
-  InProgress = 'in_progress',
-  Server_Exit = 'server_exit',
-  Klippy_Shutdown = 'klippy_shutdown',
-  Klippy_Disconnect = 'klippy_disconnect'
+export interface HistoryItemAuxiliaryData {
+  provider: string;
+  name: string;
+  value: unknown;
+  description: string;
+  units: string | null;
 }

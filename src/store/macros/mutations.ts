@@ -1,19 +1,30 @@
 import Vue from 'vue'
 import { v4 as uuidv4 } from 'uuid'
-import { MutationTree } from 'vuex'
-import { defaultState } from './state'
-import { Macro, MacroCategory, MacrosState } from './types'
+import type { MutationTree } from 'vuex'
+import { createState } from './state'
+import type { Macro, MacroCategory, MacrosState } from './types'
+import { MACRO_DEFAULTS } from '@/store/macros/getters'
 
-export const mutations: MutationTree<MacrosState> = {
+const sanitizeMacroForStorage = (macro: Macro) => {
+  for (const key in macro) {
+    if (!(key === 'name' || key in MACRO_DEFAULTS)) {
+      delete macro[key as keyof Macro]
+    }
+  }
+
+  return macro
+}
+
+export const mutations = {
   /**
    * Reset state
    */
   setReset (state) {
-    Object.assign(state, defaultState())
+    Object.assign(state, createState())
   },
 
   // Sets macro state from db
-  initMacros (state, payload: MacrosState) {
+  initMacros (state, payload: Partial<MacrosState>) {
     if (payload && payload.categories) {
       if (typeof payload.categories[0] === 'string') payload.categories = []
     }
@@ -22,26 +33,26 @@ export const mutations: MutationTree<MacrosState> = {
 
   // Updates a singular macro
   setUpdateMacro (state, macro: Macro) {
-    const m = { ...macro }
-    delete m.config // Saving a macro should never include its config.
-    delete m.category // we don't need the category prop (we use categoryid)
-    const i = state.stored.findIndex(m => m.name === macro.name)
+    const lowerCaseName = macro.name.toLowerCase()
+    const i = state.stored.findIndex(m => m.name.toLowerCase() === lowerCaseName)
+    const processed = sanitizeMacroForStorage({
+      ...macro
+    })
     if (i < 0) {
-      state.stored.push(m)
+      state.stored.push(processed)
     } else {
-      Vue.set(state.stored, i, m)
+      Vue.set(state.stored, i, processed)
     }
   },
 
   setUpdateAllVisible (state, payload: { macros: Macro[]; visible: boolean }) {
     payload.macros.forEach((macro: Macro) => {
-      const i = state.stored.findIndex(m => m.name === macro.name)
-      const processed = {
+      const lowerCaseName = macro.name.toLowerCase()
+      const i = state.stored.findIndex(m => m.name.toLowerCase() === lowerCaseName)
+      const processed = sanitizeMacroForStorage({
         ...macro,
         visible: payload.visible
-      }
-      delete processed.config // Saving a macro should never include its config.
-      delete processed.category // we don't need the category prop (we use categoryid)
+      })
       if (i < 0) {
         state.stored.push(processed)
       } else {
@@ -61,11 +72,6 @@ export const mutations: MutationTree<MacrosState> = {
       id: payload.id,
       name: payload.name
     })
-    state.stored.forEach((macro, i) => {
-      if (macro.categoryId === payload.id) {
-        Vue.set(state.stored, i, { ...macro, categoryId: payload.id })
-      }
-    })
   },
 
   setRemoveCategory (state, payload: MacroCategory) {
@@ -74,7 +80,7 @@ export const mutations: MutationTree<MacrosState> = {
       state.categories.splice(i, 1)
       state.stored.forEach((macro, i) => {
         if (macro.categoryId === payload.id) {
-          const m = { ...macro }
+          const m = sanitizeMacroForStorage({ ...macro })
           delete m.categoryId
           Vue.set(state.stored, i, m)
         }
@@ -82,7 +88,11 @@ export const mutations: MutationTree<MacrosState> = {
     }
   },
 
+  setUpdateCategories (state, payload: MacroCategory[]) {
+    state.categories = payload
+  },
+
   setExpanded (state, expanded: number[]) {
-    Vue.set(state, 'expanded', expanded)
+    state.expanded = expanded
   }
-}
+} satisfies MutationTree<MacrosState>

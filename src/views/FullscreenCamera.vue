@@ -5,14 +5,13 @@
   >
     <CameraItem
       :camera="camera"
-      :fullscreen="true"
+      fullscreen
     />
   </v-card>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import { CameraConfig } from '@/store/cameras/types'
 import CameraItem from '@/components/widgets/camera/CameraItem.vue'
 
 @Component({
@@ -21,12 +20,13 @@ import CameraItem from '@/components/widgets/camera/CameraItem.vue'
   }
 })
 export default class FullscreenCamera extends Vue {
-  cameraId: string | null = null
-  camera: CameraConfig | null = null
+  camera: Moonraker.Webcam.Entry | null = null
 
   created () {
-    this.cameraId = this.$route.params.cameraId
-    this.camera = this.$store.getters['cameras/getCameras'].find((camera: CameraConfig) => camera.id === this.cameraId)
+    const cameraId = this.$route.params.cameraId
+    const camera: Moonraker.Webcam.Entry | undefined = this.$typedGetters['webcams/getWebcamById'](cameraId)
+
+    this.camera = camera ?? null
   }
 }
 </script>

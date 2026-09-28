@@ -1,14 +1,14 @@
 import Vue from 'vue'
-import { MutationTree } from 'vuex'
-import { defaultState } from './state'
-import { NotificationsState, AppNotification } from './types'
+import type { MutationTree } from 'vuex'
+import { createState } from './state'
+import type { NotificationsState, AppNotification } from './types'
 
-export const mutations: MutationTree<NotificationsState> = {
+export const mutations = {
   /**
    * Reset state
    */
   setReset (state) {
-    Object.assign(state, defaultState())
+    Object.assign(state, createState())
   },
 
   setPushNotification (state, n: AppNotification) {
@@ -34,6 +34,7 @@ export const mutations: MutationTree<NotificationsState> = {
   },
 
   setClearAllNotifications (state) {
-    Vue.set(state, 'notifications', [...state.notifications.filter(n => !n.clear)])
+    state.notifications = state.notifications
+      .filter(n => !n.clear)
   }
-}
+} satisfies MutationTree<NotificationsState>

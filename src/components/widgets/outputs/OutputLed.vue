@@ -6,18 +6,19 @@
     <v-col
       align-self="center"
       cols="5"
-      class="text-body-1 py-0"
+      class="text-body-1"
+      :class="{ 'text--disabled': !klippyReady || led.disconnected }"
     >
       {{ led.prettyName }}
     </v-col>
-    <v-col class="ml-auto py-0 text-right">
+    <v-col class="ml-auto text-right">
       <app-color-picker
-        :primary="primaryColor"
-        :white="whiteColor"
+        v-model="primaryColor"
+        :white.sync="whiteValue"
         :title="led.prettyName"
         :supported-channels="supportedChannels"
+        :disabled="!klippyReady || led.disconnected"
         dot
-        @change="handleColorChange"
       />
     </v-col>
   </v-row>
@@ -27,89 +28,65 @@
 import { Component, Mixins, Prop } from 'vue-property-decorator'
 import { IroColor } from '@irojs/iro-core'
 import StateMixin from '@/mixins/state'
-import { Led } from '@/store/printer/types'
+import type { Led } from '@/store/printer/types'
+import { encodeGcodeParamValue } from '@/util/gcode-helpers'
 
-type Channel = 'r' | 'g' | 'b' | 'w'
+type Rgbw = {
+  r: number,
+  g: number,
+  b: number,
+  w: number
+}
 
 @Component({})
 export default class OutputLed extends Mixins(StateMixin) {
   @Prop({ type: Object, required: true })
   readonly led!: Led
 
-  channelLookup: Record<Channel, string> = { r: 'RED', g: 'GREEN', b: 'BLUE', w: 'WHITE' }
+  channelLookup: Record<keyof Rgbw, string> = {
+    r: 'RED',
+    g: 'GREEN',
+    b: 'BLUE',
+    w: 'WHITE'
+  }
 
   get supportedChannels (): string {
     const { type, config } = this.led
 
-    if ('color_order' in config) {
-      return config.color_order[0]
-    }
+    if (config) {
+      if ('color_order' in config) {
+        const colorOrder = Array.isArray(config.color_order)
+          ? config.color_order[0]
+          : config.color_order
 
-    switch (type) {
-      case 'dotstar':
-        return 'RGB'
+        if (typeof colorOrder === 'string') {
+          return colorOrder
+        }
+      }
 
-      case 'led':
-      {
-        const channels = []
+      switch (type) {
+        case 'dotstar':
+          return 'RGB'
 
-        if ('red_pin' in config) channels.push('R')
-        if ('green_pin' in config) channels.push('G')
-        if ('blue_pin' in config) channels.push('B')
-        if ('white_pin' in config) channels.push('W')
+        case 'led': {
+          const channels = []
 
-        return channels.join('')
+          if ('red_pin' in config) channels.push('R')
+          if ('green_pin' in config) channels.push('G')
+          if ('blue_pin' in config) channels.push('B')
+          if ('white_pin' in config) channels.push('W')
+
+          return channels.join('')
+        }
       }
     }
 
     return 'RBGW'
   }
 
-  get currentColor () {
-    return this.convertFromNumberArray(this.led.color_data[0])
-  }
-
-  get primaryColor () {
-    const color = new IroColor(this.currentColor)
-
-    return color.hexString
-  }
-
-  get whiteColor () {
-    if (!this.supportedChannels.includes('W')) {
-      return undefined
-    }
-
-    const currentColor = this.currentColor
-    const color = new IroColor({
-      r: currentColor.w,
-      g: currentColor.w,
-      b: currentColor.w
-    })
-
-    return color.hexString
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
-  }
-
-  handleColorChange (value: { channel: string; color: IroColor }) {
-    const selectedColor = value.color.rgb
-
-    const newColor: Record<Channel, number> = {
-      ...this.currentColor,
-      ...(value.channel === 'primary' ? selectedColor : { w: selectedColor.r })
-    }
-
-    const supportedChannels = this.supportedChannels.toLowerCase().split('') as Channel[]
-    const colorsString = supportedChannels.map(channel => `${this.channelLookup[channel]}=${Math.round(newColor[channel] * 1000 / 255) / 1000}`).join(' ')
-
-    this.sendGcode(`SET_LED LED=${this.led.name} ${colorsString}`)
-  }
-
-  convertFromNumberArray (colorData: number[]) : Record<Channel, number> {
-    const [r, g, b, w] = colorData.map(value => value * 255)
+  get color (): Rgbw {
+    const [r, g, b, w] = this.led.color_data[0]
+      .map(value => Math.round(value * 255))
 
     return {
       r,
@@ -117,6 +94,48 @@ export default class OutputLed extends Mixins(StateMixin) {
       b,
       w
     }
+  }
+
+  get primaryColor (): string {
+    const color = new IroColor(this.color)
+
+    return color.hexString
+  }
+
+  set primaryColor (value: string) {
+    const { r, g, b } = new IroColor(value).rgb
+
+    const newColor: Rgbw = {
+      ...this.color,
+      r,
+      g,
+      b
+    }
+
+    this.sendColor(newColor)
+  }
+
+  get whiteValue () {
+    return this.color.w
+  }
+
+  set whiteValue (value: number) {
+    const newColor: Rgbw = {
+      ...this.color,
+      w: value
+    }
+
+    this.sendColor(newColor)
+  }
+
+  sendColor (color: Rgbw) {
+    const supportedChannels = this.supportedChannels.toLowerCase().split('') as (keyof Rgbw)[]
+
+    const colorsString = supportedChannels
+      .map(channel => ` ${this.channelLookup[channel]}=${Math.round(color[channel] * 1000 / 255) / 1000}`)
+      .join('')
+
+    this.sendGcode(`SET_LED LED=${encodeGcodeParamValue(this.led.name)}${colorsString}`)
   }
 }
 </script>

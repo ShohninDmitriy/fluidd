@@ -1,7 +1,7 @@
 <template>
   <v-row :dense="$vuetify.breakpoint.smAndDown">
     <template v-for="(container, containerIndex) in containers">
-      <v-col
+      <app-observed-column
         v-if="inLayout || hasCards(container)"
         :key="`container${containerIndex}`"
         cols="12"
@@ -9,29 +9,25 @@
         :lg="columnSpan"
         :class="{ 'drag': inLayout }"
       >
-        <draggable
-          v-model="containers[containerIndex]"
-          class="list-group"
-          v-bind="dragOptions"
-          @start.stop="drag = true"
-          @end.stop="handleStopDrag"
-        >
-          <transition-group
-            type="transition"
-            :name="!drag ? 'flip-list' : null"
+        <template #default="{ narrow }">
+          <app-draggable
+            v-model="containers[containerIndex]"
+            class="list-group"
+            :options="draggableOptions"
+            @end="handleUpdateLayout"
           >
             <template v-for="c in container">
               <component
                 :is="c.id"
-                v-if="(c.enabled && !filtered(c)) || inLayout"
+                v-if="inLayout || (c.enabled && !filtered(c))"
                 :key="c.id"
-                :menu-collapsed="menuCollapsed"
-                class="mb-2 mb-sm-4"
+                :narrow="narrow"
+                class="mb-2 mb-md-4"
               />
             </template>
-          </transition-group>
-        </draggable>
-      </v-col>
+          </app-draggable>
+        </template>
+      </app-observed-column>
     </template>
   </v-row>
 </template>
@@ -39,8 +35,6 @@
 <script lang="ts">
 import { Component, Mixins, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import draggable from 'vuedraggable'
-
 import PrinterStatusCard from '@/components/widgets/status/PrinterStatusCard.vue'
 import JobsCard from '@/components/widgets/jobs/JobsCard.vue'
 import ToolheadCard from '@/components/widgets/toolhead/ToolheadCard.vue'
@@ -51,14 +45,20 @@ import ConsoleCard from '@/components/widgets/console/ConsoleCard.vue'
 import OutputsCard from '@/components/widgets/outputs/OutputsCard.vue'
 import PrinterLimitsCard from '@/components/widgets/limits/PrinterLimitsCard.vue'
 import RetractCard from '@/components/widgets/retract/RetractCard.vue'
-import { LayoutConfig } from '@/store/layout/types'
+import type { LayoutConfig, LayoutContainer } from '@/store/layout/types'
 import BedMeshCard from '@/components/widgets/bedmesh/BedMeshCard.vue'
 import GcodePreviewCard from '@/components/widgets/gcode-preview/GcodePreviewCard.vue'
-import { Macro } from '@/store/macros/types'
+import JobQueueCard from '@/components/widgets/job-queue/JobQueueCard.vue'
+import SpoolmanCard from '@/components/widgets/spoolman/SpoolmanCard.vue'
+import MmuCard from '@/components/widgets/mmu/MmuCard.vue'
+import SensorsCard from '@/components/widgets/sensors/SensorsCard.vue'
+import RunoutSensorsCard from '@/components/widgets/runout-sensors/RunoutSensorsCard.vue'
+import BeaconCard from '@/components/widgets/beacon/BeaconCard.vue'
+import AfcCard from '@/components/widgets/afc/AfcCard.vue'
+import type Sortable from 'sortablejs'
 
 @Component({
   components: {
-    draggable,
     PrinterStatusCard,
     JobsCard,
     ToolheadCard,
@@ -70,24 +70,21 @@ import { Macro } from '@/store/macros/types'
     ConsoleCard,
     OutputsCard,
     BedMeshCard,
-    GcodePreviewCard
+    GcodePreviewCard,
+    JobQueueCard,
+    SpoolmanCard,
+    MmuCard,
+    SensorsCard,
+    RunoutSensorsCard,
+    BeaconCard,
+    AfcCard
   }
 })
 export default class Dashboard extends Mixins(StateMixin) {
-  drag = false
-  menuCollapsed = false
   containers: Array<LayoutConfig[]> = []
 
   mounted () {
     this.onLayoutChange()
-
-    window.addEventListener('resize', this.updateMenuCollapsed)
-
-    this.updateMenuCollapsed()
-  }
-
-  unmounted () {
-    window.removeEventListener('resize', this.updateMenuCollapsed)
   }
 
   get columnCount () {
@@ -98,43 +95,92 @@ export default class Dashboard extends Mixins(StateMixin) {
 
   @Watch('columnCount')
   onColumnCount (value: number) {
-    this.$store.commit('config/setContainerColumnCount', value)
-
-    this.updateMenuCollapsed()
+    this.$typedCommit('config/setContainerColumnCount', value)
   }
 
   get columnSpan () {
     return 12 / this.columnCount
   }
 
+  get printerSettings (): Klipper.SettingsState {
+    return this.$typedGetters['printer/getPrinterSettings']
+  }
+
   get hasCameras (): boolean {
-    return this.$store.getters['cameras/getEnabledCameras'].length
+    return this.$typedGetters['webcams/getEnabledWebcams'].length > 0
+  }
+
+  get hasHeatersOrTemperatureSensors (): boolean {
+    return (
+      this.$typedGetters['printer/getHeaters'].length > 0 ||
+      this.$typedGetters['printer/getOutputs'](['temperature_fan']).length > 0 ||
+      this.$typedGetters['printer/getSensors'].length > 0
+    )
+  }
+
+  get hasSensors (): boolean {
+    return this.$typedGetters['sensors/getSensors'].length > 0
   }
 
   get firmwareRetractionEnabled (): boolean {
-    return 'firmware_retraction' in this.$store.getters['printer/getPrinterSettings']()
+    return 'firmware_retraction' in this.printerSettings
   }
 
-  get supportsBedMesh () {
-    return this.$store.getters['mesh/getSupportsBedMesh']
+  get supportsJobQueue (): boolean {
+    return this.$typedGetters['server/componentSupport']('job_queue')
   }
 
-  get macros () {
-    return this.$store.getters['macros/getVisibleMacros']
+  get supportsBedMesh (): boolean {
+    return this.$typedGetters['mesh/getSupportsBedMesh']
   }
 
-  get uncategorizedMacros () {
-    const macros = this.$store.getters['macros/getMacrosByCategory']()
-    return macros.filter((macro: Macro) => macro.visible)
+  get supportsBeacon (): boolean {
+    return this.$typedGetters['printer/getSupportsBeacon']
+  }
+
+  get supportsRunoutSensors (): boolean {
+    return this.$typedGetters['printer/getRunoutSensors'].length > 0
+  }
+
+  get supportsSpoolman (): boolean {
+    return this.$typedGetters['server/componentSupport']('spoolman')
+  }
+
+  get supportsMmu (): boolean {
+    return this.$typedState.printer.printer.mmu != null
+  }
+
+  get supportsAfc (): boolean {
+    return this.$typedGetters['printer/getSupportsAfc']
+  }
+
+  get hasMacros (): boolean {
+    return this.$typedGetters['macros/getVisibleMacros'].length > 0
+  }
+
+  get hasOutputs (): boolean {
+    return (
+      this.$typedGetters['printer/getAllFans'].length > 0 ||
+      this.$typedGetters['printer/getAllPins'].length > 0 ||
+      this.$typedGetters['printer/getAllLeds'].length > 0
+    )
   }
 
   get inLayout (): boolean {
-    return (this.$store.state.config.layoutMode)
+    return this.$typedState.config.layoutMode
   }
 
-  get layout () {
-    const layoutName = this.$store.getters['layout/getSpecificLayoutName']
-    return this.$store.getters['layout/getLayout'](layoutName)
+  get layout (): LayoutContainer | undefined {
+    const layoutName: string = this.$typedGetters['layout/getSpecificLayoutName']
+
+    return this.$typedGetters['layout/getLayout'](layoutName)
+  }
+
+  get draggableOptions (): Sortable.Options {
+    return {
+      group: 'dashboard',
+      disabled: !this.inLayout
+    }
   }
 
   @Watch('layout')
@@ -142,9 +188,9 @@ export default class Dashboard extends Mixins(StateMixin) {
     const containers: Array<LayoutConfig[]> = []
 
     for (let index = 1; index <= 4; index++) {
-      const container = this.layout[`container${index}`]
+      const container = this.layout?.[`container${index}`]
 
-      if (container?.length > 0) {
+      if (container && container.length > 0) {
         containers.push(container)
       }
     }
@@ -156,24 +202,11 @@ export default class Dashboard extends Mixins(StateMixin) {
     this.containers = containers.slice(0, 4)
   }
 
-  get dragOptions () {
-    return {
-      animation: 200,
-      handle: '.handle',
-      group: 'dashboard',
-      disabled: !this.inLayout,
-      ghostClass: 'ghost'
-    }
-  }
+  handleUpdateLayout () {
+    const name: string = this.$typedGetters['layout/getSpecificLayoutName']
 
-  updateMenuCollapsed () {
-    this.menuCollapsed = (this.$el.clientWidth / this.columnCount) < 560
-  }
-
-  handleStopDrag () {
-    this.drag = false
-    this.$store.dispatch('layout/onLayoutChange', {
-      name: this.$store.getters['layout/getSpecificLayoutName'],
+    this.$typedDispatch('layout/onLayoutChange', {
+      name,
       value: {
         container1: this.containers[0],
         container2: this.containers[1],
@@ -191,10 +224,19 @@ export default class Dashboard extends Mixins(StateMixin) {
     // Take care of special cases.
     if (this.inLayout) return false
     if (item.id === 'camera-card' && !this.hasCameras) return true
-    if (item.id === 'macros-card' && (this.macros.length <= 0 && this.uncategorizedMacros.length <= 0)) return true
+    if (item.id === 'macros-card' && !this.hasMacros) return true
+    if (item.id === 'outputs-card' && !this.hasOutputs) return true
     if (item.id === 'printer-status-card' && !this.klippyReady) return true
+    if (item.id === 'job-queue-card' && !this.supportsJobQueue) return true
     if (item.id === 'retract-card' && !this.firmwareRetractionEnabled) return true
     if (item.id === 'bed-mesh-card' && !this.supportsBedMesh) return true
+    if (item.id === 'beacon-card' && !this.supportsBeacon) return true
+    if (item.id === 'runout-sensors-card' && !this.supportsRunoutSensors) return true
+    if (item.id === 'spoolman-card' && !this.supportsSpoolman) return true
+    if (item.id === 'mmu-card' && !this.supportsMmu) return true
+    if (item.id === 'sensors-card' && !this.hasSensors) return true
+    if (item.id === 'temperature-card' && !this.hasHeatersOrTemperatureSensors) return true
+    if (item.id === 'afc-card' && !this.supportsAfc) return true
 
     // Otherwise return the opposite of whatever the enabled state is.
     return !item.enabled

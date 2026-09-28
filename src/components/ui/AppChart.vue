@@ -1,89 +1,90 @@
 <template>
-  <div>
-    <div
-      class="chart"
-      :style="{ 'height': height }"
-    >
-      <e-chart
-        v-if="ready"
-        ref="chart"
-        style="overflow: initial;"
-        :option="opts"
-        :update-options="{ notMerge: true }"
-        :init-options="{ renderer: 'svg' }"
-        :events="events"
-        autoresize
-      />
-    </div>
+  <div
+    class="chart"
+    :style="{
+      height: $filters.getPixelsString(height)
+    }"
+  >
+    <e-chart
+      ref="chart"
+      style="overflow: initial;"
+      manual-update
+      :init-options="initOptions"
+      autoresize
+      @hook:mounted="applyOption"
+    />
   </div>
 </template>
 
 <script lang='ts'>
 import { Vue, Component, Prop, Watch, Ref } from 'vue-property-decorator'
-import type { ECharts } from 'echarts'
-import { merge } from 'lodash-es'
+import type { DatasetComponentOption, ECharts, EChartsInitOpts, EChartsOption } from 'echarts'
+import type { ChartDataSource } from '@/store/charts/types'
 
 @Component({})
 export default class AppChart extends Vue {
-  @Prop({ type: Array, required: true })
-  readonly data!: any
+  @Prop({ type: Object, required: true })
+  readonly data!: ChartDataSource
 
-  @Prop({ type: Object, default: {} })
-  readonly options!: any
+  @Prop({ type: Array })
+  readonly dimensions?: DatasetComponentOption['dimensions']
+
+  @Prop({ type: Object, default: () => {} })
+  readonly options!: EChartsOption
 
   @Prop({ type: String, default: '100%' })
   readonly height!: string
 
-  @Prop({ type: Array, default: () => [] })
-  readonly events!: any
-
   @Ref('chart')
-  readonly chart!: ECharts
+  readonly chart?: ECharts
 
-  ready = false
+  // Stable reference so re-renders don't make vue-echarts re-init the chart.
+  readonly initOptions: EChartsInitOpts = Object.freeze({ renderer: 'canvas' })
 
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
-  }
+  // Apply the full options + current data (on chart ready and on option changes).
+  applyOption () {
+    if (!this.chart) return
 
-  get isDark () {
-    return this.$store.state.config.uiSettings.theme.isDark
-  }
-
-  @Watch('data')
-  onData (data: any) {
-    if (this.chart && data && data.length) {
-      this.chart.setOption({
-        dataset: {
-          source: data
-        }
-      })
-    }
-  }
-
-  get opts () {
-    const baseOptions = {
+    const options: EChartsOption = {
+      ...this.options,
       grid: {
         top: 0,
         left: 0,
         right: 0,
-        bottom: 0
+        bottom: 0,
+        ...this.options.grid
+      },
+      dataset: {
+        dimensions: this.dimensions,
+        source: this.data
       }
     }
 
-    const options = merge(baseOptions, this.options)
-    return options
+    this.chart.setOption(options, { notMerge: true })
   }
 
-  mounted () {
-    if (this.data && !this.ready) this.ready = true
+  @Watch('options')
+  onOptions () {
+    this.applyOption()
+  }
+
+  // Push only a dataset update, never a full options re-apply.
+  @Watch('data')
+  onData (data: ChartDataSource) {
+    if (this.chart != null) {
+      // Merging recurses into typed arrays index by index, leaving stale rows.
+      this.chart.setOption({
+        dataset: {
+          dimensions: this.dimensions,
+          source: data
+        }
+      }, { replaceMerge: 'dataset' })
+    }
   }
 
   beforeDestroy () {
     if (typeof window === 'undefined') return
-    if (this.chart) {
-      this.chart.dispose()
-    }
+    this.chart?.dispose()
   }
 }
 

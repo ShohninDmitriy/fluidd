@@ -1,18 +1,14 @@
-import { ArcMove, Move, Point, Rotation } from '@/store/gcodePreview/types'
+import type { BuildLayerPathsOptions, LayerPaths, MoveStore, Point, Tool } from '@/store/gcodePreview/types'
+import { MoveFlags } from '@/store/gcodePreview/types'
+import decimalRound from './decimal-round'
 
-type BinarySearchComparer<T> = (item: T, index: number, array: T[]) => number
-
-export const binarySearch = <T>(arr: T[], comp: BinarySearchComparer<T>, approx = false): number => {
-  if (arr.length <= 1) {
-    return 0
-  }
-
-  let index = Math.floor(arr.length / 2)
-  let topBound = arr.length - 1
+export const binarySearch = (length: number, comp: (index: number) => number): number => {
+  let topBound = length - 1
   let bottomBound = 0
 
   while (bottomBound <= topBound) {
-    const result = comp(arr[index], index, arr)
+    const index = (bottomBound + topBound) >> 1
+    const result = comp(index)
 
     if (result > 0) {
       bottomBound = index + 1
@@ -21,37 +17,39 @@ export const binarySearch = <T>(arr: T[], comp: BinarySearchComparer<T>, approx 
     } else {
       return index
     }
-
-    index = Math.floor((bottomBound + topBound) / 2)
   }
 
-  return approx ? index : -1
+  // -1 when the target sorts before the first entry
+  return topBound
 }
 
-function distance (a: Point, b: Point): number {
-  const diffX = Math.abs(a.x - b.x)
-  const diffY = Math.abs(a.y - b.y)
-
-  return Math.sqrt(diffX ** 2 + diffY ** 2)
+// Float32 round-trips to values like 123.44999694824219; rounding to microns
+// keeps the emitted path data short with no visible difference at preview scale
+const formatCoordinate = (value: number): number => {
+  return decimalRound(value, 3)
 }
 
-function angleBetween (a: Point, b: Point) {
-  return Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI)
+const RADIANS_TO_DEGREES = 180 / Math.PI
+
+const angleBetween = (fromX: number, fromY: number, toX: number, toY: number): number => {
+  return Math.atan2(toY - fromY, toX - fromX) * RADIANS_TO_DEGREES
 }
 
-function arcIJMoveToSVGPath (toolhead: Point, move: ArcMove): string {
-  const destination = {
-    x: move.x ?? toolhead.x,
-    y: move.y ?? toolhead.y
-  }
+const arcToSVGPath = (
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  i: number,
+  j: number,
+  clockwise: boolean
+): string => {
+  const centerX = fromX + i
+  const centerY = fromY + j
 
-  const center = {
-    x: toolhead.x + (move.i ?? 0),
-    y: toolhead.y + (move.j ?? 0)
-  }
+  const radius = formatCoordinate(Math.hypot(i, j))
 
-  const radius = distance(toolhead, center)
-  let angle = angleBetween(center, toolhead) - angleBetween(center, destination)
+  let angle = angleBetween(centerX, centerY, fromX, fromY) - angleBetween(centerX, centerY, toX, toY)
 
   if (angle > 180) {
     angle -= 360
@@ -59,79 +57,127 @@ function arcIJMoveToSVGPath (toolhead: Point, move: ArcMove): string {
     angle += 360
   }
 
-  switch (move.direction) {
-    case Rotation.Clockwise:
-      return 'A' + [
-        radius, radius, 0, Number(angle < 0), 0, destination.x, destination.y
-      ].join(',')
-    case Rotation.CounterClockwise:
-      return '' +
-        'M' + [destination.x, destination.y].join(',') +
-        'A' + [radius, radius, 0, Number(angle > 0), 0, toolhead.x, toolhead.y].join(',') +
-        'M' + [destination.x, destination.y].join(',')
-    default:
-      throw new TypeError('move has no direction')
+  const x = formatCoordinate(toX)
+  const y = formatCoordinate(toY)
+
+  if (clockwise) {
+    return `A${radius},${radius},0,${+(angle < 0)},0,${x},${y}`
   }
+
+  return `M${x},${y}` +
+    `A${radius},${radius},0,${+(angle > 0)},0,${formatCoordinate(fromX)},${formatCoordinate(fromY)}` +
+    `M${x},${y}`
 }
 
-/**
- * Taken from https://stackoverflow.com/a/42803692
- */
-// function findIntersections (center1: Point, center2: Point, radius: number) {
-//   const d = Math.sqrt((center2.x - center1.x) ** 2 + (center2.y - center1.y) ** 2)
-//   const a = (d ** 2) / (2 * d)
-//   const h = Math.sqrt(radius ** 2 - a ** 2)
-//   const x2 = center1.x + a * (center2.x - center1.x) / d
-//   const y2 = center1.y + a * (center2.y - center1.y) / d
+const moveToSVGPath = (moves: MoveStore, index: number, fromX: number, fromY: number): string => {
+  const toX = moves.x[index]
+  const toY = moves.y[index]
+  const flags = moves.flags[index]
 
-//   const x3 = x2 + h * (center2.y - center1.y) / d
-//   const y3 = y2 - h * (center2.x - center1.x) / d
-
-//   const x4 = x2 - h * (center2.y - center1.y) / d
-//   const y4 = y2 + h * (center2.x - center1.x) / d
-
-//   return [{
-//     x: x3,
-//     y: y3
-//   }, {
-//     x: x4,
-//     y: y4
-//   }]
-// }
-
-// function arcRMoveToSVGPath (toolhead: Point, move: ArcMove): string {
-//   const intersections = findIntersections(
-//     toolhead,
-//     {
-//       x: move.x ?? toolhead.x,
-//       y: move.y ?? toolhead.y
-//     },
-//     move.r ?? NaN
-//   )
-
-//   throw new Error('Arcs with the R parameter are currently not supported. ' +
-//     'Please make a Github issue with some sample gcode so we can resolve this')
-// }
-
-export function arcMoveToSvgPath (toolhead: Point, move: ArcMove): string {
-  if (move.i !== undefined && move.j !== undefined) {
-    return arcIJMoveToSVGPath(toolhead, move)
+  if ((flags & MoveFlags.Arc) !== 0) {
+    return arcToSVGPath(fromX, fromY, toX, toY, moves.i[index], moves.j[index], (flags & MoveFlags.Clockwise) !== 0)
   }
 
-  if (move.r !== undefined) {
-    // return arcRMoveToSVGPath(toolhead, move)
-    throw new Error('Arcs with the R parameter are currently not supported. ' +
-    'Please make a Github issue with some sample gcode so we can resolve this')
-  }
-
-  throw new TypeError('Move is not a valid arc')
+  return `L${formatCoordinate(toX)},${formatCoordinate(toY)}`
 }
 
-// Assumes the path is pr
-export function moveToSVGPath (toolhead: Point, move: Move) {
-  if (Object.hasOwnProperty.call(move, 'direction')) {
-    return arcMoveToSvgPath(toolhead, move as ArcMove)
-  } else {
-    return `L${move.x ?? toolhead.x},${move.y ?? toolhead.y}`
+export const buildLayerPaths = (
+  moves: MoveStore,
+  startMove: number,
+  endMove: number,
+  options?: BuildLayerPathsOptions
+): Readonly<LayerPaths> => {
+  const {
+    includeExtrusions = true,
+    includeMoves = false,
+    includeRetractions = false,
+    includeTools = false
+  } = options ?? {}
+
+  const { x, y, tool, flags: moveFlags, length } = moves
+
+  const startIndex = Math.min(startMove, length - 1)
+
+  let toolheadX = startIndex >= 0 ? x[startIndex] : 0
+  let toolheadY = startIndex >= 0 ? y[startIndex] : 0
+
+  const movesPath: string[] = includeMoves
+    ? [`M${formatCoordinate(toolheadX)},${formatCoordinate(toolheadY)}`]
+    : []
+  const extrusionPaths = new Map<number, string[]>()
+  const retractions: Point[] = []
+  const unretractions: Point[] = []
+
+  // tool currently laying down extrusions, or -1 while traveling
+  let activeTool = -1
+  let currentTool = 0
+  let activePath: string[] = []
+
+  for (let index = Math.max(0, startMove); index <= endMove && index < length; index++) {
+    if (includeTools) {
+      currentTool = tool[index]
+    }
+
+    const flags = moveFlags[index]
+
+    if ((flags & MoveFlags.Extruding) !== 0) {
+      if (includeRetractions && activeTool < 0) {
+        unretractions.push({
+          x: formatCoordinate(toolheadX),
+          y: formatCoordinate(toolheadY)
+        })
+      }
+
+      if (includeExtrusions) {
+        if (activeTool !== currentTool) {
+          activePath = extrusionPaths.get(currentTool) ?? []
+
+          extrusionPaths.set(currentTool, activePath)
+          activePath.push(`M${formatCoordinate(toolheadX)},${formatCoordinate(toolheadY)}`)
+        }
+
+        activePath.push(moveToSVGPath(moves, index, toolheadX, toolheadY))
+      }
+
+      activeTool = currentTool
+    } else {
+      if (includeMoves) {
+        if (activeTool >= 0) {
+          movesPath.push(`M${formatCoordinate(toolheadX)},${formatCoordinate(toolheadY)}`)
+        }
+
+        movesPath.push(moveToSVGPath(moves, index, toolheadX, toolheadY))
+      }
+
+      activeTool = -1
+
+      if (includeRetractions && (flags & MoveFlags.Retracting) !== 0) {
+        retractions.push({
+          x: formatCoordinate(toolheadX),
+          y: formatCoordinate(toolheadY)
+        })
+      }
+    }
+
+    toolheadX = x[index]
+    toolheadY = y[index]
   }
+
+  const extrusions = {} as Record<Tool, string>
+
+  for (const [toolIndex, path] of extrusionPaths) {
+    extrusions[`T${toolIndex}`] = path.join('')
+  }
+
+  return Object.freeze({
+    extrusions,
+    moves: movesPath.join(''),
+    retractions,
+    unretractions,
+    toolhead: {
+      x: formatCoordinate(toolheadX),
+      y: formatCoordinate(toolheadY)
+    },
+    tool: `T${currentTool}`
+  })
 }

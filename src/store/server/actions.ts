@@ -1,13 +1,18 @@
-import { ActionTree } from 'vuex'
-import { ServerState, ServerThrottledState, ServiceState } from './types'
-import { RootState } from '../types'
+import Vue from 'vue'
+import type { ActionTree } from 'vuex'
+import type { Peripherals, ServerState } from './types'
+import type { RootState } from '../types'
 import { SocketActions } from '@/api/socketActions'
 import { Globals } from '@/globals'
-import { AppPushNotification } from '../notifications/types'
+import type { AppPushNotification } from '../notifications/types'
+import { EventBus } from '@/eventBus'
+import i18n from '@/plugins/i18n'
+import { gte, valid } from 'semver'
+import type { ObjectWithRequest } from '@/plugins/socketClient'
 
-let retryTimeout: number
+let retryTimeout: ReturnType<typeof setTimeout>
 
-export const actions: ActionTree<ServerState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -25,98 +30,139 @@ export const actions: ActionTree<ServerState, RootState> = {
    * of klippy's state. After that, we'd only ever init once more if
    * klippy is connected.
    */
-  async initComponents ({ dispatch }, payload) {
+  async initComponents ({ dispatch }, payload: Moonraker.Server.InfoResponse) {
     if (
       payload.components &&
       payload.components.length > 0
     ) {
-      const componentsToInit: { [index: string]: { name: string; dispatch: string } } = Globals.MOONRAKER_COMPONENTS
-      for (const key in componentsToInit) {
-        const component = componentsToInit[key]
-        if (payload.components.includes(component.name)) {
-          dispatch(component.dispatch, undefined, { root: true })
-        }
-      }
+      const promises = Object.values(Globals.MOONRAKER_COMPONENTS)
+        .map((component) => (
+          payload.components.includes(component.name)
+            ? dispatch(component.dispatch, undefined, { root: true })
+            : null
+        ))
+        .filter(promise => promise)
+
+      await Promise.all(promises)
+    }
+  },
+
+  async notifyOldMoonraker ({ dispatch }) {
+    await dispatch('notifications/pushNotification', {
+      id: 'old-moonraker',
+      title: 'Moonraker',
+      description: i18n.t('app.version.label.old_component_version', { name: 'Moonraker', version: Globals.MOONRAKER_MIN_VERSION }),
+      to: '/settings#versions',
+      btnText: i18n.t('app.version.btn.view_versions'),
+      type: 'warning',
+      merge: true
+    }, { root: true })
+  },
+
+  async checkMoonrakerMinVersion ({ state, dispatch }) {
+    const moonrakerVersion = state.info.moonraker_version ?? '?'
+
+    const fullMoonrakerVersion = moonrakerVersion.includes('-')
+      ? moonrakerVersion
+      : `${moonrakerVersion}-0`
+
+    if (
+      valid(fullMoonrakerVersion) &&
+      valid(Globals.MOONRAKER_MIN_VERSION) &&
+      !gte(fullMoonrakerVersion, Globals.MOONRAKER_MIN_VERSION)
+    ) {
+      await dispatch('notifyOldMoonraker')
     }
   },
 
   /**
    * On server info
    */
-  async onServerInfo ({ commit, dispatch, state }, payload) {
-    // This payload should return a list of enabled components
-    // and root directories that are available.
-    SocketActions.printerInfo()
-    SocketActions.serverConfig()
-    SocketActions.machineProcStats()
-    SocketActions.machineSystemInfo()
+  async onServerInfo ({ commit, dispatch, state }, payload: Moonraker.Server.InfoResponse) {
+    clearTimeout(retryTimeout)
+
+    if (payload.klippy_connected) {
+      SocketActions.printerInfo()
+
+      if (payload.klippy_state !== state.info.klippy_state) {
+        SocketActions.printerObjectsList()
+      }
+    }
+
+    if (payload.components.length > 0 && state.info.components.length === 0) {
+      dispatch('initComponents', payload)
+    }
 
     commit('setServerInfo', payload)
 
+    dispatch('checkMoonrakerMinVersion')
+
     if (payload.klippy_state !== 'ready') {
-      // If klippy is not connected, we'll continue to
-      // retry the init process.
-      if (state.klippy_retries === 0) dispatch('initComponents', payload)
-      commit('setKlippyRetries', state.klippy_retries + 1)
-      clearTimeout(retryTimeout)
-      retryTimeout = window.setTimeout(() => {
+      retryTimeout = setTimeout(() => {
         SocketActions.serverInfo()
       }, Globals.KLIPPY_RETRY_DELAY)
-    } else {
-      // If klippy is connected, move on.
-      commit('setKlippyRetries', 0)
-      dispatch('initComponents', payload)
-      SocketActions.printerObjectsList()
     }
   },
 
   /**
    * Gives us moonrakers configuration./
    */
-  async onServerConfig ({ commit }, payload) {
+  async onServerConfig ({ commit }, payload: Moonraker.Server.ConfigResponse) {
     if (payload.config) {
       commit('setServerConfig', payload.config)
     }
   },
 
-  async onMachineProcStats ({ commit, dispatch }, payload) {
-    if (payload && payload.throttled_state) {
+  async onLogsRollOver (_, payload: Moonraker.Server.LogsRolloverResponse) {
+    if (payload.failed && Object.keys(payload.failed).length > 0) {
+      const message = Object.values(payload.failed)
+        .join('\n')
+
+      EventBus.$emit(message, { type: 'error' })
+    } else if (payload.rolled_over && payload.rolled_over.length) {
+      const applications = payload.rolled_over
+        .map(Vue.$filters.prettyCase)
+        .join(', ')
+      const message = i18n.tc('app.general.msg.rolledover_logs', 0, { applications })
+
+      EventBus.$emit(message, { type: 'success' })
+    }
+  },
+
+  async onMachineProcStats ({ commit, dispatch }, payload: Moonraker.ProcStats.Response) {
+    if (payload.throttled_state) {
       await dispatch('onMachineThrottledState', payload.throttled_state)
     }
     commit('setMoonrakerStats', payload)
 
     // Add a chart entry
-    if (
-      payload.moonraker_stats &&
-      'cpu_usage' in payload.moonraker_stats &&
-      !Array.isArray(payload.moonraker_stats)
-    ) {
-      const d = payload.moonraker_stats
-      if (d.cpu_usage <= 100) {
-        commit('charts/setChartEntry', {
-          type: 'moonraker',
-          retention: 600,
-          data: {
-            date: new Date(d.time * 1000),
-            load: d.cpu_usage.toFixed(2)
-          }
-        }, { root: true })
-      }
+    if (payload.moonraker_stats) {
+      await dispatch('charts/onMoonrakerStats', payload.moonraker_stats, { root: true })
     }
   },
 
-  async onMachineSystemInfo ({ commit }, payload) {
+  async onMachineSystemInfo ({ commit }, payload: Moonraker.Machine.SystemInfoResponse) {
     commit('setSystemInfo', payload)
   },
 
-  async onServiceStateChanged ({ commit }, payload: ServiceState) {
+  async onMachinePeripherals ({ commit }, payload: Partial<Peripherals>) {
+    commit('setMachinePeripherals', payload)
+  },
+
+  async onMachinePeripheralsCanbus ({ commit }, payload: ObjectWithRequest<Moonraker.Peripherals.CanbusResponse>) {
+    const { interface: canbusInterface } = payload.__request__.params ?? {}
+
+    commit('setMachinePeripheralsCanbus', { canbusInterface, can_uuids: payload.can_uuids })
+  },
+
+  async onServiceStateChanged ({ commit }, payload: Moonraker.Machine.ServiceState) {
     commit('setServiceState', payload)
   },
 
-  async onMachineThrottledState ({ commit, dispatch, state }, payload: ServerThrottledState) {
+  async onMachineThrottledState ({ commit, dispatch, state, rootState }, payload: Moonraker.ProcStats.ThrottledState) {
     if (payload) {
       // If we have a throttled condition.
-      if (payload && payload.flags.length > 0) {
+      if (rootState.config.uiSettings.warnings.warnOnCpuThrottled) {
         // Fire notifications.
         payload.flags.forEach((flag) => {
           // Only apply a notification if the flag changed state.
@@ -125,7 +171,7 @@ export const actions: ActionTree<ServerState, RootState> = {
             let n: AppPushNotification = {
               id: flag,
               title: flag,
-              description: 'This may lead to a throttle condition and result in a failed print',
+              description: i18n.t('app.general.msg.throttled_warning').toString(),
               to: 'https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#frequency-management-and-thermal-control',
               type: (previousEvent) ? 'info' : 'error',
               snackbar: !previousEvent, // Snackbar only if not a previously encountered event.
@@ -150,7 +196,7 @@ export const actions: ActionTree<ServerState, RootState> = {
             if (!previousEvent) {
               n = {
                 ...n,
-                description: 'This may lead to a failed print'
+                description: i18n.t('app.printer.msg.possible_print_failure').toString()
               }
             }
 
@@ -162,4 +208,4 @@ export const actions: ActionTree<ServerState, RootState> = {
       commit('setMoonrakerStats', { throttled_state: payload })
     }
   }
-}
+} satisfies ActionTree<ServerState, RootState>

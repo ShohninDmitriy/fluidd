@@ -1,12 +1,12 @@
-import { ActionTree } from 'vuex'
-import { TimelapseState } from './types'
-import { RootState } from '../types'
+import type { ActionTree } from 'vuex'
+import type { TimelapseState } from './types'
+import type { RootState } from '../types'
 import { SocketActions } from '@/api/socketActions'
-import consola from 'consola'
-import { EventBus, FlashMessageTypes } from '@/eventBus'
+import { consola } from 'consola'
+import { EventBus } from '@/eventBus'
 import i18n from '@/plugins/i18n'
 
-export const actions: ActionTree<TimelapseState, RootState> = {
+export const actions = {
   /**
    * Reset our store
    */
@@ -18,34 +18,29 @@ export const actions: ActionTree<TimelapseState, RootState> = {
    * Make a socket request to init the timelapse component.
    */
   async init () {
-    SocketActions.timelapseState()
+    SocketActions.machineTimelapseGetSettings()
+    SocketActions.machineTimelapseLastFrameInfo()
   },
 
-  async onSettings ({ commit }, payload) {
+  async onSettings ({ commit }, payload: Moonraker.Timelapse.SettingsResponse) {
     commit('setSettings', payload)
   },
 
-  async onLastFrame ({ commit }, payload) {
-    const uniqueCount = +(payload.lastframefile?.match(/\d+/)?.[0] ?? 0)
-    commit('setLastFrame', {
-      count: payload.framecount,
-      uniqueCount,
-      file: payload.lastframefile
-    })
+  async onLastFrame ({ commit }, payload: Moonraker.Timelapse.LastFrameInfoResponse) {
+    commit('setLastFrame', payload)
   },
 
-  async onEvent ({ commit }, payload) {
+  async onEvent ({ commit }, payload: Moonraker.Timelapse.Event) {
     switch (payload.action) {
       case 'newframe': {
         if (payload.status === 'error') {
           // open snackbar
-          EventBus.$emit(i18n.tc('app.timelapse.error.newframe'), { type: FlashMessageTypes.error })
+          EventBus.$emit(i18n.tc('app.timelapse.error.newframe'), { type: 'error' })
         } else {
           const count = parseInt(payload.frame)
           commit('setLastFrame', {
-            count,
-            uniqueCount: count,
-            file: payload.framefile
+            framecount: count,
+            lastframefile: payload.framefile
           })
         }
 
@@ -53,46 +48,12 @@ export const actions: ActionTree<TimelapseState, RootState> = {
       }
 
       case 'render': {
-        let status
-
-        switch (payload.status) {
-          case 'started': {
-            status = {
-              status: 'started',
-              count: payload.framecount,
-              settings: {
-                frameRate: payload.framerate,
-                crf: payload.crf,
-                pixelFormat: payload.pixelformat
-              }
-            }
-            break
-          }
-
-          case 'running': {
-            status = { status: 'running', progress: payload.progress }
-            break
-          }
-
-          case 'success': {
-            status = {
-              status: 'success',
-              frameCount: payload.framecount,
-              fileName: payload.filename,
-              printFile: payload.printfile,
-              previewImage: payload.previewimage,
-              message: payload.msg
-            }
-            break
-          }
-
-          default: {
-            consola.warn('unhandled timelapse render status', payload)
-            return
-          }
+        if (!['started', 'running', 'success'].includes(payload.status)) {
+          consola.warn('unhandled timelapse render status', payload)
+          return
         }
 
-        commit('setRenderStatus', status)
+        commit('setRenderStatus', payload)
         break
       }
 
@@ -102,4 +63,4 @@ export const actions: ActionTree<TimelapseState, RootState> = {
       }
     }
   }
-}
+} satisfies ActionTree<TimelapseState, RootState>

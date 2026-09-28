@@ -1,17 +1,15 @@
-import { Module } from 'vuex'
-import { state } from './state'
+import type { Module } from 'vuex'
+import { createState } from './state'
 import { getters } from './getters'
 import { actions } from './actions'
 import { mutations } from './mutations'
-import { MeshState } from './types'
-import { RootState } from '../types'
+import type { MeshState } from './types'
+import type { RootState } from '../types'
 
-const namespaced = true
-
-export const mesh: Module<MeshState, RootState> = {
-  namespaced,
-  state,
+export const mesh = {
+  namespaced: true,
+  state: createState,
   getters,
   actions,
   mutations
-}
+} satisfies Module<MeshState, RootState>

@@ -1,22 +1,19 @@
 export interface MeshState {
-  variance: number;
+  range: number;
   wireframe: boolean;
   scale: number;
   boxScale: number;
   flatSurface: boolean;
-  matrix: 'probed_matrix' | 'mesh_matrix';
+  matrix: MatrixType;
 }
 
-export interface KlipperMesh {
-  [index: string]: string | boolean | number[] | number[][] | undefined;
-  profile_name: string;
+export type MatrixType = 'probed_matrix' | 'mesh_matrix'
+
+export interface BedMeshProfileListEntry {
+  name: string;
   active: boolean;
-  markedForRemoval?: boolean;
-  markedForSave?: boolean;
-  mesh_max?: number[];
-  mesh_min?: number[];
-  mesh_matrix?: number[][];
-  probed_matrix?: number[][];
+  adaptive: boolean;
+  range: number;
 }
 
 export interface AppMeshes {
@@ -25,7 +22,8 @@ export interface AppMeshes {
 
 export interface ProcessedMesh {
   coordinates: MeshCoordinates[];
-  variance: number;
+  dimensions: [number, number];
+  range: number;
   min: number;
   mid: number;
   max: number;

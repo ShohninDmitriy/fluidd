@@ -1,5 +1,6 @@
 <template>
   <v-form
+    ref="form"
     v-model="valid"
     @submit.prevent
   >
@@ -9,15 +10,18 @@
         class="text-right"
       >
         <v-text-field
-          ref="lengthfield"
           v-model.number="extrudeLength"
-          :disabled="!klippyReady"
+          :disabled="!klippyReady || !activeExtruder"
           :rules="[
+            $rules.required,
+            $rules.numberValid,
             $rules.numberGreaterThanOrEqual(0.1),
-            $rules.numberLessThanOrEqual(maxExtrudeLength)
+            maxExtrudeLengthRule
           ]"
+          type="number"
           hide-details
           outlined
+          persistent-placeholder
           dense
           :label="$t('app.general.label.extrude_length')"
           suffix="mm"
@@ -26,12 +30,17 @@
       </v-col>
       <v-col cols="6">
         <app-btn
-          :disabled="!extruderReady || !klippyReady || !valid"
+          :disabled="!klippyReady || !extruderReady || extruderDisconnected || !valid"
           block
-          @click="sendRetractGcode(extrudeLength, extrudeSpeed, $waits.onExtrude)"
+          @click="retract"
         >
           {{ $t('app.general.btn.retract') }}
-          <v-icon>$chevronUp</v-icon>
+          <v-icon
+            small
+            right
+          >
+            $retract
+          </v-icon>
         </app-btn>
       </v-col>
     </v-row>
@@ -45,13 +54,17 @@
       >
         <v-text-field
           v-model.number="extrudeSpeed"
-          :disabled="!klippyReady"
+          :disabled="!klippyReady || !activeExtruder"
           :rules="[
+            $rules.required,
+            $rules.numberValid,
             $rules.numberGreaterThanOrEqual(0.1),
-            $rules.numberLessThanOrEqual(maxExtrudeSpeed)
+            maxExtrudeSpeedRule
           ]"
+          type="number"
           hide-details
           outlined
+          persistent-placeholder
           dense
           :label="$t('app.general.label.extrude_speed')"
           suffix="mm/s"
@@ -60,12 +73,17 @@
       </v-col>
       <v-col cols="6">
         <app-btn
-          :disabled="!extruderReady || !klippyReady || !valid"
+          :disabled="!klippyReady || !extruderReady || extruderDisconnected || !valid"
           block
-          @click="sendExtrudeGcode(extrudeLength, extrudeSpeed, $waits.onExtrude)"
+          @click="extrude"
         >
           {{ $t('app.general.btn.extrude') }}
-          <v-icon>$chevronDown</v-icon>
+          <v-icon
+            small
+            right
+          >
+            $extrude
+          </v-icon>
         </app-btn>
       </v-col>
     </v-row>
@@ -73,32 +91,28 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins } from 'vue-property-decorator'
+import { Component, Mixins, Ref, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import ToolheadMixin from '@/mixins/toolhead'
+import type { VForm } from 'vuetify/lib'
 
 @Component({})
 export default class ExtruderMoves extends Mixins(StateMixin, ToolheadMixin) {
+  @Ref('form')
+  readonly form!: VForm
+
   valid = true
 
-  get maxExtrudeSpeed () {
-    return this.activeExtruder?.max_extrude_only_velocity || 500
-  }
-
-  get maxExtrudeLength () {
-    return this.activeExtruder?.max_extrude_only_distance || 50
-  }
-
   get extrudeSpeed () {
-    const extrudeSpeed = this.$store.state.config.uiSettings.toolhead.extrudeSpeed
+    const extrudeSpeed: number = this.$typedState.config.uiSettings.toolhead.extrudeSpeed
 
     return extrudeSpeed === -1
-      ? this.$store.state.config.uiSettings.general.defaultExtrudeSpeed
+      ? this.$typedState.config.uiSettings.general.defaultExtrudeSpeed
       : extrudeSpeed
   }
 
   set extrudeSpeed (value: number) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.toolhead.extrudeSpeed',
       value,
       server: false
@@ -106,35 +120,48 @@ export default class ExtruderMoves extends Mixins(StateMixin, ToolheadMixin) {
   }
 
   get extrudeLength () {
-    const extrudeLength = this.$store.state.config.uiSettings.toolhead.extrudeLength
+    const extrudeLength: number = this.$typedState.config.uiSettings.toolhead.extrudeLength
 
     return extrudeLength === -1
-      ? this.$store.state.config.uiSettings.general.defaultExtrudeLength
+      ? this.$typedState.config.uiSettings.general.defaultExtrudeLength
       : extrudeLength
   }
 
   set extrudeLength (value: number) {
-    this.$store.dispatch('config/saveByPath', {
+    this.$typedDispatch('config/saveByPath', {
       path: 'uiSettings.toolhead.extrudeLength',
       value,
       server: false
     })
   }
 
-  sendRetractGcode (amount: number, rate: number, wait?: string) {
+  @Watch('activeExtruder')
+  activeExtruderChanged () {
+    this.form.validate()
+  }
+
+  maxExtrudeLengthRule (value: number) {
+    return this.$rules.numberLessThanOrEqual(this.maxExtrudeLength)(value)
+  }
+
+  maxExtrudeSpeedRule (value: number) {
+    return this.$rules.numberLessThanOrEqual(this.maxExtrudeSpeed)(value)
+  }
+
+  retract () {
     if (this.valid) {
-      const gcode = `M83
-        G1 E-${amount} F${rate * 60}`
-      this.sendGcode(gcode, wait)
+      this.sendExtrudeGcode(-this.extrudeLength, this.extrudeSpeed, this.$waits.onExtrude)
     }
   }
 
-  sendExtrudeGcode (amount: number, rate: number, wait?: string) {
+  extrude () {
     if (this.valid) {
-      const gcode = `M83
-        G1 E${amount} F${rate * 60}`
-      this.sendGcode(gcode, wait)
+      this.sendExtrudeGcode(this.extrudeLength, this.extrudeSpeed, this.$waits.onExtrude)
     }
+  }
+
+  mounted () {
+    this.form.validate()
   }
 }
 </script>

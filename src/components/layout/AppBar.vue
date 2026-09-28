@@ -2,13 +2,13 @@
   <v-app-bar
     app
     clipped-left
-    extension-height="46"
-    :color="theme.currentTheme.appbar"
+    :extension-height="46 * (isMobileViewport ? 3 : 2)"
+    :color="$vuetify.theme.currentTheme.appbar"
     :height="$globals.HEADER_HEIGHT"
   >
     <router-link
-      v-show="!isMobile"
-      to="/"
+      v-if="!isMobileViewport"
+      :to="{ name: 'home' }"
       class="toolbar-logo"
     >
       <app-icon />
@@ -16,12 +16,9 @@
 
     <div class="toolbar-title">
       <app-btn
-        v-if="isMobile"
-        fab
-        small
-        :elevation="0"
-        class="mx-1"
-        color="transparent"
+        v-if="isMobileViewport"
+        icon
+        text
         @click="$emit('navdrawer')"
       >
         <v-icon>$menuAlt</v-icon>
@@ -29,8 +26,8 @@
 
       <v-toolbar-title class="printer-title text--secondary">
         <router-link
-          to="/"
-          v-html="instanceName"
+          v-safe-html="instanceName"
+          :to="{ name: 'home' }"
         />
       </v-toolbar-title>
     </div>
@@ -38,48 +35,55 @@
     <!-- <v-spacer /> -->
 
     <div class="toolbar-supplemental">
-      <div
-        v-if="socketConnected && klippyReady && authenticated && showSaveConfigAndRestart && saveConfigPending"
-        class="mr-1"
-      >
+      <div v-if="socketReady && klippyReady && showSaveConfigAndRestartForPendingChanges">
         <app-save-config-and-restart-btn
           :loading="hasWait($waits.onSaveConfig)"
-          :disabled="printerPrinting"
+          :disabled="printerPrinting || printerPaused"
           @click="saveConfigAndRestart"
         />
       </div>
 
-      <div v-if="socketConnected && !isMobile && authenticated">
+      <div v-if="socketReady && !isMobileViewport">
         <v-tooltip bottom>
           <template #activator="{ on, attrs }">
             <app-btn
               :disabled="!klippyReady"
               v-bind="attrs"
               class="mx-1"
-              color=""
+              color="error"
+              rounded
+              :aria-label="$t('app.general.tooltip.estop')"
               v-on="on"
               @click="emergencyStop()"
             >
-              <v-icon color="error">
+              <v-icon color="white">
                 $estop
               </v-icon>
             </app-btn>
           </template>
-          <span>{{ $t('app.general.tooltip.estop') }}</span>
+          <span>
+            {{ $t('app.general.tooltip.estop') }}
+            <template v-if="enableKeyboardShortcuts">
+              <br>
+              <kbd v-if="isAppleDevice">&#8984;</kbd><kbd v-else>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>e</kbd>
+            </template>
+          </span>
         </v-tooltip>
       </div>
 
-      <div
-        v-if="authenticated && socketConnected && topNavPowerToggle"
-      >
+      <div v-if="socketReady && showUploadAndPrint">
+        <app-upload-and-print-btn
+          :disabled="printerPrinting || printerPaused || !klippyReady"
+          @upload="handleUploadAndPrint"
+        />
+      </div>
+
+      <div v-if="socketReady && topNavPowerToggle">
         <v-tooltip bottom>
           <template #activator="{ on, attrs }">
             <app-btn
-              fab
-              small
-              :elevation="0"
-              class="mr-1 bg-transparent"
-              color="transparent"
+              icon
+              text
               :disabled="topNavPowerDeviceDisabled"
               v-bind="attrs"
               v-on="on"
@@ -94,26 +98,17 @@
         </v-tooltip>
       </div>
 
-      <div
-        v-if="authenticated && socketConnected"
-        class="mr-1"
-      >
+      <div v-if="socketReady">
         <app-notification-menu />
       </div>
 
-      <div
-        v-if="supportsAuth && authenticated"
-        class="mr-1"
-      >
+      <div v-if="socketReady && supportsAuth">
         <app-user-menu @change-password="userPasswordDialogOpen = true" />
       </div>
 
       <app-btn
-        fab
-        small
-        :elevation="0"
-        class="mr-1"
-        color="transparent"
+        icon
+        text
         @click="$emit('toolsdrawer')"
       >
         <v-icon>$menu</v-icon>
@@ -124,40 +119,108 @@
       v-if="inLayout"
       #extension
     >
-      <app-btn
-        small
-        class="mx-2"
-        color="primary"
-        @click.stop="handleExitLayout"
-        v-html="$t('app.general.btn.exit_layout')"
-      />
-      <app-btn
-        small
-        class="mx-2"
-        color="primary"
-        @click.stop="handleResetLayout"
-        v-html="$t('app.general.btn.reset_layout')"
-      />
-      <template v-if="isDashboard">
-        <v-divider
-          vertical
-          class="mx-2"
-        />
-        <app-btn
-          small
-          class="mx-2"
-          color="primary"
-          @click.stop="handleSetDefaultLayout"
-          v-html="$t('app.general.btn.set_default_layout')"
-        />
-        <app-btn
-          small
-          class="mx-2"
-          color="primary"
-          @click.stop="handleResetDefaultLayout"
-          v-html="$t('app.general.btn.reset_default_layout')"
-        />
-      </template>
+      <v-container>
+        <div class="d-flex justify-center ma-2">
+          <v-chip
+            v-if="currentUser"
+            class="mx-1"
+            label
+          >
+            <v-icon left>
+              $account
+            </v-icon>
+            {{ currentUser.username }}
+          </v-chip>
+          <v-chip
+            class="mx-1"
+            label
+          >
+            <v-icon left>
+              $screenshot
+            </v-icon>
+            {{ currentBreakpoint.toUpperCase() }}
+          </v-chip>
+        </div>
+        <div class="d-flex justify-center ma-2">
+          <app-btn-group class="mx-1">
+            <v-tooltip bottom>
+              <template #activator="{ on, attrs }">
+                <app-btn
+                  small
+                  v-bind="attrs"
+                  color="primary"
+                  @click.stop="handleExitLayout"
+                  v-on="on"
+                >
+                  <v-icon left>
+                    $close
+                  </v-icon>
+                  {{ $t('app.general.btn.exit_layout') }}
+                </app-btn>
+              </template>
+              <span>{{ $t('app.general.tooltip.exit_layout') }}</span>
+            </v-tooltip>
+            <v-tooltip bottom>
+              <template #activator="{ on, attrs }">
+                <app-btn
+                  small
+                  v-bind="attrs"
+                  color="primary"
+                  @click.stop="handleResetLayout"
+                  v-on="on"
+                >
+                  <v-icon left>
+                    $accountSettings
+                  </v-icon>
+                  {{ $t('app.general.btn.reset_layout') }}
+                </app-btn>
+              </template>
+              <span>{{ $t('app.general.tooltip.reset_layout') }}</span>
+            </v-tooltip>
+          </app-btn-group>
+
+          <app-btn-group
+            v-if="isDashboard"
+            class="mx-1"
+          >
+            <v-tooltip bottom>
+              <template #activator="{ on, attrs }">
+                <app-btn
+                  small
+                  v-bind="attrs"
+                  color="primary"
+                  @click.stop="handleSetDefaultLayout"
+                  v-on="on"
+                >
+                  <v-icon left>
+                    $saveDefault
+                  </v-icon>
+                  {{ $t('app.general.btn.set_default_layout') }}
+                </app-btn>
+              </template>
+              <span>{{ $t('app.general.tooltip.set_default_layout') }}</span>
+            </v-tooltip>
+
+            <v-tooltip bottom>
+              <template #activator="{ on, attrs }">
+                <app-btn
+                  small
+                  v-bind="attrs"
+                  color="primary"
+                  @click.stop="handleResetDefaultLayout"
+                  v-on="on"
+                >
+                  <v-icon left>
+                    $resetDefaults
+                  </v-icon>
+                  {{ $t('app.general.btn.reset_default_layout') }}
+                </app-btn>
+              </template>
+              <span>{{ $t('app.general.tooltip.reset_default_layout') }}</span>
+            </v-tooltip>
+          </app-btn-group>
+        </div>
+      </v-container>
     </template>
 
     <user-password-dialog
@@ -178,69 +241,84 @@ import { Component, Mixins } from 'vue-property-decorator'
 import UserPasswordDialog from '@/components/settings/auth/UserPasswordDialog.vue'
 import PendingChangesDialog from '@/components/settings/PendingChangesDialog.vue'
 import AppSaveConfigAndRestartBtn from './AppSaveConfigAndRestartBtn.vue'
-import { defaultState } from '@/store/layout/state'
+import AppUploadAndPrintBtn from './AppUploadAndPrintBtn.vue'
+import { createState } from '@/store/layout/state'
 import StateMixin from '@/mixins/state'
 import ServicesMixin from '@/mixins/services'
+import FilesMixin from '@/mixins/files'
+import BrowserMixin from '@/mixins/browser'
 import { SocketActions } from '@/api/socketActions'
+import type { OutputPin } from '@/store/printer/types'
+import { encodeGcodeParamValue } from '@/util/gcode-helpers'
+import vuetify from '@/plugins/vuetify'
+import type { AppUser } from '@/store/auth/types'
 
 @Component({
   components: {
     UserPasswordDialog,
     PendingChangesDialog,
-    AppSaveConfigAndRestartBtn
+    AppSaveConfigAndRestartBtn,
+    AppUploadAndPrintBtn
   }
 })
-export default class AppBar extends Mixins(StateMixin, ServicesMixin) {
+export default class AppBar extends Mixins(StateMixin, ServicesMixin, FilesMixin, BrowserMixin) {
   menu = false
   userPasswordDialogOpen = false
   pendingChangesDialogOpen = false
 
-  get supportsAuth () {
-    return this.$store.getters['server/componentSupport']('authorization')
+  get supportsAuth (): boolean {
+    return this.$typedGetters['server/componentSupport']('authorization')
   }
 
-  get instances () {
-    return this.$store.state.config.instances
+  get instanceName (): string {
+    return this.$typedState.config.uiSettings.general.instanceName
   }
 
-  get instanceName () {
-    return this.$store.state.config.uiSettings.general.instanceName
+  get saveConfigPending (): boolean {
+    return this.$typedGetters['printer/getSaveConfigPending']
   }
 
-  get currentFile () {
-    return this.$store.state.printer.printer.print_stats.filename
+  get saveConfigPendingItems (): Klipper.ConfigState {
+    return this.$typedGetters['printer/getSaveConfigPendingItems']
   }
 
-  get hasUpdates () {
-    return this.$store.getters['version/hasUpdates']
+  get showSaveConfigAndRestartForPendingChanges (): boolean {
+    if (!this.showSaveConfigAndRestart || !this.saveConfigPending) {
+      return false
+    }
+
+    const sectionsToIgnore = this.sectionsToIgnorePendingConfigurationChanges
+
+    return (
+      sectionsToIgnore.length === 0 ||
+      Object.keys(this.saveConfigPendingItems)
+        .filter(key => !sectionsToIgnore.includes(key))
+        .length > 0
+    )
   }
 
-  get saveConfigPending () {
-    return this.$store.getters['printer/getSaveConfigPending']
-  }
-
-  get devicePowerComponentEnabled () {
-    return this.$store.getters['server/componentSupport']('power')
-  }
-
-  get theme () {
-    return this.$store.getters['config/getTheme']
-  }
-
-  get isMobile () {
-    return this.$vuetify.breakpoint.mobile
+  get devicePowerComponentEnabled (): boolean {
+    return this.$typedGetters['server/componentSupport']('power')
   }
 
   get inLayout (): boolean {
-    return (this.$store.state.config.layoutMode)
+    return (this.$typedState.config.layoutMode)
   }
 
   get showSaveConfigAndRestart (): boolean {
-    return this.$store.state.config.uiSettings.general.showSaveConfigAndRestart
+    return this.$typedState.config.uiSettings.general.showSaveConfigAndRestart
+  }
+
+  get sectionsToIgnorePendingConfigurationChanges (): string[] {
+    return this.$typedState.config.uiSettings.general.sectionsToIgnorePendingConfigurationChanges
+  }
+
+  get showUploadAndPrint (): boolean {
+    return this.$typedState.config.uiSettings.general.showUploadAndPrint
   }
 
   get topNavPowerToggle () {
-    const topNavPowerToggle = this.$store.state.config.uiSettings.general.topNavPowerToggle as string | null
+    const topNavPowerToggle: string | null = this.$typedState.config.uiSettings.general.topNavPowerToggle
 
     if (!topNavPowerToggle) return null
 
@@ -248,132 +326,160 @@ export default class AppBar extends Mixins(StateMixin, ServicesMixin) {
 
     switch (type) {
       case 'klipper': {
-        const device = this.$store.getters['printer/getPinByName'](name)
+        const device: OutputPin | undefined = this.$typedGetters['printer/getPinByName'](name)
+
+        if (!device) return null
 
         return {
           type,
-          name: device.prettyName,
+          name: device?.prettyName ?? name,
           device
         }
       }
 
       default: {
-        const device = this.$store.state.power.devices.find((device: { device: string }) => device.device === topNavPowerToggle)
+        const device: Moonraker.Power.Device | undefined = this.$typedGetters['power/getDeviceByName'](topNavPowerToggle)
+
+        if (!device) return null
+
         return {
-          type: 'moonraker',
-          name: topNavPowerToggle,
+          type: 'moonraker' as const,
+          name: this.$filters.prettyCase(topNavPowerToggle),
           device
         }
       }
     }
   }
 
-  get topNavPowerDeviceOn () {
-    const topNavPowerToggle = this.topNavPowerToggle
+  get topNavPowerDeviceOn (): boolean {
+    const { type, device } = this.topNavPowerToggle || {}
 
-    switch (topNavPowerToggle?.type) {
+    if (!device) return false
+
+    switch (type) {
       case 'moonraker':
-        return topNavPowerToggle.device.status === 'on'
+        return device.status === 'on'
 
       case 'klipper':
-        return topNavPowerToggle.device.value !== 0
+        return device.value !== 0
     }
+
+    return false
   }
 
   get topNavPowerDeviceDisabled (): boolean {
-    const topNavPowerToggle = this.topNavPowerToggle
+    const { type, device } = this.topNavPowerToggle || {}
 
-    switch (topNavPowerToggle?.type) {
-      case 'moonraker': {
-        const device = topNavPowerToggle.device
-        return !device || (this.printerPrinting && device.locked_while_printing) || ['init', 'error'].includes(device.status) || (!this.devicePowerComponentEnabled)
-      }
+    if (!device) return true
+
+    switch (type) {
+      case 'moonraker':
+        return (this.printerPrinting && device.locked_while_printing) || ['init', 'error'].includes(device.status) || (!this.devicePowerComponentEnabled)
 
       case 'klipper':
-        return !topNavPowerToggle.device || !this.klippyReady
+        return !this.klippyReady
     }
 
     return true
   }
 
+  get enableKeyboardShortcuts (): boolean {
+    return this.$typedState.config.uiSettings.general.enableKeyboardShortcuts
+  }
+
   handleExitLayout () {
-    this.$store.commit('config/setLayoutMode', false)
+    this.$typedCommit('config/setLayoutMode', false)
   }
 
   get isDashboard () {
-    return this.$route.path === '/'
+    return this.$route.name === 'home'
   }
 
   handleResetLayout () {
-    const pathLayouts = {
-      '/diagnostics': 'diagnostics'
-    } as Record<string, string>
+    const pathLayouts = [
+      'diagnostics'
+    ]
 
-    const pathLayout = pathLayouts[this.$route.path]
-    let layoutDefaultState
-    if (pathLayout) {
-      // reset to default init state
-      layoutDefaultState = defaultState().layouts[pathLayout]
-    } else {
-      // reset dashboard to default layout
-      layoutDefaultState = this.$store.getters['layout/getLayout']('dashboard')
-    }
+    const pathLayout = pathLayouts.includes(this.$route.name ?? '')
+      ? this.$route.name
+      : undefined
+    const layoutDefaultState = pathLayout
+      ? createState().layouts[pathLayout]
+      : this.$typedGetters['layout/getLayout']('dashboard')!
 
-    const toReset = pathLayout ?? this.$store.getters['layout/getSpecificLayoutName']
+    const toReset = pathLayout ?? this.$typedGetters['layout/getSpecificLayoutName']
 
-    this.$store.dispatch('layout/onLayoutChange', {
+    this.$typedDispatch('layout/onLayoutChange', {
       name: toReset,
       value: layoutDefaultState
     })
   }
 
+  get currentLayoutName () {
+    return this.$typedGetters['layout/getSpecificLayoutName']
+  }
+
+  get currentUser (): AppUser | null {
+    return this.$typedState.auth.currentUser
+  }
+
+  get currentBreakpoint () {
+    return vuetify.framework.breakpoint.name
+  }
+
   handleSetDefaultLayout () {
-    const currentLayoutName = this.$store.getters['layout/getSpecificLayoutName']
-    this.$store.dispatch('layout/onLayoutChange', {
+    this.$typedDispatch('layout/onLayoutChange', {
       name: 'dashboard',
-      value: this.$store.getters['layout/getLayout'](currentLayoutName)
+      value: this.$typedGetters['layout/getLayout'](this.currentLayoutName)!
     })
   }
 
   handleResetDefaultLayout () {
-    this.$store.dispatch('layout/onLayoutChange', {
+    this.$typedDispatch('layout/onLayoutChange', {
       name: 'dashboard',
-      value: defaultState().layouts.dashboard
+      value: createState().layouts.dashboard
     })
   }
 
   async handlePowerToggle () {
-    const confirmOnPowerDeviceChange = this.$store.state.config.uiSettings.general.confirmOnPowerDeviceChange
-    let res: boolean | undefined = true
-    if (confirmOnPowerDeviceChange) {
-      res = await this.$confirm(
+    const { type, device } = this.topNavPowerToggle || {}
+
+    if (!device) return
+
+    const confirmOnPowerDeviceChange: boolean = this.$typedState.config.uiSettings.general.confirmOnPowerDeviceChange
+
+    const result = (
+      !confirmOnPowerDeviceChange ||
+      await this.$confirm(
         this.$tc('app.general.simple_form.msg.confirm_power_device_toggle'),
         { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
       )
-    }
+    )
 
-    if (res) {
-      const { type, device } = this.topNavPowerToggle || {}
-
+    if (result) {
       switch (type) {
         case 'moonraker': {
           const state = (device.status === 'on') ? 'off' : 'on'
-          SocketActions.machineDevicePowerToggle(device.device, state)
+          SocketActions.machineDevicePowerSetDevice(device.device, state)
           break
         }
 
         case 'klipper': {
           const value = (device.value !== 0) ? 0 : device.scale
-          this.sendGcode(`SET_PIN PIN=${device.name} VALUE=${value}`, `${this.$waits.onSetOutputPin}${device.name}`)
+          this.sendGcode(`SET_PIN PIN=${encodeGcodeParamValue(device.name)} VALUE=${value}`, `${this.$waits.onSetOutputPin}${device.name}`)
           break
         }
       }
     }
   }
 
+  handleUploadAndPrint (file: File) {
+    this.uploadFile(file, '/', 'gcodes', true)
+  }
+
   saveConfigAndRestart (force = false) {
     if (!force) {
-      const confirmOnSaveConfigAndRestart = this.$store.state.config.uiSettings.general.confirmOnSaveConfigAndRestart
+      const confirmOnSaveConfigAndRestart: boolean = this.$typedState.config.uiSettings.general.confirmOnSaveConfigAndRestart
 
       if (confirmOnSaveConfigAndRestart) {
         this.pendingChangesDialogOpen = true

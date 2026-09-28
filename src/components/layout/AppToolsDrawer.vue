@@ -9,7 +9,7 @@
     dense
   >
     <v-list
-      v-if="authenticated"
+      v-if="socketReady"
       dense
     >
       <v-subheader>{{ instanceName }}</v-subheader>
@@ -20,7 +20,7 @@
     <system-printers @click="open = false" />
 
     <system-layout
-      v-if="authenticated"
+      v-if="socketReady"
       @click="open = false"
     />
   </v-navigation-drawer>
@@ -28,28 +28,15 @@
 
 <script lang="ts">
 import { Component, Mixins, VModel } from 'vue-property-decorator'
-
 import StateMixin from '@/mixins/state'
 
 @Component({})
 export default class AppToolsDrawer extends Mixins(StateMixin) {
-  @VModel({ type: Boolean, default: false })
-    open!: boolean
+  @VModel({ type: Boolean })
+  open?: boolean
 
-  get supportsHistory () {
-    return this.$store.getters['server/componentSupport']('history')
-  }
-
-  get instanceName () {
-    return this.$store.state.config.uiSettings.general.instanceName
-  }
-
-  get serverInfo () {
-    return this.$store.getters['server/getInfo']
-  }
-
-  get hasUpdates () {
-    return this.$store.getters['version/hasUpdates']
+  get instanceName (): string {
+    return this.$typedState.config.uiSettings.general.instanceName
   }
 }
 </script>

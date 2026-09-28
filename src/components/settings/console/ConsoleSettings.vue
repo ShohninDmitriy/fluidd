@@ -25,11 +25,11 @@
         </app-btn>
       </app-setting>
 
-      <v-divider />
-
       <template v-for="filter in filters">
+        <v-divider :key="`filter:divider:${filter.name}`" />
+
         <app-setting
-          :key="`filter-${filter.name}`"
+          :key="`filter::${filter.name}`"
           :r-cols="3"
         >
           <template #title>
@@ -37,31 +37,23 @@
           </template>
 
           <app-btn
-            fab
-            text
-            x-small
-            color=""
+            icon
             @click.stop="handleEditFilterDialog(filter)"
           >
-            <v-icon color="">
+            <v-icon dense>
               $edit
             </v-icon>
           </app-btn>
 
           <app-btn
-            fab
-            text
-            x-small
-            color=""
+            icon
             @click.stop="handleRemoveFilter(filter)"
           >
-            <v-icon color="">
-              $close
+            <v-icon dense>
+              $delete
             </v-icon>
           </app-btn>
         </app-setting>
-
-        <v-divider :key="`divider-${filter.name}`" />
       </template>
 
       <console-filter-dialog
@@ -77,7 +69,7 @@
 <script lang="ts">
 import { Component, Mixins } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
-import { ConsoleFilter, ConsoleFilterType } from '@/store/console/types'
+import type { ConsoleFilter } from '@/store/console/types'
 import ConsoleFilterDialog from './ConsoleFilterDialog.vue'
 
 @Component({
@@ -91,18 +83,18 @@ export default class ConsoleSettings extends Mixins(StateMixin) {
     filter: null
   }
 
-  get filters () {
-    return this.$store.getters['console/getFilters']
+  get filters (): ConsoleFilter[] {
+    return this.$typedState.console.consoleFilters
   }
 
   handleEditFilterDialog (filter: ConsoleFilter | null) {
-    const filterCopy = filter
+    const filterCopy: ConsoleFilter = filter
       ? { ...filter }
       : {
           id: '',
           enabled: true,
           name: '',
-          type: ConsoleFilterType.Contains,
+          type: 'contains',
           value: ''
         }
 
@@ -112,12 +104,19 @@ export default class ConsoleSettings extends Mixins(StateMixin) {
     }
   }
 
-  handleRemoveFilter (filter: ConsoleFilter) {
-    this.$store.dispatch('console/onRemoveFilter', filter)
+  async handleRemoveFilter (filter: ConsoleFilter) {
+    const result = await this.$confirm(
+      this.$t('app.general.simple_form.msg.confirm_remove_console_filter', { name: filter.name }).toString(),
+      { title: this.$tc('app.general.label.confirm'), color: 'card-heading', icon: '$error' }
+    )
+
+    if (result) {
+      this.$typedDispatch('console/onRemoveFilter', filter)
+    }
   }
 
   handleSaveFilter (filter: ConsoleFilter) {
-    this.$store.dispatch('console/onSaveFilter', filter)
+    this.$typedDispatch('console/onSaveFilter', filter)
   }
 }
 </script>

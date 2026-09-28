@@ -1,13 +1,14 @@
 <template>
   <collapsable-card
-    :title="$t('app.printer.state.' + printerState)"
+    :title="$t('app.printer.title.printer_status')"
     icon="$printer3d"
-    :draggable="true"
+    draggable
     :collapsable="collapsable"
     layout-path="dashboard.printer-status-card"
   >
-    <template #title>
+    <template #title="{inLayout}">
       <v-tabs
+        v-if="!inLayout"
         v-model="tab"
         background-color="transparent"
         mobile-breakpoint="0"
@@ -38,6 +39,15 @@
       />
     </template>
 
+    <template #collapsed-content>
+      <v-progress-linear
+        v-if="printerPrinting || printerPaused || filename"
+        :height="6"
+        :value="estimates.progress"
+        color="primary"
+      />
+    </template>
+
     <v-tabs-items
       v-model="tab"
       touchless
@@ -62,9 +72,12 @@
 import { Component, Mixins, Watch } from 'vue-property-decorator'
 import { SocketActions } from '@/api/socketActions'
 import StateMixin from '@/mixins/state'
+import AfcMixin from '@/mixins/afc'
 import StatusControls from './StatusControls.vue'
 import StatusTab from './StatusTab.vue'
 import ReprintTab from './ReprintTab.vue'
+import type { TimeEstimates } from '@/store/printer/types'
+import getFilePaths from '@/util/get-file-paths'
 
 @Component({
   components: {
@@ -73,26 +86,29 @@ import ReprintTab from './ReprintTab.vue'
     ReprintTab
   }
 })
-export default class PrinterStatusCard extends Mixins(StateMixin) {
+export default class PrinterStatusCard extends Mixins(StateMixin, AfcMixin) {
   tab = 0
 
   // If the user has no history plugin, and there's no print running..
   // then hide the collapse control.
-  get supportsHistoryComponent () {
-    return this.$store.getters['server/componentSupport']('history')
+  get supportsHistoryComponent (): boolean {
+    return this.$typedGetters['server/componentSupport']('history')
   }
 
   get collapsable () {
-    const filename = this.$store.state.printer.printer.print_stats.filename
     return (
       this.printerPrinting ||
       this.supportsHistoryComponent ||
-      filename !== ''
+      this.filename !== ''
     )
   }
 
-  get filename () {
-    return this.$store.state.printer.printer.print_stats.filename
+  get filename (): string {
+    return this.$typedState.printer.printer.print_stats?.filename ?? ''
+  }
+
+  get estimates (): TimeEstimates {
+    return this.$typedGetters['printer/getTimeEstimates']
   }
 
   @Watch('filename')
@@ -100,7 +116,7 @@ export default class PrinterStatusCard extends Mixins(StateMixin) {
     this.init(val)
   }
 
-  mounted () {
+  created () {
     this.init(this.filename)
   }
 
@@ -113,6 +129,50 @@ export default class PrinterStatusCard extends Mixins(StateMixin) {
   }
 
   handlePrint (filename: string) {
+    const { rootPath, filename: filenameOnly } = getFilePaths(filename, 'gcodes')
+    const fileWithMeta = this.$typedGetters['files/getFile'](rootPath, filenameOnly)
+
+    // AFC check — show lane mapping dialog when AFC is installed. If metadata
+    // is not yet loaded we open the dialog anyway (it will fetch on open);
+    // if metadata is loaded, this panel should show for both single-color
+    // and multi-color prints to allow the user to remap lanes(if needed)
+    // before starting their print.
+    if (this.shouldShowAfcDialog(fileWithMeta)) {
+      this.$typedCommit('afc/setDialogState', {
+        show: true,
+        filename
+      })
+
+      return
+    }
+
+    if (this.$typedState.printer.printer.mmu?.enabled === true) {
+      if (fileWithMeta != null && 'referenced_tools' in fileWithMeta) {
+        const mmuPrint = (fileWithMeta.referenced_tools?.length ?? 1) > 1 || this.$typedState.printer.printer.mmu.gate !== -2
+
+        if (mmuPrint) {
+          this.$typedCommit('mmu/setDialogState', {
+            show: true,
+            filename
+          })
+
+          return
+        }
+      }
+    }
+
+    const spoolmanSupported: boolean = this.$typedGetters['spoolman/getAvailable']
+    const autoSpoolSelectionDialog: boolean = this.$typedState.config.uiSettings.spoolman.autoSpoolSelectionDialog
+
+    if (spoolmanSupported && autoSpoolSelectionDialog) {
+      this.$typedCommit('spoolman/setDialogState', {
+        show: true,
+        filename
+      })
+
+      return
+    }
+
     SocketActions.printerPrintStart(filename)
   }
 }

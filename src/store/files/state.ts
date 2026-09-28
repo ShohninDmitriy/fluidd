@@ -1,30 +1,13 @@
-import { FilesState } from './types'
+import type { FilesState } from './types'
 
-export const defaultState = (): FilesState => {
+export const createState = (): FilesState => {
   return {
     uploads: [],
     download: null,
+    roots: null,
     currentPaths: {},
-    disk_usage: {
-      total: 0,
-      used: 0,
-      free: 0
-    },
-    rootFiles: {
-      gcodes: [],
-      config: [],
-      config_examples: [],
-      docs: [],
-      logs: [],
-      timelapse: []
-    },
-    gcodes: [],
-    config: [],
-    config_examples: [],
-    docs: [],
-    logs: [],
-    timelapse: []
+    diskUsage: {},
+    rootFiles: {},
+    pathContent: {}
   }
 }
-
-export const state = defaultState()
