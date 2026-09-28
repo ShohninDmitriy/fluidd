@@ -1117,17 +1117,13 @@ app:
       active_spool: Активная катушка
       bed_temp: Темп. стола
       change_spool: Сменить катушку
-      colors: Colors
       comment: Комментарий
       density: Плотность
       device_camera: Устройство
-      diameter: Diameter
       extruder_temp: Темп. сопла
       filament_name: Филамент
       first_used: Первое использование
       id: ID
-      initial_length: Initial Length
-      initial_weight: Initial Weight
       last_used: Последнее использование
       location: Расположение
       lot_nr: № партии
