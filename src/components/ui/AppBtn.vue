@@ -7,8 +7,9 @@
     :outlined="outlined"
     :text="text"
     :plain="plain"
+    class="app-btn"
     :class="{
-      'grey--text text--darken-3': primaryColorIsLight
+      'grey--text text--darken-3': colorIsLight
     }"
     v-on="$listeners"
   >
@@ -18,6 +19,7 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
+import { TinyColor } from '@ctrl/tinycolor'
 
 @Component({
   inheritAttrs: false
@@ -55,20 +57,36 @@ export default class AppBtn extends Vue {
       : 'btncolor'
   }
 
-  get primaryColorIsLight () {
+  get colorIsLight () {
+    const color = this.colorToApply
+
     if (
+      color == null ||
       this.fab ||
       this.icon ||
       this.outlined ||
       this.text ||
-      this.color !== 'primary'
+      this.plain
     ) {
       return false
     }
 
-    const color = this.$vuetify.theme.currentTheme.primary?.toString() ?? ''
+    const themeColor = this.$vuetify.theme.currentTheme[color]
 
-    return !this.$filters.isColorDark(color)
+    // Theme colors are used as is, with the exception of "primary"
+    if (
+      themeColor != null &&
+      color !== 'primary'
+    ) {
+      return false
+    }
+
+    const resolvedColor = new TinyColor(themeColor?.toString() ?? color)
+
+    return (
+      resolvedColor.isValid &&
+      resolvedColor.isLight()
+    )
   }
 }
 </script>
